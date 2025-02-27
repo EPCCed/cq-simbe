@@ -33,6 +33,8 @@ int main (void)
   const size_t NSHOTS = 10;
   const size_t NMEASURE = NQUBITS;
 
+  cq_init(1);
+
   qubit * qr;
   alloc_qureg(qr, NQUBITS);
 
@@ -45,6 +47,8 @@ int main (void)
 
   free_qureg(qr);
   free(cr);
+
+  cq_finalise();
 
   return 0;
 }
