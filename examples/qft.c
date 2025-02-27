@@ -37,7 +37,7 @@ int main (void)
   alloc_qureg(qr, NQUBITS);
 
   cstate * cr;
-  cr = malloc(NQUBITS * sizeof(cstate));
+  cr = malloc(NMEASURE * NSHOTS * sizeof(cstate));
 
   register_qkern(qft);
 
