@@ -6,6 +6,7 @@ project(CQ-SIMBE
   LANGUAGES C
 )
 
+find_package(Threads REQUIRED)
 find_package(QuEST REQUIRED)
 
 add_library(cq-simbe)
@@ -19,10 +20,11 @@ option(BUILD_SHARED_LIBS "Build shared library. Turned ON by default." ON)
 target_include_directories(cq-simbe
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(cq-simbe PRIVATE QuEST::QuEST)
+target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
 
 add_subdirectory(src)
 
