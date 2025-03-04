@@ -1,7 +1,3 @@
-target_sources(cq-simbe
-  PRIVATE
-  device_ops.c
-  env.c
-  host_ops.c
-  qasm_gates.c
-)
+add_subdirectory(host)
+add_subdirectory(device)
+add_subdirectory(host-device)

@@ -1,6 +1,8 @@
 #include "host_ops.h"
 
 int alloc_qureg(qubit * qrp, size_t N) {
+  
+
   return 0;
 }
 
