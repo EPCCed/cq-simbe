@@ -1,10 +1,12 @@
 #ifndef DEVICE_CONTROL_H
 #define DEVICE_CONTROL_H
 
-int initialise_quantum_device(void *);
+extern int (*control_registry[3])(void *);
+
+int initialise_simulator(void *);
 
 int abort_current_kernel(void *);
 
-int finalise_quantum_device(void *);
+int finalise_simulator(void *);
 
 #endif 

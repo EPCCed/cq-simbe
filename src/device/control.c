@@ -1,11 +1,28 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include "src/host-device/comms.h"
 #include "control.h"
+#include "quest/include/environment.h"
 
-#include <stdio.h>
+int (*control_registry[3])(void *) =  {
+  initialise_simulator,
+  abort_current_kernel,
+  finalise_simulator
+};
 
-int initialise_quantum_device(void *) {
-  printf("Initialising quantum device\n");
+int initialise_simulator(void * par) {
+  const unsigned int * pVERBOSITY = (const unsigned int *) par;
+
+  if (*pVERBOSITY > 0) {
+    printf("Initialising QuEST.\n");
+  }
+
+  initQuESTEnv();
+
+  if (*pVERBOSITY > 0) {
+    reportQuESTEnv();
+  }
+
   return 0;
 }
 
@@ -13,7 +30,14 @@ int abort_current_kernel(void *) {
   return 0;
 }
 
-int finalise_quantum_device(void *) {
-  printf("Finalising quantum device\n"); 
+int finalise_simulator(void * par) {
+  const unsigned int * pVERBOSITY = (const unsigned int *) par;
+  
+  if (*pVERBOSITY > 0) {
+    printf("Finalising QuEST\n");
+  }
+
+  finalizeQuESTEnv();
+
   return 0;
 }
