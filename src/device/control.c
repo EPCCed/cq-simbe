@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 int initialise_quantum_device(void *) {
+  printf("Initialising quantum device\n");
   return 0;
 }
 
@@ -14,6 +15,5 @@ int abort_current_kernel(void *) {
 
 int finalise_quantum_device(void *) {
   printf("Finalising quantum device\n"); 
-  dev_ctrl.run_device = false;
   return 0;
 }
