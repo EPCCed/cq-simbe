@@ -14,18 +14,19 @@ struct dev_link {
   pthread_cond_t ctrl_op_complete_condition;
   pthread_t device_thread;
   enum ctrl_code op;
+  void * op_params;
 };
 
 extern struct dev_link dev_ctrl;
 
-int initialise_device_link(void);
+int initialise_device(const unsigned int VERBOSITY);
 
-void host_send_ctrl_op(const enum ctrl_code);
+void host_send_ctrl_op(const enum ctrl_code, void * ctrl_params);
 
 void host_wait_ctrl_op();
 
 void * device_control_thread(void *);
 
-int finalise_device_link(void);
+int finalise_device(const unsigned int VERBOSITY);
 
 #endif

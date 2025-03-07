@@ -48,7 +48,7 @@ int main (void)
   free_qureg(qr);
   free(cr);
 
-  cq_finalise();
+  cq_finalise(1);
 
   return 0;
 }

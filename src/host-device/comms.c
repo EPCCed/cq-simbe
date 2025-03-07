@@ -1,11 +1,14 @@
 #include <pthread.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "comms.h"
 #include "src/host/opcodes.h"
-#include "src/device/opreg.h"
+#include "src/device/control.h"
 
-int initialise_device_link() {
+int initialise_device(const unsigned int VERBOSITY) {
+  if (VERBOSITY > 0) {
+    printf("Initialising device.\n");
+  }
   pthread_mutex_init(&dev_ctrl.device_lock, NULL);
   pthread_cond_init(&dev_ctrl.new_op_condition, NULL);
   pthread_cond_init(&dev_ctrl.ctrl_op_complete_condition, NULL);
@@ -15,15 +18,17 @@ int initialise_device_link() {
 
   pthread_create(&dev_ctrl.device_thread, NULL, &device_control_thread, NULL);
 
-  host_send_ctrl_op(INIT);
+  unsigned int verbosity = VERBOSITY;
+  host_send_ctrl_op(INIT, &verbosity);
   host_wait_ctrl_op();
-  
+
   return 0;
 }
 
-void host_send_ctrl_op(const enum ctrl_code OP) {
+void host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
   dev_ctrl.op = OP;
+  dev_ctrl.op_params = ctrl_params;
   dev_ctrl.new_op = true;
   dev_ctrl.ctrl_op_complete = false;
   pthread_cond_signal(&dev_ctrl.new_op_condition);
@@ -63,8 +68,7 @@ void * device_control_thread(void * par) {
     current_op = dev_ctrl.op;
     dev_ctrl.new_op = false; 
     
-    printf("Device op = %u\n", current_op); 
-    control_registry[current_op](par);
+    control_registry[current_op](dev_ctrl.op_params);
 
     dev_ctrl.ctrl_op_complete = true;
     pthread_cond_signal(&dev_ctrl.ctrl_op_complete_condition);    
@@ -75,12 +79,17 @@ void * device_control_thread(void * par) {
   return NULL;
 }
 
-int finalise_device_link() {
+int finalise_device(const unsigned int VERBOSITY) {
+  if (VERBOSITY > 0) {
+    printf("Finalising device.\n");
+  }
+
   pthread_mutex_lock(&dev_ctrl.device_lock);
   dev_ctrl.run_device = false;
   pthread_mutex_unlock(&dev_ctrl.device_lock);
 
-  host_send_ctrl_op(FINALISE);
+  unsigned int verbosity = VERBOSITY;
+  host_send_ctrl_op(FINALISE, &verbosity);
 
   pthread_join(dev_ctrl.device_thread, NULL);
 

@@ -6,6 +6,6 @@
 
 int cq_init(const unsigned int VERBOSITY);
 
-int cq_finalise();
+int cq_finalise(const unsigned int VERBOSITY);
 
 #endif

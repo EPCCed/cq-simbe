@@ -16,15 +16,15 @@ int cq_init(const unsigned int VERBOSITY) {
     printf("Initialising CQ Simulated Backend library. QuEST environment report to follow.\n\n");
   }
 
-  initialise_device_link();
+  initialise_device(VERBOSITY);
   
   return status;
 }
 
-int cq_finalise() {
+int cq_finalise(const unsigned int VERBOSITY) {
   printf("Host finalising\n");
 
-  finalise_device_link();
+  finalise_device(VERBOSITY);
 
   return 0;
 }
