@@ -6,6 +6,8 @@ project(CQ-SIMBE
   LANGUAGES C
 )
 
+option(BUILD_SHARED_LIBS "Build shared library. Turned ON by default." ON)
+
 find_package(Threads REQUIRED)
 find_package(QuEST REQUIRED)
 
@@ -15,7 +17,6 @@ add_library(CQ-SIMBE::cq-simbe ALIAS cq-simbe)
 target_compile_features(cq-simbe PRIVATE c_std_99)
 target_compile_options(cq-simbe PRIVATE -Wall)
 
-option(BUILD_SHARED_LIBS "Build shared library. Turned ON by default." ON)
 
 target_include_directories(cq-simbe
   PUBLIC
