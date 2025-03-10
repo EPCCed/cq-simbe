@@ -26,7 +26,7 @@ int initialise_simulator(void * par) {
   return 0;
 }
 
-int abort_current_kernel(void *) {
+int abort_current_kernel(void * par) {
   return 0;
 }
 
