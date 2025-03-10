@@ -1,4 +1,4 @@
 target_sources(cq-simbe
-  PUBLIC
+  PRIVATE
   comms.c
 )
