@@ -1,7 +1,7 @@
 #ifndef DEVICE_CONTROL_H
 #define DEVICE_CONTROL_H
 
-extern int (*control_registry[3])(void *);
+extern int (*control_registry[5])(void *);
 
 int initialise_simulator(void *);
 

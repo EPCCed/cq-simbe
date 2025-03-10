@@ -4,7 +4,9 @@
 enum ctrl_code {
   INIT,
   ABORT,
-  FINALISE
+  FINALISE,
+  ALLOC,
+  DEALLOC
 };
 
 #endif

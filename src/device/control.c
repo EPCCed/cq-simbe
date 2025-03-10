@@ -2,12 +2,15 @@
 #include <stdio.h>
 #include "src/host-device/comms.h"
 #include "control.h"
+#include "resources.h"
 #include "quest/include/environment.h"
 
-int (*control_registry[3])(void *) =  {
+int (*control_registry[5])(void *) =  {
   initialise_simulator,
   abort_current_kernel,
-  finalise_simulator
+  finalise_simulator,
+  device_alloc_qureg,
+  device_dealloc_qureg
 };
 
 int initialise_simulator(void * par) {
@@ -21,7 +24,11 @@ int initialise_simulator(void * par) {
 
   if (*pVERBOSITY > 0) {
     reportQuESTEnv();
+  
+    printf("Initialising quantum resource registry.\n");
   }
+
+  init_qregistry();
 
   return 0;
 }
@@ -36,6 +43,8 @@ int finalise_simulator(void * par) {
   if (*pVERBOSITY > 0) {
     printf("Finalising QuEST\n");
   }
+
+  clear_qregistry();
 
   finalizeQuESTEnv();
 

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include "src/host/opcodes.h"
+#include "src/device/resources.h"
 
 struct dev_link {
   bool run_device;

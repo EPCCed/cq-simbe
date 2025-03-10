@@ -13,6 +13,22 @@ typedef struct quantumregistry {
   bool available[__DEVICE_MAX_NUM_QUREGS__];
 } quantumregistry;
 
-void device_alloc_qureg(const size_t NQUBITS);
+extern quantumregistry qregistry;
+
+typedef struct device_alloc_params {
+  const size_t NQUBITS;
+  size_t qregistry_idx;
+  int status;
+} device_alloc_params;
+
+void init_qregistry(void);
+
+void clear_qregistry(void);
+
+int get_next_available_qregistry_slot(void);
+
+int device_alloc_qureg(void *);
+
+int device_dealloc_qureg(void *);
 
 #endif
