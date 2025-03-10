@@ -4,9 +4,13 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef unsigned short int qubit;
 typedef short int cstate;
 typedef unsigned int backend_id;
+
+typedef struct qubit {
+  size_t registry_index;
+  size_t offset;
+} qubit;
 
 typedef struct exec {
   bool complete;
