@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define __MAX_NUM_QKERN__ 256
+#define __MAX_QKERN_NAME_LENGTH__ 1024
+
 typedef short int cstate;
 typedef unsigned int backend_id;
 
@@ -18,8 +21,25 @@ typedef struct exec {
   size_t completed_shots;
 } exec;
 
-typedef void (*qkern)(const size_t NQUBITS, qubit * qreg, cstate * creg);
+struct qkern_map;
+struct pqkern_map;
 
-typedef void (*pqkern)(const size_t NQUBITS, qubit * qreg, cstate * creg, void * params);
+typedef void (*qkern)
+  (const size_t NQUBITS, qubit * qreg, cstate * creg, 
+  struct qkern_map * registration);
+
+typedef void (*pqkern)
+  (const size_t NQUBITS, qubit * qreg, cstate * creg, void * params, 
+  struct pqkern_map * registration);
+
+typedef struct qkern_map {
+  qkern fn;
+  char fname[__MAX_QKERN_NAME_LENGTH__];
+} qkern_map;
+
+typedef struct pqkern_map {
+  pqkern fn;
+  char fname[__MAX_QKERN_NAME_LENGTH__];
+} pqkern_map;
 
 #endif

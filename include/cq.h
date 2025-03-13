@@ -6,5 +6,6 @@
 #include "device_ops.h"
 #include "host_ops.h"
 #include "qasm_gates.h"
+#include "kernels.h"
 
 #endif

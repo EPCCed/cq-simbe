@@ -1,12 +1,16 @@
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include "cq.h"
 
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383
 #endif
 
-void qft(const size_t NQUBITS, qubit * qr, cstate * cr) {
+void qft(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg)
+{
+  CQ_REGISTER_KERNEL(reg)
+
   set_qureg(qr, 0, NQUBITS);
 
   for (size_t i = 0; i < NQUBITS; ++i) {
@@ -35,13 +39,13 @@ int main (void)
 
   cq_init(1);
 
-  qubit * qr;
+  qubit * qr = NULL;
   alloc_qureg(qr, NQUBITS);
 
   cstate * cr;
   cr = malloc(NMEASURE * NSHOTS * sizeof(cstate));
 
-  register_qkern(qft);
+  register_qkern(qft); // Everybody runs this!
 
   sm_qrun(qft, qr, NQUBITS, cr, NMEASURE, NSHOTS);
 
