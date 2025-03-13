@@ -27,10 +27,6 @@ int alloc_qureg(qubit * qrp, size_t N) {
   return alloc_params.status;
 }
 
-int register_qkern(qkern kernel) {
-  return 0;
-}
-
 int sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
     return 0;

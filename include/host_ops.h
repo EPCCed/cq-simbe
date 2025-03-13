@@ -14,12 +14,6 @@ int alloc_qureg(qubit * qrp, size_t N);
 
 int free_qureg(qubit * qrp);
 
-// Kernel registration
-
-int register_qkern(qkern kernel);
-
-int register_pqkern(pqkern kernel);
-
 // Executors
 
 int s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
