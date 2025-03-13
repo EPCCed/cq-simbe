@@ -5,8 +5,6 @@
 #include "opcodes.h"
 #include "env.h"
 
-#include <unistd.h>
-
 struct dev_link dev_ctrl;
 
 int cq_init(const unsigned int VERBOSITY) {
@@ -17,7 +15,7 @@ int cq_init(const unsigned int VERBOSITY) {
   }
 
   initialise_device(VERBOSITY);
-  
+
   return status;
 }
 
