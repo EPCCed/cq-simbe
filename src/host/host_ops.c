@@ -3,9 +3,7 @@
 #include "kernels.h"
 #include "src/host-device/comms.h"
 
-int alloc_qureg(qubit * qrp, size_t N) {
-  if (qrp == NULL) return -2;
-
+int alloc_qureg(qubit ** qrp, size_t N) {
   device_alloc_params alloc_params = {
     .NQUBITS = N,
     .qregistry_idx = 0,
@@ -16,10 +14,10 @@ int alloc_qureg(qubit * qrp, size_t N) {
   host_wait_ctrl_op();
 
   if (alloc_params.status == 0) {
-    qrp = (qubit *) malloc(sizeof(qubit) * N);
+    *qrp = (qubit *) malloc(sizeof(qubit) * N);
     for (size_t i = 0; i < N; ++i) {
-      qrp[i].registry_index = alloc_params.qregistry_idx;
-      qrp[i].offset = i;
+      (*qrp)[i].registry_index = alloc_params.qregistry_idx;
+      (*qrp)[i].offset = i;
     }
   } else {
     // Something went wrong!

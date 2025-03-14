@@ -6,11 +6,11 @@
 
 // Resource management
 
-int alloc_qubit(qubit * qhp);
+int alloc_qubit(qubit ** qhp);
 
 int free_qubit(qubit * qhp);
 
-int alloc_qureg(qubit * qrp, size_t N);
+int alloc_qureg(qubit ** qrp, size_t N);
 
 int free_qureg(qubit * qrp);
 
