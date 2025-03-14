@@ -27,11 +27,9 @@ int alloc_qureg(qubit ** qrp, size_t N) {
 }
 
 int sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
-
+cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   int status = 0;
   char const * fname = NULL;
-
 
   status = find_qkern_name(kernel, &fname);    
 
@@ -66,6 +64,8 @@ int free_qureg(qubit * qrp) {
 
   host_send_ctrl_op(DEALLOC, &dealloc_params);
   host_wait_ctrl_op();
+
+  free(qrp);
 
   return dealloc_params.status;
 }
