@@ -4,4 +4,5 @@ target_sources(cq-simbe
   device_ops.c
   qasm_gates.c
   resources.c
+  device_utils.c
 )
