@@ -20,7 +20,8 @@ int cq_init(const unsigned int VERBOSITY) {
 }
 
 int cq_finalise(const unsigned int VERBOSITY) {
-  printf("Host finalising\n");
+  if (VERBOSITY > 0)
+    printf("Host finalising\n");
 
   finalise_device(VERBOSITY);
 
