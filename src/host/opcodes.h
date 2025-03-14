@@ -6,7 +6,9 @@ enum ctrl_code {
   ABORT,
   FINALISE,
   ALLOC,
-  DEALLOC
+  DEALLOC,
+  RUN_QKERNEL,
+  RUN_PQKERNEL
 };
 
 #endif

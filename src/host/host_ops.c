@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "host_ops.h"
+#include "kernels.h"
 #include "src/host-device/comms.h"
 
 int alloc_qureg(qubit * qrp, size_t N) {
@@ -29,7 +30,31 @@ int alloc_qureg(qubit * qrp, size_t N) {
 
 int sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
-    return 0;
+
+  int status = 0;
+  char const * fname = NULL;
+
+
+  status = find_qkern_name(kernel, &fname);    
+
+  if (!status) {
+    qkern_params qk_par = {
+      .FNAME = fname,
+      .NQUBITS = NQUBITS,
+      .creg = crp,
+      .qreg = qrp,
+      .params = NULL
+    };
+
+
+    for (size_t shot = 0; shot < NSHOTS; ++shot) {
+      host_send_ctrl_op(RUN_QKERNEL, &qk_par);
+      host_wait_ctrl_op();
+      qk_par.creg += NMEASURE;
+    }
+  }
+
+  return status;
 }
 
 int free_qureg(qubit * qrp) {
