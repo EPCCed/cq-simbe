@@ -14,7 +14,7 @@ const size_t NSHOTS) {
   for (size_t shot = 0; shot < NSHOTS; ++shot) {
     printf("Shot [%lu]: ", shot);
     for (size_t i = shot * NMEASURE; i < (shot + 1) * NMEASURE; ++i) {
-      printf("%u ", CR[i]);
+      printf("%d ", CR[i]);
     }
     printf("\n");
   }
@@ -90,6 +90,7 @@ int main (void)
 
   cstate * cr;
   cr = malloc(NMEASURE * NSHOTS * sizeof(cstate));
+  for (size_t i = 0; i < NMEASURE * NSHOTS; ++i) cr[i] = -1;
 
   register_qkern(zero_init_full_qft);
   register_qkern(equal_superposition_full_qft);
