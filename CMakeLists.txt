@@ -30,3 +30,10 @@ target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
 add_subdirectory(src)
 
 add_subdirectory(examples)
+
+if (ENABLE_TESTING)
+  find_package(unity REQUIRED)
+
+  enable_testing()
+  add_subdirectory(tests)
+endif()
