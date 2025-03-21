@@ -4,6 +4,13 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+struct cq_environment {
+  bool initialised;
+  bool finalised;
+};
+
+extern struct cq_environment cq_env;
+
 int cq_init(const unsigned int VERBOSITY);
 
 int cq_finalise(const unsigned int VERBOSITY);
