@@ -8,11 +8,11 @@
 
 cq_status alloc_qubit(qubit ** qhp);
 
-cq_status free_qubit(qubit * qhp);
+cq_status free_qubit(qubit ** qhp);
 
 cq_status alloc_qureg(qubit ** qrp, size_t N);
 
-cq_status free_qureg(qubit * qrp);
+cq_status free_qureg(qubit ** qrp);
 
 // Executors
 

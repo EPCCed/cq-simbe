@@ -5,23 +5,42 @@
 #include "src/host-device/comms.h"
 
 cq_status alloc_qureg(qubit ** qrp, size_t N) {
+  // check qr is NULL
+  // Note that this is not a foolproof way to ensure we are not double
+  // allocating...
+  if (*qrp != NULL) return CQ_WARNING;
+  
   device_alloc_params alloc_params = {
     .NQUBITS = N,
     .qregistry_idx = 0,
     .status = CQ_ERROR
   };
 
+  *qrp = (qubit *) malloc(sizeof(qubit) * N);
+  if (*qrp == NULL) {
+    /*  whoops, the malloc failed
+        originally we only malloc'd on the host after receiving
+        CQ_SUCCESS from the device, but it's easier to undo
+        this malloc in the event the device fails to allocate a register
+        than it is to undo the allocation on the device if this fails
+    */
+    return CQ_ERROR;
+  }
+  
   host_send_ctrl_op(ALLOC, &alloc_params);
   host_wait_ctrl_op();
 
   if (alloc_params.status == CQ_SUCCESS) {
-    *qrp = (qubit *) malloc(sizeof(qubit) * N);
     for (size_t i = 0; i < N; ++i) {
       (*qrp)[i].registry_index = alloc_params.qregistry_idx;
       (*qrp)[i].offset = i;
+      (*qrp)[i].N = N;
     }
   } else {
     // Something went wrong!
+    // need to free qrp
+    free(*qrp);
+    *qrp = NULL;
   }
 
   return alloc_params.status;
@@ -54,19 +73,22 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   return status;
 }
 
-cq_status free_qureg(qubit * qrp) {
-  if (qrp == NULL) return CQ_WARNING;
+cq_status free_qureg(qubit ** qrp) {
+  if (*qrp == NULL) return CQ_WARNING;
 
   device_alloc_params dealloc_params = {
     .NQUBITS = 0,
-    .qregistry_idx = qrp[0].registry_index,
+    .qregistry_idx = (*qrp)[0].registry_index,
     .status = CQ_ERROR
   };
 
   host_send_ctrl_op(DEALLOC, &dealloc_params);
   host_wait_ctrl_op();
 
-  free(qrp);
+  if (dealloc_params.status == CQ_SUCCESS) {
+    free(*qrp);
+    *qrp = NULL;
+  }
 
   return dealloc_params.status;
 }
