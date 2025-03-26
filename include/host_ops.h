@@ -6,78 +6,78 @@
 
 // Resource management
 
-int alloc_qubit(qubit ** qhp);
+cq_status alloc_qubit(qubit ** qhp);
 
-int free_qubit(qubit * qhp);
+cq_status free_qubit(qubit * qhp);
 
-int alloc_qureg(qubit ** qrp, size_t N);
+cq_status alloc_qureg(qubit ** qrp, size_t N);
 
-int free_qureg(qubit * qrp);
+cq_status free_qureg(qubit * qrp);
 
 // Executors
 
-int s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
+cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
   const size_t NMEASURE);
 
-int a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
+cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
   const size_t NMEASURE, struct exec * const ehp);
 
-int sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS);
 
-int am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS,
   struct exec * const ehp);
 
-int sb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cq_status sb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const backend_id BE);
 
-int ab_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cq_status ab_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const backend_id BE,
   struct exec * const ehp);
 
-int smb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cq_status smb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
   const backend_id BE);
 
-int amb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cq_status amb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
   const backend_id BE, struct exec * const ehp);
 
-int sp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
+cq_status sp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
   cstate * const crp, const size_t NMEASURE);
 
-int ap_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
+cq_status ap_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
   cstate * const crp, const size_t NMEASURE, struct exec * const ehp);
 
-int smp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
+cq_status smp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS);
 
-int amp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
+cq_status amp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
   struct exec * const ehp);
 
-int sbp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
+cq_status sbp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const backend_id BE);
 
-int abp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
+cq_status abp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, 
   const backend_id BE, struct exec * const ehp);
 
-int smbp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
+cq_status smbp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
   const backend_id BE);
 
-int ambp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
+cq_status ambp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
   cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
   const backend_id BE, struct exec * const ehp);
 
 // Synchronisation
 
-int sync_qrun(struct exec * const ehp);
+cq_status sync_qrun(struct exec * const ehp);
 
-int wait_qrun(struct exec * const ehp);
+cq_status wait_qrun(struct exec * const ehp);
 
-int halt_qrun(struct exec * const ehp);
+cq_status halt_qrun(struct exec * const ehp);
 
 #endif

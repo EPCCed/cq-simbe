@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include "datatypes.h"
 #include "quest/include/qureg.h"
 
 #define __DEVICE_MAX_NUM_QUREGS__ 64
@@ -18,7 +19,7 @@ extern quantumregistry qregistry;
 typedef struct device_alloc_params {
   const size_t NQUBITS;
   size_t qregistry_idx;
-  int status;
+  cq_status status;
 } device_alloc_params;
 
 void init_qregistry(void);
