@@ -1,6 +1,6 @@
 # CQ Simulated Backend
 
-:warning: **CQ-SimBE is UNDER CONSTRUCTION** :construction-worker: :warning:
+:warning: :construction: **CQ-SimBE is UNDER CONSTRUCTION** :construction: :warning:
 
 A [CQ](https://github.com/EPCCed/cq-spec) compliant quantum computing library built on QuEST.
 
