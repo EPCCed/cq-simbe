@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include "datatypes.h"
 #include "src/host-device/comms.h"
 #include "opcodes.h"
 #include "env.h"
@@ -12,8 +13,8 @@ struct cq_environment cq_env = {
 
 struct dev_link dev_ctrl;
 
-int cq_init(const unsigned int VERBOSITY) {
-  int status = 0;  
+cq_status cq_init(const unsigned int VERBOSITY) {
+  cq_status status = CQ_SUCCESS;  
 
   if (!cq_env.finalised) {
     if (!cq_env.initialised) {  
@@ -28,18 +29,18 @@ int cq_init(const unsigned int VERBOSITY) {
       if (VERBOSITY > 0) {
         printf("CQ-SimBE is already initialised. No need to do it again.\n");
       }
-      status = 1;
+      status = CQ_WARNING;
     }
   } else {
     printf("CQ-SimBE cannot be reinitialised once finalised! This would break QuEST.\n");
-    status = -1;
+    status = CQ_ERROR;
   }
 
   return status;
 }
 
-int cq_finalise(const unsigned int VERBOSITY) {
-  int status = 0;
+cq_status cq_finalise(const unsigned int VERBOSITY) {
+  cq_status status = CQ_SUCCESS;
 
   if (!cq_env.finalised) {
     if (VERBOSITY > 0)
@@ -51,7 +52,7 @@ int cq_finalise(const unsigned int VERBOSITY) {
     if (VERBOSITY > 0) {
       printf("CQ-SimBE is already finalised. No need to do it again.\n");
     }
-    status = 1;
+    status = CQ_WARNING;
   }
 
   return status;

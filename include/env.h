@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <pthread.h>
+#include "datatypes.h"
 
 struct cq_environment {
   bool initialised;
@@ -11,8 +12,8 @@ struct cq_environment {
 
 extern struct cq_environment cq_env;
 
-int cq_init(const unsigned int VERBOSITY);
+cq_status cq_init(const unsigned int VERBOSITY);
 
-int cq_finalise(const unsigned int VERBOSITY);
+cq_status cq_finalise(const unsigned int VERBOSITY);
 
 #endif
