@@ -103,7 +103,7 @@ int main (void)
   sm_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS);
   report_results(cr, NMEASURE, NSHOTS);
 
-  free_qureg(qr);
+  free_qureg(&qr);
   free(cr);
 
   cq_finalise(0);
