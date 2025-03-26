@@ -19,6 +19,7 @@ typedef unsigned int backend_id;
 typedef struct qubit {
   size_t registry_index;
   size_t offset;
+  size_t N;
 } qubit;
 
 typedef struct exec {
