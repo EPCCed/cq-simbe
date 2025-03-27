@@ -34,6 +34,7 @@ add_subdirectory(examples)
 if (ENABLE_TESTING)
   find_package(unity REQUIRED)
 
+  include(CTest)
   enable_testing()
   add_subdirectory(tests)
 endif()
