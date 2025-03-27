@@ -4,6 +4,8 @@
 #include "kernels.h"
 #include "src/host-device/comms.h"
 
+// Resource Management
+
 cq_status alloc_qureg(qubit ** qrp, size_t N) {
   // check qr is NULL
   // Note that this is not a foolproof way to ensure we are not double
@@ -46,6 +48,28 @@ cq_status alloc_qureg(qubit ** qrp, size_t N) {
   return alloc_params.status;
 }
 
+cq_status free_qureg(qubit ** qrp) {
+  if (*qrp == NULL) return CQ_WARNING;
+
+  device_alloc_params dealloc_params = {
+    .NQUBITS = 0,
+    .qregistry_idx = (*qrp)[0].registry_index,
+    .status = CQ_ERROR
+  };
+
+  host_send_ctrl_op(DEALLOC, &dealloc_params);
+  host_wait_ctrl_op();
+
+  if (dealloc_params.status == CQ_SUCCESS) {
+    free(*qrp);
+    *qrp = NULL;
+  }
+
+  return dealloc_params.status;
+}
+
+// Executors
+
 cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
 cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   int status = 0;
@@ -71,24 +95,4 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   }
 
   return status;
-}
-
-cq_status free_qureg(qubit ** qrp) {
-  if (*qrp == NULL) return CQ_WARNING;
-
-  device_alloc_params dealloc_params = {
-    .NQUBITS = 0,
-    .qregistry_idx = (*qrp)[0].registry_index,
-    .status = CQ_ERROR
-  };
-
-  host_send_ctrl_op(DEALLOC, &dealloc_params);
-  host_wait_ctrl_op();
-
-  if (dealloc_params.status == CQ_SUCCESS) {
-    free(*qrp);
-    *qrp = NULL;
-  }
-
-  return dealloc_params.status;
 }
