@@ -1,6 +1,7 @@
 #ifndef CQ_KERNELS_H
 #define CQ_KERNELS_H
 
+#include <string.h>
 #include "datatypes.h"
 
 // This has to be a macro as we need __func__ to return the
