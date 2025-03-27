@@ -1,5 +1,5 @@
-#ifndef TEST_HOST_RESOURCE_MANAGEMENT_H
-#define TEST_HOST_RESOURCE_MANAGEMENT_H
+#ifndef CQ_TEST_HOST_RESOURCE_MANAGEMENT_H
+#define CQ_TEST_HOST_RESOURCE_MANAGEMENT_H
 
 void test_first_alloc_qureg(void);
 void test_first_free_qureg(void);

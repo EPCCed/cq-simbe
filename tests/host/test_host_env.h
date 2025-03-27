@@ -1,5 +1,5 @@
-#ifndef TEST_HOST_ENV_H
-#define TEST_HOST_ENV_H
+#ifndef CQ_TEST_HOST_ENV_H
+#define CQ_TEST_HOST_ENV_H
 
 void test_initial_environment_flags(void);
 void test_init(void);
