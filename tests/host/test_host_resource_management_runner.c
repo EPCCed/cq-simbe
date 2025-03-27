@@ -4,7 +4,7 @@
 
 int main ()
 {
-  UnityBegin("test_host_ops.c");
+  UnityBegin("test_host_resource_management.c");
 
   cq_init(0);
 
