@@ -146,7 +146,7 @@ void test_nshots(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, nshots)
   );
-  TEST_ASSERT_INT8_WITHIN(1, expected, cr);  
+  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, NMEASURE*nshots); 
 
   free_qureg(&qr);
   free(cr);
@@ -160,8 +160,7 @@ void test_bad_inputs(void) {
   const size_t NSHOTS = 2;
   const cstate CR_INIT_VAL = -1;
   cstate * cr, * empty_cr;
-  qubit * qr, * empty_qr;
-  qr = NULL;
+  qubit * qr = NULL;
 
   cr = (cstate*) malloc(NMEASURE*NSHOTS*sizeof(cstate));
 
@@ -175,27 +174,22 @@ void test_bad_inputs(void) {
     sm_qrun(unregistered_kernel, NULL, NQUBITS, NULL, NMEASURE, NSHOTS)
   );
 
-  // NULL or uninitialised qureg
+  // NULL qureg
   TEST_ASSERT_EQUAL_INT(CQ_ERROR,
     sm_qrun(all_site_hadamard, NULL, NQUBITS, cr, NMEASURE, NSHOTS)
   );
   TEST_ASSERT_EACH_EQUAL_INT8(CR_INIT_VAL, cr, NMEASURE*NSHOTS);
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-    sm_qrun(all_site_hadamard, empty_qr, NQUBITS, cr, NMEASURE, NSHOTS)
-  );
+  
   alloc_qureg(&qr, NQUBITS);
   free_qureg(&qr);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR,
     sm_qrun(all_site_hadamard, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
 
-  // NULL or empty creg
+  // NULL creg
   alloc_qureg(&qr, NQUBITS);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR,
     sm_qrun(all_site_hadamard, qr, NQUBITS, NULL, NMEASURE, NSHOTS)
-  );
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-    sm_qrun(all_site_hadamard, qr, NQUBITS, empty_cr, NMEASURE, NSHOTS)
   );
 
   free_qureg(&qr);
