@@ -69,10 +69,11 @@ void test_alloc_and_free_qureg(void) {
 }
 
 void test_realloc_qureg(void) {
-  qubit * qr;
+  qubit * qr = NULL;
   const size_t NQ = 3;
 
   alloc_qureg(&qr, NQ);
+  // Note, this leaks! Not the Qureg, but the qubit register
   TEST_ASSERT_EQUAL_INT(CQ_WARNING, alloc_qureg(&qr, NQ));
   free_qureg(&qr);
 
@@ -80,7 +81,7 @@ void test_realloc_qureg(void) {
 }
 
 void test_double_free_qureg(void) {
-  qubit * qr;
+  qubit * qr = NULL;
   const size_t NQ = 3;
 
   alloc_qureg(&qr, NQ);
