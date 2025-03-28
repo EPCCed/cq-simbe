@@ -7,10 +7,13 @@
 // Resource Management
 
 cq_status alloc_qureg(qubit ** qrp, size_t N) {
+  cq_status status = CQ_SUCCESS;
+  
   // check qr is NULL
-  // Note that this is not a foolproof way to ensure we are not double
-  // allocating...
-  if (*qrp != NULL) return CQ_WARNING;
+  // If it's not, we still allocate, but issue a CQ_WARNING.
+  if (*qrp != NULL)  {
+    status = CQ_WARNING;
+  }
   
   device_alloc_params alloc_params = {
     .NQUBITS = N,
@@ -43,9 +46,10 @@ cq_status alloc_qureg(qubit ** qrp, size_t N) {
     // need to free qrp
     free(*qrp);
     *qrp = NULL;
+    status = alloc_params.status;
   }
 
-  return alloc_params.status;
+  return status;
 }
 
 cq_status free_qureg(qubit ** qrp) {
@@ -72,25 +76,31 @@ cq_status free_qureg(qubit ** qrp) {
 
 cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
 cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
-  int status = 0;
+  cq_status status = CQ_ERROR;
   char const * fname = NULL;
 
-  status = find_qkern_name(kernel, &fname);    
+  // proceed iff there are any shots
+  // and the qreg is non-null
+  // and either the creg is non-null or there will be no measurements anyway
+  if (NSHOTS == 0) {
+    status = CQ_SUCCESS;
+  } else if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
+    status = find_qkern_name(kernel, &fname);    
 
-  if (!status) {
-    qkern_params qk_par = {
-      .FNAME = fname,
-      .NQUBITS = NQUBITS,
-      .creg = crp,
-      .qreg = qrp,
-      .params = NULL
-    };
+    if (status == CQ_SUCCESS) {
+      qkern_params qk_par = {
+        .FNAME = fname,
+        .NQUBITS = NQUBITS,
+        .creg = crp,
+        .qreg = qrp,
+        .params = NULL
+      };
 
-
-    for (size_t shot = 0; shot < NSHOTS; ++shot) {
-      host_send_ctrl_op(RUN_QKERNEL, &qk_par);
-      host_wait_ctrl_op();
-      qk_par.creg += NMEASURE;
+      for (size_t shot = 0; shot < NSHOTS; ++shot) {
+        host_send_ctrl_op(RUN_QKERNEL, &qk_par);
+        host_wait_ctrl_op();
+        if (qk_par.creg != NULL) qk_par.creg += NMEASURE;
+      }
     }
   }
 
