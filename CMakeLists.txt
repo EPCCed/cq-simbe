@@ -9,7 +9,7 @@ project(CQ-SIMBE
 option(BUILD_SHARED_LIBS "Build shared library. Turned ON by default." ON)
 
 find_package(Threads REQUIRED)
-find_package(QuEST REQUIRED)
+find_package(QuEST 4.0 REQUIRED)
 
 add_library(cq-simbe)
 add_library(CQ-SIMBE::cq-simbe ALIAS cq-simbe)
