@@ -15,12 +15,6 @@ int register_qkern(qkern kernel) {
   kernel(0, NULL, NULL, pkmap);
   ++qk_reg.next_available_slot;
 
-#ifndef NDEBUG
-  size_t slot = qk_reg.next_available_slot - 1;
-  printf("Registered kernel function %s (%p) in slot %lu.\n", 
-    qk_reg.qkernels[slot].fname, qk_reg.qkernels[slot].fn, slot);
-#endif
-  
   return 0;
 }
 
@@ -47,7 +41,7 @@ int find_qkern_pointer(char const * const FNAME, qkern * qk) {
 
 int find_qkern_name(const qkern QK, char const ** fname) {
   *fname = NULL;
-  int status = 0;
+  cq_status status = CQ_SUCCESS;
 
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     if (QK == qk_reg.qkernels[i].fn) {
@@ -57,7 +51,7 @@ int find_qkern_name(const qkern QK, char const ** fname) {
     }
   }
 
-  if (*fname == NULL) status = -1;
+  if (*fname == NULL) status = CQ_ERROR;
 
   return status;
 }
