@@ -79,6 +79,29 @@ qkern_map * reg) {
   return;
 }
 
+void only_measure_first_site(const size_t NQUBITS, qubit * qr,
+cstate * cr, qkern_map * reg) {
+  CQ_REGISTER_KERNEL(reg);
+
+  set_qureg(qr, 0, NQUBITS);
+
+  hadamard(&qr[0]);
+
+  // TODO: implement with measure_qubit once implemented
+  measure_qureg(qr, 1, cr);
+
+  return;
+}
+
+void no_measure_qkern(const size_t NQUBITS, qubit * qr, cstate * cr,
+qkern_map * reg) {
+  CQ_REGISTER_KERNEL(reg);
+
+  // a tree falls in the forest with no-one to hear it...
+
+  return;
+}
+
 void unregistered_kernel(const size_t NQUBITS, qubit * qr,
 cstate * cr, qkern_map * reg) {
   printf("I'm an unregistered kernel. How did you get here?\n");
