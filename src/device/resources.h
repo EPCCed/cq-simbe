@@ -28,8 +28,8 @@ void clear_qregistry(void);
 
 int get_next_available_qregistry_slot(void);
 
-int device_alloc_qureg(void *);
+cq_status device_alloc_qureg(void *);
 
-int device_dealloc_qureg(void *);
+cq_status device_dealloc_qureg(void *);
 
 #endif
