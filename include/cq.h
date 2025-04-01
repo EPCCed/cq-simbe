@@ -7,5 +7,6 @@
 #include "host_ops.h"
 #include "qasm_gates.h"
 #include "kernels.h"
+#include "utils.h"
 
 #endif

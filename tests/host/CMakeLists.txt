@@ -46,3 +46,19 @@ add_test(
   NAME test_executors
   COMMAND ./test_executors
 )
+
+add_executable(test_host_utils
+  test_host_utils_runner.c
+  test_host_utils.c
+)
+
+target_link_libraries(test_host_utils
+  PRIVATE
+  CQ-SIMBE::cq-simbe
+  unity::framework
+)
+
+add_test(
+  NAME test_host_utils
+  COMMAND ./test_host_utils
+)

@@ -8,9 +8,6 @@
 #include "qasm_gates.h"
 #include "test_qkerns.h"
 
-void init_creg(const size_t LENGTH, const cstate INIT_VAL, 
-  cstate * cr);
-
 void test_first_run(void);
 void test_nmeasure(void);
 void test_nshots(void);

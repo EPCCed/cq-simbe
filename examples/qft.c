@@ -90,7 +90,7 @@ int main (void)
 
   cstate * cr;
   cr = malloc(NMEASURE * NSHOTS * sizeof(cstate));
-  for (size_t i = 0; i < NMEASURE * NSHOTS; ++i) cr[i] = -1;
+  init_creg(NMEASURE * NSHOTS, -1, cr);
 
   register_qkern(zero_init_full_qft);
   register_qkern(equal_superposition_full_qft);

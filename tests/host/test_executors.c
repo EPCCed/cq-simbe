@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "unity.h"
 #include "host_ops.h"
+#include "utils.h"
 #include "test_executors.h"
 
 const size_t NQUBITS = 5;
@@ -10,15 +11,6 @@ void setUp(void) {
 }
 
 void tearDown(void) {
-  return;
-}
-
-void init_creg(const size_t LENGTH, const cstate INIT_VAL,  
-cstate * cr) {
-  for (size_t i = 0; i < LENGTH; ++i) {
-    cr[i] = INIT_VAL;
-  }
-
   return;
 }
 
