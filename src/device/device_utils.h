@@ -4,6 +4,6 @@
 #include "datatypes.h"
 #include "quest/include/types.h"
 
-int qindex_to_cstate(qindex state, cstate * creg, const size_t BIT_WIDTH);
+cq_status qindex_to_cstate(qindex state, cstate * creg, const size_t BIT_WIDTH);
 
 #endif
