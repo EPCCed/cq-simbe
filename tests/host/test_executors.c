@@ -30,39 +30,39 @@ void test_first_run(void) {
   alloc_qureg(&qr, NQUBITS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
-  TEST_ASSERT_EACH_EQUAL_INT8(CR_INIT_VAL, cr, NMEASURE*NSHOTS);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE*NSHOTS);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, 
     sm_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
   // tests that all elements with cr are in the range 0-2 i.e. not -1
-  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
-  TEST_ASSERT_EQUAL_INT8(CQ_SUCCESS,
+  TEST_ASSERT_EQUAL_INT16(CQ_SUCCESS,
     sm_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
-  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(all_site_hadamard, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
-  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     // we use NMEASURE=1 here
     sm_qrun(only_measure_first_site, qr, NQUBITS, cr, 1, NSHOTS)
   );
-  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, NSHOTS);
-  TEST_ASSERT_EACH_EQUAL_INT8(CR_INIT_VAL, cr+NSHOTS, (NMEASURE-1)*NSHOTS);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NSHOTS);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr+NSHOTS, (NMEASURE-1)*NSHOTS);
 
   // no measurements here!
   init_creg(NSHOTS*NMEASURE, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(no_measure_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
-  TEST_ASSERT_EACH_EQUAL_INT8(CR_INIT_VAL, cr, NSHOTS*NMEASURE);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NSHOTS*NMEASURE);
 
   free_qureg(&qr);
   free(cr);
@@ -94,7 +94,7 @@ void test_nmeasure(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(only_measure_first_site, qr, NQUBITS, cr, nmeasure, NSHOTS)
   );
-  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, nmeasure*NSHOTS);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, nmeasure*NSHOTS);
   free(cr);
   free(expected);
 
@@ -106,7 +106,7 @@ void test_nmeasure(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(all_site_hadamard, qr, NQUBITS, cr, nmeasure, NSHOTS)
   );
-  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, nmeasure*NSHOTS);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, nmeasure*NSHOTS);
   free(cr);
   free(expected);
 
@@ -138,7 +138,7 @@ void test_nshots(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, nshots)
   );
-  TEST_ASSERT_INT8_ARRAY_WITHIN(1, expected, cr, NMEASURE*nshots); 
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*nshots); 
 
   free_qureg(&qr);
   free(cr);
@@ -170,7 +170,7 @@ void test_bad_inputs(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR,
     sm_qrun(all_site_hadamard, NULL, NQUBITS, cr, NMEASURE, NSHOTS)
   );
-  TEST_ASSERT_EACH_EQUAL_INT8(CR_INIT_VAL, cr, NMEASURE*NSHOTS);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE*NSHOTS);
   
   alloc_qureg(&qr, NQUBITS);
   free_qureg(&qr);
