@@ -33,7 +33,8 @@ int initialise_simulator(void * par) {
 
   init_qregistry();
 
-  return 0;
+  // isQuESTEnvInit returns 1 for true, 0 for false
+  return !isQuESTEnvInit();
 }
 
 int abort_current_kernel(void * par) {
@@ -51,7 +52,8 @@ int finalise_simulator(void * par) {
 
   finalizeQuESTEnv();
 
-  return 0;
+  // isQuESTEnvInit returns 1 for true, 0 for false
+  return isQuESTEnvInit();
 }
 
 int run_qkernel(void * par) {
