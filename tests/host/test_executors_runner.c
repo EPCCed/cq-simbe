@@ -1,7 +1,7 @@
 #include "unity.h"
 #include "env.h"
 #include "kernels.h"
-#include "test_qkerns.h"
+#include "tests/test_qkerns.h"
 #include "test_executors.h"
 
 int main ()

@@ -32,7 +32,7 @@ add_test(
 add_executable(test_executors
   test_executors_runner.c
   test_executors.c
-  test_qkerns.c
+  ../test_qkerns.c
 )
 
 target_link_libraries(test_executors 

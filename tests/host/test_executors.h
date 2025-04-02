@@ -6,7 +6,7 @@
 #include "kernels.h"
 #include "device_ops.h"
 #include "qasm_gates.h"
-#include "test_qkerns.h"
+#include "tests/test_qkerns.h"
 
 void test_first_run(void);
 void test_nmeasure(void);
