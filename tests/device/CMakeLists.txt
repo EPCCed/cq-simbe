@@ -74,3 +74,23 @@ add_test(
   NAME test_device_ops
   COMMAND ./test_device_ops
 )
+
+add_executable(test_qasm_gates
+  test_qasm_gates_runner.c
+  test_qasm_gates.c
+)
+
+target_link_libraries(test_qasm_gates
+  PRIVATE
+  CQ-SIMBE::cq-simbe
+  unity::framework
+  QuEST::QuEST
+  ${MATHS_LIBRARY}
+)
+
+target_compile_definitions(test_qasm_gates PRIVATE UNITY_INCLUDE_DOUBLE)
+
+add_test(
+  NAME test_qasm_gates
+  COMMAND ./test_qasm_gates
+)
