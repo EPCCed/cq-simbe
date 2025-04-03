@@ -55,3 +55,22 @@ add_test(
   NAME test_device_control
   COMMAND ./test_device_control
 )
+
+add_executable(test_device_ops
+  test_device_ops_runner.c
+  test_device_ops.c
+)
+
+target_compile_definitions(test_device_ops PRIVATE UNITY_INCLUDE_DOUBLE)
+
+target_link_libraries(test_device_ops
+  PRIVATE
+  CQ-SIMBE::cq-simbe
+  unity::framework
+  QuEST::QuEST
+)
+
+add_test(
+  NAME test_device_ops
+  COMMAND ./test_device_ops
+)
