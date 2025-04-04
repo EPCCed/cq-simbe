@@ -39,6 +39,18 @@ int check_bit(unsigned long long state, unsigned long long position) {
   return state & (1LLU << position);
 }
 
+unsigned int pop_count(unsigned long long value) {
+  // courtesy of Brian Kernighan
+  unsigned int count;
+
+  // Bitwise AND of value and value-1 clears the least significant set bit
+  for (count = 0; value != 0; ++count) {
+    value &= value - 1;
+  }
+  
+  return count;
+}
+
 void test_hadamard(void) {
   const double EXPECTED = 1.0 / sqrt(NAMPS);
   char msg[64];
@@ -72,6 +84,8 @@ void test_hadamard(void) {
     sprintf(msg, "Imaginary component: index = %lu", i);
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
   }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, hadamard(NULL));
   
   return;
 }
@@ -96,6 +110,8 @@ void test_cphase(void) {
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
   }
 
+  // We expect the amplitude to have moved to the imaginary component for the amplitudes
+  // where both the control and target qubit are 1, otherwise no change.
   for (size_t ctrl = 0; ctrl < NQUBITS; ++ctrl) {
     for (size_t target = 0; target < NQUBITS; ++target) {
       if (ctrl != target) {
@@ -108,7 +124,7 @@ void test_cphase(void) {
             sprintf(msg, "Imaginary component: index = %lu, control = %lu, target = %lu", state, ctrl, target);
             TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(EXPECTED, cimag(sv[state]), msg);
           } else {
-             sprintf(msg, "Real component: index = %lu, control = %lu, target = %lu", state, ctrl, target);
+            sprintf(msg, "Real component: index = %lu, control = %lu, target = %lu", state, ctrl, target);
             TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(EXPECTED, creal(sv[state]), msg);
             sprintf(msg, "Imaginary component: index = %lu, control = %lu, target = %lu", state, ctrl, target);
             TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[state]), msg);
@@ -122,9 +138,48 @@ void test_cphase(void) {
     }
   }
 
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cphase(&qr[0], NULL, 0.0));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cphase(NULL, &qr[0], 0.0));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cphase(NULL, NULL, 0.0)); 
+
   return;
 }
 
 void test_swap(void) {
+  char msg[128];
+  complex double sv[NAMPS];
+  const double EXPECTED = 1.0 / sqrt(2);
+
+  set_qureg(qr, 0, NQUBITS);
+  hadamard(&qr[0]);
+
+  for (size_t hot_qubit = 0; hot_qubit <= NQUBITS; ++hot_qubit) {
+    getQuregAmps(sv, qregistry.registers[qr[0].registry_index], 0, NAMPS);
+    // We expect amplitude in the all-zero state, and in the state where 
+    // only the target qubit is 1
+
+    size_t hqi = hot_qubit % NQUBITS;
+    for (size_t i = 0; i < NAMPS; ++i) {
+      if (i == 0 || (check_bit(i, hqi) && pop_count(i) == 1)) {
+        sprintf(msg, "Real component: index = %lu", i);
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(EXPECTED, creal(sv[i]), msg);
+        sprintf(msg, "Imaginary component: index = %lu", i);
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+      } else {
+        sprintf(msg, "Real component: index = %lu", i);
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, creal(sv[i]), msg);
+        sprintf(msg, "Imaginary component: index = %lu", i);
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+      }
+    }
+
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, swap(&qr[hqi], &qr[(hot_qubit+1) % NQUBITS]));
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, swap(&qr[0], &qr[0]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, swap(&qr[0], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, swap(NULL, &qr[0]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, swap(NULL, NULL));
+
   return;
 }
