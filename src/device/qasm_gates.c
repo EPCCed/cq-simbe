@@ -3,23 +3,37 @@
 #include "qasm_gates.h"
 #include "quest/include/operations.h"
 
-#ifndef NDEBUG
-#include <stdio.h>
-#endif
-
-int hadamard(qubit * qh) {
-  applyHadamard(qregistry.registers[qh->registry_index], qh->offset);
-  return 0;
+cq_status hadamard(qubit * qh) {
+  cq_status status = CQ_ERROR;
+  
+  if (qh != NULL) {
+    applyHadamard(qregistry.registers[qh->registry_index], qh->offset);
+    status = CQ_SUCCESS;
+  }
+  
+  return status;
 }
 
-int cphase(qubit * ctrl, qubit * target, const double THETA) {
-  Qureg qureg = qregistry.registers[ctrl->registry_index];
-  applyTwoQubitPhaseShift(qureg, ctrl->offset, target->offset, THETA);
-  return 0;
+cq_status cphase(qubit * ctrl, qubit * target, const double THETA) {
+  cq_status status = CQ_ERROR;
+
+  if (ctrl != target && ctrl != NULL && target != NULL) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyTwoQubitPhaseShift(qureg, ctrl->offset, target->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
+  return status;
 }
 
-int swap(qubit * a, qubit * b) {
-  Qureg qureg = qregistry.registers[a->registry_index];
-  applySwap(qureg, a->offset, b->offset);
-  return 0;
+cq_status swap(qubit * a, qubit * b) {
+  cq_status status = CQ_ERROR;
+
+  if (a != b && a != NULL && b != NULL) {
+    Qureg qureg = qregistry.registers[a->registry_index];
+    applySwap(qureg, a->offset, b->offset);
+    status = CQ_SUCCESS;
+  }
+  
+  return status;
 }

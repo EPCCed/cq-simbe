@@ -3,60 +3,60 @@
 
 #include "datatypes.h"
 
-int unitary(qubit * qh, const double THETA, const double PHI, 
+cq_status unitary(qubit * qh, const double THETA, const double PHI, 
   const double LAMBDA);
 
-int gphase(qubit * qh, const double THETA);
+cq_status gphase(qubit * qh, const double THETA);
 
-int phase(qubit * qh, const double THETA);
+cq_status phase(qubit * qh, const double THETA);
 
-int paulix(qubit * qh);
+cq_status paulix(qubit * qh);
 
-int pauliy(qubit * qh);
+cq_status pauliy(qubit * qh);
 
-int pauliz(qubit * qh);
+cq_status pauliz(qubit * qh);
 
-int hadamard(qubit * qh);
+cq_status hadamard(qubit * qh);
 
-int sqrtz(qubit * qh);
+cq_status sqrtz(qubit * qh);
 
-int sqrtzhc(qubit * qh);
+cq_status sqrtzhc(qubit * qh);
 
-int sqrts(qubit * qh);
+cq_status sqrts(qubit * qh);
 
-int sqrtshc(qubit * qh);
+cq_status sqrtshc(qubit * qh);
 
-int sqrtx(qubit * qh);
+cq_status sqrtx(qubit * qh);
 
-int rotx(qubit * qh, const double THETA);
+cq_status rotx(qubit * qh, const double THETA);
 
-int roty(qubit * qh, const double THETA);
+cq_status roty(qubit * qh, const double THETA);
 
-int rotz(qubit * qh, const double THETA);
+cq_status rotz(qubit * qh, const double THETA);
 
-int cpaulix(qubit * ctrl, qubit * target);
+cq_status cpaulix(qubit * ctrl, qubit * target);
 
-int cpauliy(qubit * ctrl, qubit * target);
+cq_status cpauliy(qubit * ctrl, qubit * target);
 
-int cpauliz(qubit * ctrl, qubit * target);
+cq_status cpauliz(qubit * ctrl, qubit * target);
 
-int cphase(qubit * ctrl, qubit * target, const double THETA);
+cq_status cphase(qubit * ctrl, qubit * target, const double THETA);
 
-int crotx(qubit * ctrl, qubit *  target, const double THETA);
+cq_status crotx(qubit * ctrl, qubit *  target, const double THETA);
 
-int croty(qubit * ctrl, qubit *  target, const double THETA);
+cq_status croty(qubit * ctrl, qubit *  target, const double THETA);
 
-int crotz(qubit * ctrl, qubit *  target, const double THETA);
+cq_status crotz(qubit * ctrl, qubit *  target, const double THETA);
 
-int chadamard(qubit * ctrl, qubit * target);
+cq_status chadamard(qubit * ctrl, qubit * target);
 
-int cunitary(qubit * ctrl, qubit * target, const double THETA, 
+cq_status cunitary(qubit * ctrl, qubit * target, const double THETA, 
   const double PHI, const double LAMBDA);
 
-int swap(qubit * a, qubit * b);
+cq_status swap(qubit * a, qubit * b);
 
-int ccpaulix(qubit * ctrl_a, qubit * ctrl_b, qubit * target);
+cq_status ccpaulix(qubit * ctrl_a, qubit * ctrl_b, qubit * target);
 
-int cswap(qubit * ctrl, qubit * a, qubit * b);
+cq_status cswap(qubit * ctrl, qubit * a, qubit * b);
 
 #endif
