@@ -8,7 +8,8 @@ enum ctrl_code {
   ALLOC,
   DEALLOC,
   RUN_QKERNEL,
-  RUN_PQKERNEL
+  RUN_PQKERNEL,
+  TEST
 };
 
 #endif

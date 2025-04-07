@@ -1,19 +1,21 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include "datatypes.h"
 #include "src/host-device/comms.h"
 #include "control.h"
 #include "kernel_utils.h"
 #include "resources.h"
 #include "quest/include/environment.h"
 
-int (*control_registry[7])(void *) =  {
+int (*control_registry[8])(void *) =  {
   initialise_simulator,
   abort_current_kernel,
   finalise_simulator,
   device_alloc_qureg,
   device_dealloc_qureg,
   run_qkernel,
-  run_pqkernel
+  run_pqkernel,
+  test_control_fn
 };
 
 int initialise_simulator(void * par) {
@@ -84,4 +86,18 @@ int run_pqkernel(void * par) {
   }
 
  return status;
+}
+
+int test_control_fn(void * par) {
+  cq_status status = CQ_ERROR;
+  bool * p_test_flag = (bool *) par;
+
+  if (!(*p_test_flag)) {
+    *p_test_flag = true;
+    status = CQ_SUCCESS;
+  } else {
+    status = CQ_WARNING;
+  }
+
+  return status;
 }
