@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "datatypes.h"
 #include "host_ops.h"
-#include "kernels.h"
+#include "kernel_utils.h"
 #include "src/host-device/comms.h"
 
 // Resource Management

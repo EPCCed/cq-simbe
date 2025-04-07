@@ -6,7 +6,7 @@
 #include "device_ops.h"
 #include "host_ops.h"
 #include "qasm_gates.h"
-#include "kernels.h"
+#include "kernel_utils.h"
 #include "utils.h"
 
 #endif

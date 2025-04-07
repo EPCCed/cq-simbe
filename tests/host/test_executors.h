@@ -3,7 +3,7 @@
 
 #include <math.h>
 #include "datatypes.h"
-#include "kernels.h"
+#include "kernel_utils.h"
 #include "device_ops.h"
 #include "qasm_gates.h"
 #include "tests/test_qkerns.h"

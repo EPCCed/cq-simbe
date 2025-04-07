@@ -1,10 +1,5 @@
 #include <string.h>
-#include "kernels.h"
-
-#ifndef NDEBUG
-#include <stddef.h>
-#include <stdio.h>
-#endif
+#include "kernel_utils.h"
 
 struct qkern_registry qk_reg;
 struct pqkern_registry pqk_reg;

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "src/host-device/comms.h"
 #include "control.h"
-#include "kernels.h"
+#include "kernel_utils.h"
 #include "resources.h"
 #include "quest/include/environment.h"
 

@@ -1,5 +1,5 @@
-#ifndef CQ_KERNELS_H
-#define CQ_KERNELS_H
+#ifndef CQ_KERNEL_UTILS_H
+#define CQ_KERNEL_UTILS_H
 
 #include <string.h>
 #include "datatypes.h"

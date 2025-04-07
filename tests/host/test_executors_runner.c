@@ -1,6 +1,6 @@
 #include "unity.h"
 #include "env.h"
-#include "kernels.h"
+#include "kernel_utils.h"
 #include "tests/test_qkerns.h"
 #include "test_executors.h"
 
