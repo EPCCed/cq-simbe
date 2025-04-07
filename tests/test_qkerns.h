@@ -16,5 +16,7 @@ void no_measure_qkern(const size_t NQUBITS, qubit * qr, cstate * cr,
   qkern_map * reg);
 void unregistered_kernel(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);
+void overly_long_qkern_name(const size_t NQUBITS, qubit * qr,
+  cstate * cr, qkern_map * reg);
 
 #endif
