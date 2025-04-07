@@ -9,8 +9,13 @@
 // function
 #define CQ_REGISTER_KERNEL(reg) \
 if (reg != NULL) {\
-  strcpy(reg->fname, __func__);\
-  return;\
+  size_t strsz = sizeof(__func__);\
+  if (strsz < __MAX_QKERN_NAME_LENGTH__) {\
+    strcpy(reg->fname, __func__);\
+    return;\
+  } else {\
+    reg->fname[0] = '\0';\
+  }\
 }
 
 struct qkern_registry {
@@ -36,18 +41,18 @@ typedef struct qkern_params {
 
 // Kernel registration
 
-int register_qkern(qkern kernel);
+cq_status register_qkern(qkern kernel);
 
-int register_pqkern(pqkern kernel);
+cq_status register_pqkern(pqkern kernel);
 
 // find user kernels
 
-int find_qkern_pointer(const char * FNAME, qkern * qk);
+cq_status find_qkern_pointer(const char * FNAME, qkern * qk);
 
-int find_qkern_name(qkern const QK, char const ** fname);
+cq_status find_qkern_name(qkern const QK, char const ** fname);
 
-int find_pqkern_pointer(const char * FNAME, pqkern * pqk);
+cq_status find_pqkern_pointer(const char * FNAME, pqkern * pqk);
 
-int find_pqkern_name(pqkern const PQK, char const ** fname);
+cq_status find_pqkern_name(pqkern const PQK, char const ** fname);
 
 #endif

@@ -32,22 +32,22 @@ void test_register_qkern(void) {
 
   // This should not break anything, but definitely isn't what you intended
   TEST_ASSERT_EQUAL_INT(CQ_WARNING, register_qkern(zero_init_full_qft));
-  TEST_ASSERT_EQUAL_PTR(zero_init_full_qft, qk_reg.qkernels[5].fn);
-  TEST_ASSERT_EQUAL_size_t(6, qk_reg.next_available_slot);
+  TEST_ASSERT_NULL(qk_reg.qkernels[5].fn);
+  TEST_ASSERT_EQUAL_size_t(5, qk_reg.next_available_slot);
 
   // These should break things
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(unregistered_kernel));
-  TEST_ASSERT_EQUAL_size_t(6, qk_reg.next_available_slot);
+  TEST_ASSERT_EQUAL_size_t(5, qk_reg.next_available_slot);
 
   qk_reg.next_available_slot = __MAX_NUM_QKERN__;
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(zero_init_full_qft));
   TEST_ASSERT_EQUAL_size_t(__MAX_NUM_QKERN__, qk_reg.next_available_slot);
   // reset our vandalism of the qkern registry as there's no function to clear
   // it currently
-  qk_reg.next_available_slot = 6;
-  TEST_ASSERT_EQUAL_INT(6, qk_reg.next_available_slot);
+  qk_reg.next_available_slot = 5;
+  TEST_ASSERT_EQUAL_INT(5, qk_reg.next_available_slot);
 
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, NULL);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(NULL));
 
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(overly_long_qkern_name));
 

@@ -123,7 +123,12 @@ cstate * cr, qkern_map * reg) {
   // and if we don't remember to do that we're not really testing an overly long qkern name.
   // So sue me. (TODO: Check license terms mean I can't be sued.)
   if (reg != NULL) {
-    strcpy(reg->fname, too_long);
+    size_t strsz = sizeof(too_long);
+    if (strsz < __MAX_QKERN_NAME_LENGTH__) {
+      strcpy(reg->fname, too_long);
+    } else {
+      reg->fname[0] = '\0';
+    }
     return;
   }
 

@@ -4,22 +4,38 @@
 struct qkern_registry qk_reg;
 struct pqkern_registry pqk_reg;
 
-int register_qkern(qkern kernel) {
-  qkern_map * pkmap = &qk_reg.qkernels[qk_reg.next_available_slot];
-  pkmap->fn = kernel;
-  kernel(0, NULL, NULL, pkmap);
-  ++qk_reg.next_available_slot;
+cq_status register_qkern(qkern kernel) {
+  cq_status status = CQ_ERROR;
+  const char * fname;
+  
+  if (kernel != NULL && qk_reg.next_available_slot < __MAX_NUM_QKERN__) {
+    status = find_qkern_name(kernel, &fname);
+    if (status == CQ_SUCCESS) {
+      // This kernel has already been registered!
+      status = CQ_WARNING;
+    } else {
+      qkern_map * pkmap = &qk_reg.qkernels[qk_reg.next_available_slot];
+      kernel(0, NULL, NULL, pkmap);
+      if (pkmap->fname[0] != '\0') {
+        pkmap->fn = kernel;
+        ++qk_reg.next_available_slot;
+        status = CQ_SUCCESS;
+      } else {
+        status = CQ_ERROR;
+      }
+    }
+  }
 
-  return 0;
+  return status;
 }
 
-int register_pqkern(pqkern kernel) {
-  return 0;
+cq_status register_pqkern(pqkern kernel) {
+  return CQ_ERROR;
 }
 
-int find_qkern_pointer(char const * const FNAME, qkern * qk) {
+cq_status find_qkern_pointer(char const * const FNAME, qkern * qk) {
   *qk = NULL;
-  int status = 0;
+  int status = CQ_SUCCESS;
   
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     if (!strcmp(FNAME, qk_reg.qkernels[i].fname)) {
@@ -29,12 +45,12 @@ int find_qkern_pointer(char const * const FNAME, qkern * qk) {
     }
   }
 
-  if (*qk == NULL) status = -1;
+  if (*qk == NULL) status = CQ_ERROR;
 
   return status;
 }
 
-int find_qkern_name(const qkern QK, char const ** fname) {
+cq_status find_qkern_name(const qkern QK, char const ** fname) {
   *fname = NULL;
   cq_status status = CQ_SUCCESS;
 
@@ -51,9 +67,9 @@ int find_qkern_name(const qkern QK, char const ** fname) {
   return status;
 }
 
-int find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
+cq_status find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
   *pqk = NULL;
-  int status = 0;
+  int status = CQ_SUCCESS;
   
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     if (!strcmp(FNAME, pqk_reg.pqkernels[i].fname)) {
@@ -63,14 +79,14 @@ int find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
     }
   }
 
-  if (*pqk == NULL) status = -1;
+  if (*pqk == NULL) status = CQ_ERROR;
 
   return status;
 }
 
-int find_pqkern_name(pqkern const PQK, char const ** fname) {
+cq_status find_pqkern_name(pqkern const PQK, char const ** fname) {
   *fname = NULL;
-  int status = 0;
+  int status = CQ_SUCCESS;
 
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     if (PQK == pqk_reg.pqkernels[i].fn) {
@@ -80,7 +96,7 @@ int find_pqkern_name(pqkern const PQK, char const ** fname) {
     }
   }
 
-  if (*fname == NULL) status = -1;
+  if (*fname == NULL) status = CQ_ERROR;
 
   return status;
 }
