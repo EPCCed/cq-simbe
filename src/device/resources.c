@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "resources.h"
+#include "src/host-device/comms.h"
 #include "quest/include/qureg.h"
 
 quantumregistry qregistry;

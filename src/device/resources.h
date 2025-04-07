@@ -16,12 +16,6 @@ typedef struct quantumregistry {
 
 extern quantumregistry qregistry;
 
-typedef struct device_alloc_params {
-  const size_t NQUBITS;
-  size_t qregistry_idx;
-  cq_status status;
-} device_alloc_params;
-
 void init_qregistry(void);
 
 void clear_qregistry(void);

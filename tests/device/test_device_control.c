@@ -1,6 +1,7 @@
 #include "unity.h"
 #include "datatypes.h"
 #include "kernel_utils.h"
+#include "src/host-device/comms.h"
 #include "src/device/control.h"
 #include "src/device/resources.h"
 #include "quest/include/environment.h"

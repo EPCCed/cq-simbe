@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 #include <pthread.h>
+#include "datatypes.h"
 #include "src/host/opcodes.h"
-#include "src/device/resources.h"
 
 struct dev_link {
   bool run_device;
@@ -17,6 +17,12 @@ struct dev_link {
   enum ctrl_code op;
   void * op_params;
 };
+
+typedef struct device_alloc_params {
+  const size_t NQUBITS;
+  size_t qregistry_idx;
+  cq_status status;
+} device_alloc_params;
 
 extern struct dev_link dev_ctrl;
 

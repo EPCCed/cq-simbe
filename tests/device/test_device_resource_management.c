@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include "unity.h"
 #include "datatypes.h"
+#include "src/host-device/comms.h"
 #include "src/device/resources.h"
 #include "test_device_resource_management.h"
 
