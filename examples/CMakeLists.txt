@@ -5,7 +5,7 @@ add_executable(qft
 find_library(MATHS_LIBRARY m REQUIRED)
 
 target_link_libraries(qft 
-  PUBLIC 
+  PRIVATE
   CQ-SIMBE::cq-simbe
   ${MATHS_LIBRARY}
 )
