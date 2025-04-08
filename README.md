@@ -17,7 +17,7 @@ Designed to simulate tightly coupled offload to a quantum accelerator.
 
 - [x] Minimum working example.
   - Synchronous QFT offload with threads is up and running!
-- [ ] Write tests for MWE.
+- [x] Write tests for MWE.
 - [ ] Implement the rest of the spec for the offload-to-thread version.
   - And don't forget to add tests...
 - [ ] Implement Fortran (2003?) interface.
