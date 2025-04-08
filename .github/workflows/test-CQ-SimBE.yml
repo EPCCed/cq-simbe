@@ -30,7 +30,7 @@ jobs:
       - name: Checkout QuEST
         run: |
           cd ${DEPENDENCY_DIR}
-          git clone https://github.com/ThrowTheSwitch/Unity.git
+          git clone https://github.com/QuEST-Kit/QuEST.git
           cd QuEST
           checkout tags/v4.0.0
         
