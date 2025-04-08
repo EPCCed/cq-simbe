@@ -13,12 +13,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Store dependency directory
-        run: 
+        run: |
           echo "DEPENDENCY_DIR=${{ github.workspace }}/Dependencies" >> "$GITHUB_ENV"
           echo "DEPENDENCY_DIR=$DEPENDENCY_DIR"
 
       - name: Store dependency install directory
-        run:
+        run: |
           echo "DEPENDENCY_INSTALL_DIR=$DEPENDENCY_DIR/install" >> "$GITHUB_ENV"
           echo "DEPENCENCY_INSTALL_DIR=$DEPENDENCY_INSTALL_DIR"
 
@@ -28,14 +28,14 @@ jobs:
           mdkir ${DEPENDENCY_INSTALL_DIR}
         
       - name: Checkout QuEST
-        run:
+        run: |
           cd ${DEPENDENCY_DIR}
           git clone git@github.com:QuEST-Kit/QuEST.git
           cd QuEST
           checkout tags/v4.0.0
         
       - name: Checkout Unity
-        run:
+        run: |
           cd ${DEPENDENCY_DIR}
           git clone git@github.com:ThrowTheSwitch/Unity.git
           cd Unity
