@@ -55,25 +55,27 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: QuEST-Source
+          path: ${{ env.DEPENDENCY_DIR }}
 
       - name: Download Unity Source
         uses: actions/download-artifact@v4
         with:
           name: Unity-Source
+          path: ${{ env.DEPENDENCY_DIR }}
 
       - name: Configure QuEST
         run:
           cmake
-            -B ${DEPENDENCY_DIR}/QuEST/build
-            -S ${DEPENDENCY_DIR}/QuEST
+            -B ${DEPENDENCY_DIR}/QuEST-Source/QuEST/build
+            -S ${DEPENDENCY_DIR}/QuEST-Source/QuEST
             -DCMAKE_BUILD_TYPE=Release
             -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}
 
       - name: Configure Unity
         run:
           cmake
-            -B ${DEPENDENCY_DIR}/Unity/build
-            -S ${DEPENDENCY_DIR}/Unity
+            -B ${DEPENDENCY_DIR}/Unity-Source/Unity/build
+            -S ${DEPENDENCY_DIR}/Unity-Source/Unity
             -DCMAKE_BUILD_TYPE=Release
             -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/Unity
             -DCMAKE_C_FLAGS="-DUNITY_INCLUDE_DOUBLE"
@@ -122,11 +124,13 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: QuEST-Install
+        path: ${{ env.DEPENDENCY_INSTALL_DIR }}
 
     - name: Download Unity install
       uses: actions/download-artifact@v4
       with:
         name: Unity-Install
+        path: ${{ env.DEPENDENCY_INSTALL_DIR }}
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
@@ -144,8 +148,8 @@ jobs:
         -DCMAKE_BUILD_TYPE=Release
         -S ${{ github.workspace }}
         -DENABLE_TESTING=On
-        -DQuEST_DIR=${DEPENDENCY_INSTALL_DIR}/quest/lib/cmake/QuEST
-        -DUnity_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/unity
+        -DQuEST_DIR=${DEPENDENCY_INSTALL_DIR}/QuEST-Install/quest/lib/cmake/QuEST
+        -DUnity_DIR=${DEPENDENCY_INSTALL_DIR}/Unity-Install/Unity/lib/cmake/unity
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
