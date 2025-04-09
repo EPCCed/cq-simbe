@@ -8,7 +8,7 @@ cq_status register_qkern(qkern kernel) {
   cq_status status = CQ_ERROR;
   const char * fname;
   
-  if (kernel != NULL && qk_reg.next_available_slot < __MAX_NUM_QKERN__) {
+  if (kernel != NULL && qk_reg.next_available_slot < __CQ_MAX_NUM_QKERN__) {
     status = find_qkern_name(kernel, &fname);
     if (status == CQ_SUCCESS) {
       // This kernel has already been registered!

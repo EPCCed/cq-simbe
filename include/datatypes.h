@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define __MAX_NUM_QKERN__ 256
-#define __MAX_QKERN_NAME_LENGTH__ 1024
+#define __CQ_MAX_NUM_QKERN__ 256
+#define __CQ_MAX_QKERN_NAME_LENGTH__ 1024
 
 typedef enum cq_status {
   CQ_ERROR = -1,
@@ -41,12 +41,12 @@ typedef void (*pqkern)
 
 typedef struct qkern_map {
   qkern fn;
-  char fname[__MAX_QKERN_NAME_LENGTH__];
+  char fname[__CQ_MAX_QKERN_NAME_LENGTH__];
 } qkern_map;
 
 typedef struct pqkern_map {
   pqkern fn;
-  char fname[__MAX_QKERN_NAME_LENGTH__];
+  char fname[__CQ_MAX_QKERN_NAME_LENGTH__];
 } pqkern_map;
 
 #endif

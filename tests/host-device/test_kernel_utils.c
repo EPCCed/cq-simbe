@@ -39,9 +39,9 @@ void test_register_qkern(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(unregistered_kernel));
   TEST_ASSERT_EQUAL_size_t(5, qk_reg.next_available_slot);
 
-  qk_reg.next_available_slot = __MAX_NUM_QKERN__;
+  qk_reg.next_available_slot = __CQ_MAX_NUM_QKERN__;
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(zero_init_full_qft));
-  TEST_ASSERT_EQUAL_size_t(__MAX_NUM_QKERN__, qk_reg.next_available_slot);
+  TEST_ASSERT_EQUAL_size_t(__CQ_MAX_NUM_QKERN__, qk_reg.next_available_slot);
   // reset our vandalism of the qkern registry as there's no function to clear
   // it currently
   qk_reg.next_available_slot = 5;
@@ -55,7 +55,7 @@ void test_register_qkern(void) {
 }
 
 void test_find_qkern_pointer(void) {
-  char msg[128 + __MAX_QKERN_NAME_LENGTH__];
+  char msg[128 + __CQ_MAX_QKERN_NAME_LENGTH__];
   qkern qk = NULL;
 
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {

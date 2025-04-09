@@ -10,7 +10,7 @@
 #define CQ_REGISTER_KERNEL(reg) \
 if (reg != NULL) {\
   size_t strsz = sizeof(__func__);\
-  if (strsz < __MAX_QKERN_NAME_LENGTH__) {\
+  if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {\
     strcpy(reg->fname, __func__);\
     return;\
   } else {\
@@ -19,12 +19,12 @@ if (reg != NULL) {\
 }
 
 struct qkern_registry {
-  struct qkern_map qkernels[__MAX_NUM_QKERN__];
+  struct qkern_map qkernels[__CQ_MAX_NUM_QKERN__];
   size_t next_available_slot;
 };
 
 struct pqkern_registry {
-  struct pqkern_map pqkernels[__MAX_NUM_QKERN__];
+  struct pqkern_map pqkernels[__CQ_MAX_NUM_QKERN__];
   size_t next_available_slot;
 };
 

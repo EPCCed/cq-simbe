@@ -113,18 +113,18 @@ void overly_long_qkern_name(const size_t NQUBITS, qubit * qr,
 cstate * cr, qkern_map * reg) {
   // "overly_long_qkern_name" is of course fine, but the string
   // we're about to build isn't!
-  char too_long[__MAX_QKERN_NAME_LENGTH__ + 1];
-  memset(too_long, 'a', __MAX_QKERN_NAME_LENGTH__);
-  too_long[__MAX_QKERN_NAME_LENGTH__] = '\0';
+  char too_long[__CQ_MAX_QKERN_NAME_LENGTH__ + 1];
+  memset(too_long, 'a', __CQ_MAX_QKERN_NAME_LENGTH__);
+  too_long[__CQ_MAX_QKERN_NAME_LENGTH__] = '\0';
 
   // can't just use the macro here as it explicitly calls __func__ and I
-  // didn't want to have to write a longer than __MAX_QKERN_NAME_LENGTH__ function name
+  // didn't want to have to write a longer than __CQ_MAX_QKERN_NAME_LENGTH__ function name
   // this is stupid as we have to replicate CQ_REGISTER_KERNEL here and update if it changes
   // and if we don't remember to do that we're not really testing an overly long qkern name.
   // So sue me. (TODO: Check license terms mean I can't be sued.)
   if (reg != NULL) {
     size_t strsz = sizeof(too_long);
-    if (strsz < __MAX_QKERN_NAME_LENGTH__) {
+    if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {
       strcpy(reg->fname, too_long);
     } else {
       reg->fname[0] = '\0';
