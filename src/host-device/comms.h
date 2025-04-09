@@ -6,16 +6,24 @@
 #include "datatypes.h"
 #include "src/host/opcodes.h"
 
+#define __CQ_DEVICE_QUEUE_SIZE__ 16
+
 struct dev_link {
   bool run_device;
-  pthread_mutex_t device_lock;
-  bool new_op;
-  pthread_cond_t new_op_condition;
-  bool ctrl_op_complete; 
-  pthread_cond_t ctrl_op_complete_condition;
   pthread_t device_thread;
-  enum ctrl_code op;
-  void * op_params;
+  pthread_mutex_t device_lock;
+
+  bool device_busy;
+  pthread_cond_t cond_device_busy;
+  
+  size_t num_ops;
+  pthread_cond_t cond_queue_empty;
+  pthread_cond_t cond_queue_full;
+
+  size_t next_op_in;
+  size_t next_op_out;
+  enum ctrl_code op_buffer[__CQ_DEVICE_QUEUE_SIZE__];
+  void * op_params_buffer[__CQ_DEVICE_QUEUE_SIZE__];
 };
 
 typedef struct device_alloc_params {
@@ -28,9 +36,9 @@ extern struct dev_link dev_ctrl;
 
 int initialise_device(const unsigned int VERBOSITY);
 
-void host_send_ctrl_op(const enum ctrl_code, void * ctrl_params);
+size_t host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params);
 
-void host_wait_ctrl_op();
+size_t host_wait_all_ops();
 
 void * device_control_thread(void *);
 

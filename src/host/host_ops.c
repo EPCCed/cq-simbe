@@ -32,8 +32,8 @@ cq_status alloc_qureg(qubit ** qrp, size_t N) {
     return CQ_ERROR;
   }
   
-  host_send_ctrl_op(ALLOC, &alloc_params);
-  host_wait_ctrl_op();
+  host_send_ctrl_op(CQ_CTRL_ALLOC, &alloc_params);
+  host_wait_all_ops();
 
   if (alloc_params.status == CQ_SUCCESS) {
     for (size_t i = 0; i < N; ++i) {
@@ -61,8 +61,8 @@ cq_status free_qureg(qubit ** qrp) {
     .status = CQ_ERROR
   };
 
-  host_send_ctrl_op(DEALLOC, &dealloc_params);
-  host_wait_ctrl_op();
+  host_send_ctrl_op(CQ_CTRL_DEALLOC, &dealloc_params);
+  host_wait_all_ops();
 
   if (dealloc_params.status == CQ_SUCCESS) {
     free(*qrp);
@@ -97,8 +97,8 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
       };
 
       for (size_t shot = 0; shot < NSHOTS; ++shot) {
-        host_send_ctrl_op(RUN_QKERNEL, &qk_par);
-        host_wait_ctrl_op();
+        host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, &qk_par);
+        host_wait_all_ops();
         if (qk_par.creg != NULL) qk_par.creg += NMEASURE;
       }
     }
