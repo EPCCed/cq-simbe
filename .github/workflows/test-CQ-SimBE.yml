@@ -37,13 +37,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: QuEST Source
-          path: ${DEPENDENCY_DIR}/QuEST
+          path: ${DEPENDENCY_DIR}/QuEST/
+          if-no-files-found: error
 
       - name: Upload Unity Source
         uses: actions/upload-artifact@v4
         with:
           name: Unity Source
-          path: ${DEPENDENCY_DIR}/Unity
+          path: ${DEPENDENCY_DIR}/Unity/
+          if-no-files-found: error
 
   build-dependencies:
     runs-on: ubuntu-latest
@@ -92,13 +94,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: QuEST Install
-          path: ${DEPENDENCY_INSTALL_DIR}/quest
+          path: ${DEPENDENCY_INSTALL_DIR}/quest/
+          if-no-files-found: error
 
       - name: Upload Unity install
         uses: actions/upload-artifact@v4
         with:
           name: Unity Install
-          path: ${DEPENDENCY_INSTALL_DIR}/Unity
+          path: ${DEPENDENCY_INSTALL_DIR}/Unity/
+          if-no-files-found: error
 
   build:
     runs-on: ubuntu-latest
