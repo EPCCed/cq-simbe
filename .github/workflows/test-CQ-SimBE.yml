@@ -2,9 +2,9 @@ name: Build and test CQ-SimBE
 
 on:
   push:
-    branches: [ "github-ci" ]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "github-ci" ]
+    branches: [ "main", "develop" ]
 
 env:
   DEPENDENCY_DIR: ${{ github.workspace }}/Dependencies
@@ -62,14 +62,6 @@ jobs:
         with:
           name: Unity-Source
           path: ${{ env.DEPENDENCY_DIR }}/Unity
-
-      - name: DEBUG
-        run: |
-          cd ${{ env.DEPENDENCY_DIR }}
-          echo "pwd = "
-          pwd
-          echo "ls output:"
-          ls
 
       - name: Configure QuEST
         run:
