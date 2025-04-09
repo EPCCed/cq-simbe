@@ -34,13 +34,13 @@ jobs:
           git checkout -b v2.6.1 tags/v2.6.1
 
       - name: Upload QuEST Source
-        uses: actions/upload-artifact
+        uses: actions/upload-artifact@v4
         with:
           name: QuEST Source
           path: ${DEPENDENCY_DIR}/QuEST
 
       - name: Upload Unity Source
-        uses: actions/upload-artifact
+        uses: actions/upload-artifact@v4
         with:
           name: Unity Source
           path: ${DEPENDENCY_DIR}/Unity
@@ -50,12 +50,12 @@ jobs:
     needs: checkout-dependencies
     steps:
       - name: Download QuEST Source
-        uses: actions/download-artifact
+        uses: actions/download-artifact@v4
         with:
           name: QuEST Source
 
       - name: Download Unity Source
-        uses: actions/download-artifact
+        uses: actions/download-artifact@v4
         with:
           name: Unity Source
 
@@ -89,13 +89,13 @@ jobs:
         run: cmake --install ${DEPENDENCY_DIR}/Unity/build
 
       - name: Upload QuEST install
-        uses: actions/upload-artifact
+        uses: actions/upload-artifact@v4
         with:
           name: QuEST Install
           path: ${DEPENDENCY_INSTALL_DIR}/quest
 
       - name: Upload Unity install
-        uses: actions/upload-artifact
+        uses: actions/upload-artifact@v4
         with:
           name: Unity Install
           path: ${DEPENDENCY_INSTALL_DIR}/Unity
@@ -115,12 +115,12 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Download QuEST install
-      uses: actions/download-artifact
+      uses: actions/download-artifact@v4
       with:
         name: QuEST Install
 
     - name: Download Unity install
-      uses: actions/download-artifact
+      uses: actions/download-artifact@v4
       with:
         name: Unity Install
 
