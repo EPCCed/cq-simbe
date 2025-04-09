@@ -14,18 +14,8 @@ jobs:
   checkout-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Store dependency directory
-        run: |
-          echo "DEPENDENCY_DIR=$DEPENDENCY_DIR"
-
-      - name: Store dependency install directory
-        run: |
-          echo "DEPENCENCY_INSTALL_DIR=$DEPENDENCY_INSTALL_DIR"
-
       - name: Create dependency directories
-        run: 
+        run: |
           mkdir ${DEPENDENCY_DIR}
           mdkir ${DEPENDENCY_INSTALL_DIR}
         
@@ -34,20 +24,40 @@ jobs:
           cd ${DEPENDENCY_DIR}
           git clone https://github.com/QuEST-Kit/QuEST.git
           cd QuEST
-          git checkout tags/v4.0.0
+          git checkout -b v4.0.0 tags/v4.0.0
         
       - name: Checkout Unity
         run: |
           cd ${DEPENDENCY_DIR}
           git clone https://github.com/ThrowTheSwitch/Unity.git
           cd Unity
-          git checkout tags/v2.6.1
+          git checkout -b v2.6.1 tags/v2.6.1
+
+      - name: Upload QuEST Source
+        uses: actions/upload-artifact
+        with:
+          name: QuEST Source
+          path: ${DEPENDENCY_DIR}/QuEST
+
+      - name: Upload Unity Source
+        uses: actions/upload-artifact
+        with:
+          name: Unity Source
+          path: ${DEPENDENCY_DIR}/Unity
 
   build-dependencies:
     runs-on: ubuntu-latest
     needs: checkout-dependencies
     steps:
-      - uses: actions/checkout@v4
+      - name: Download QuEST Source
+        uses: actions/download-artifact
+        with:
+          name: QuEST Source
+
+      - name: Download Unity Source
+        uses: actions/download-artifact
+        with:
+          name: Unity Source
 
       - name: Configure QuEST
         run:
@@ -78,6 +88,18 @@ jobs:
       - name: Install Unity
         run: cmake --install ${DEPENDENCY_DIR}/Unity/build
 
+      - name: Upload QuEST install
+        uses: actions/upload-artifact
+        with:
+          name: QuEST Install
+          path: ${DEPENDENCY_INSTALL_DIR}/quest
+
+      - name: Upload Unity install
+        uses: actions/upload-artifact
+        with:
+          name: Unity Install
+          path: ${DEPENDENCY_INSTALL_DIR}/Unity
+
   build:
     runs-on: ubuntu-latest
     needs: build-dependencies
@@ -91,6 +113,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Download QuEST install
+      uses: actions/download-artifact
+      with:
+        name: QuEST Install
+
+    - name: Download Unity install
+      uses: actions/download-artifact
+      with:
+        name: Unity Install
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
