@@ -63,6 +63,14 @@ jobs:
           name: Unity-Source
           path: ${{ env.DEPENDENCY_DIR }}
 
+      - name: DEBUG
+        run: |
+          cd ${{ env.DEPENDENCY_DIR }}
+          echo "pwd = "
+          pwd
+          echo "ls output:"
+          ls
+
       - name: Configure QuEST
         run:
           cmake
