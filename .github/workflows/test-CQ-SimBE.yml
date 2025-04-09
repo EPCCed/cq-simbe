@@ -33,6 +33,14 @@ jobs:
           cd Unity
           git checkout -b v2.6.1 tags/v2.6.1
 
+      - name: Debug
+        run: |
+          cd ${DEPENDENCY_DIR}
+          pwd
+          ls
+          ls QuEST
+          ls Unity
+
       - name: Upload QuEST Source
         uses: actions/upload-artifact@v4
         with:
