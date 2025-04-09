@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "github-ci" ]
 
+env:
+  DEPENDENCY_DIR: ${{ github.workspace }}/Dependencies
+  DEPENDENCY_INSTALL_DIR: ${{ github.workspace }}/Dependencies/install
+
 jobs:
   checkout-dependencies:
     runs-on: ubuntu-latest
@@ -14,12 +18,10 @@ jobs:
 
       - name: Store dependency directory
         run: |
-          echo "DEPENDENCY_DIR=${{ github.workspace }}/Dependencies" >> "$GITHUB_ENV"
           echo "DEPENDENCY_DIR=$DEPENDENCY_DIR"
 
       - name: Store dependency install directory
         run: |
-          echo "DEPENDENCY_INSTALL_DIR=$DEPENDENCY_DIR/install" >> "$GITHUB_ENV"
           echo "DEPENCENCY_INSTALL_DIR=$DEPENDENCY_INSTALL_DIR"
 
       - name: Create dependency directories
