@@ -45,14 +45,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: QuEST Source
-          path: ${DEPENDENCY_DIR}/QuEST/
+          path: ${{ env.DEPENDENCY_DIR }}/QuEST/
           if-no-files-found: error
 
       - name: Upload Unity Source
         uses: actions/upload-artifact@v4
         with:
           name: Unity Source
-          path: ${DEPENDENCY_DIR}/Unity/
+          path: ${{ env.DEPENDENCY_DIR }}/Unity/
           if-no-files-found: error
 
   build-dependencies:
