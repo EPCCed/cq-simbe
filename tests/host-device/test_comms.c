@@ -43,6 +43,21 @@ void test_host_send_and_wait_ctrl_op(void) {
   return;
 }
 
+void test_op_queue(void) {
+  unsigned int test_count = 0;
+
+  TEST_ASSERT_EQUAL_UINT(0, test_count);
+
+  // Trying to fill the queue and ensure that all functions still run correctly
+  for (size_t i = 0; i < 2 * __CQ_DEVICE_QUEUE_SIZE__; ++i) {
+    host_send_ctrl_op(CQ_CTRL_TEST, &test_count);
+  }
+  host_wait_all_ops();
+  TEST_ASSERT_EQUAL_UINT(2 * __CQ_DEVICE_QUEUE_SIZE__, test_count);
+  
+  return;
+}
+
 void test_finalise_device(void) {
   const unsigned int VERBOSITY = 0;
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, finalise_device(VERBOSITY));
