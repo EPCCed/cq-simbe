@@ -50,7 +50,7 @@ cq_status find_qkern_pointer(char const * const FNAME, qkern * qk) {
   return status;
 }
 
-cq_status find_qkern_name(const qkern QK, char const ** fname) {
+cq_status find_qkern_name(const qkern QK, char ** fname) {
   *fname = NULL;
   cq_status status = CQ_SUCCESS;
 
@@ -84,7 +84,7 @@ cq_status find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
   return status;
 }
 
-cq_status find_pqkern_name(pqkern const PQK, char const ** fname) {
+cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
   *fname = NULL;
   int status = CQ_SUCCESS;
 

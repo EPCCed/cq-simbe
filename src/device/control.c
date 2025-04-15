@@ -62,11 +62,11 @@ int run_qkernel(void * par) {
 
   // find local function pointer
   qkern qk = NULL;
-  int status = find_qkern_pointer(qk_par->FNAME, &qk);
+  int status = find_qkern_pointer(qk_par->fname, &qk);
 
   // run it!
   if (!status) {
-    qk(qk_par->NQUBITS, qk_par->qreg, qk_par->creg, NULL);
+    qk(qk_par->nqubits, qk_par->qreg, qk_par->creg, NULL);
   }
 
   return status;
@@ -77,11 +77,11 @@ int run_pqkernel(void * par) {
 
   // find local function pointer
   pqkern pqk = NULL;
-  int status = find_pqkern_pointer(pqk_par->FNAME, &pqk);
+  int status = find_pqkern_pointer(pqk_par->fname, &pqk);
 
   // run it!
   if (!status) {
-    pqk(pqk_par->NQUBITS, pqk_par->qreg, pqk_par->creg, pqk_par->params, NULL);
+    pqk(pqk_par->nqubits, pqk_par->qreg, pqk_par->creg, pqk_par->params, NULL);
   }
 
  return status;

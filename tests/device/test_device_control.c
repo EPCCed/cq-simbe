@@ -47,16 +47,16 @@ void test_run_qkernel(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(zero_init_full_qft));
 
   qkern_params qkp_ur = {
-    .FNAME = "unregistered_kernel",
-    .NQUBITS = NQUBITS,
+    .fname = "unregistered_kernel",
+    .nqubits = NQUBITS,
     .qreg = qr,
     .creg = cr,
     .params = NULL
   };
 
   qkern_params qkp_zqft = {
-    .FNAME = "zero_init_full_qft",
-    .NQUBITS = NQUBITS,
+    .fname = "zero_init_full_qft",
+    .nqubits = NQUBITS,
     .qreg = qr,
     .creg = cr,
     .params = NULL

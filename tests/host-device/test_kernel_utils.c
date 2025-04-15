@@ -73,7 +73,7 @@ void test_find_qkern_pointer(void) {
 
 void test_find_qkern_name(void) {
   char msg[64];
-  const char * fname = NULL;
+  char * fname = NULL;
 
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     sprintf(msg, "i = %zu, fn = %p", i, (void*) qk_reg.qkernels[i].fn);

@@ -77,7 +77,7 @@ cq_status free_qureg(qubit ** qrp) {
 cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
 cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   cq_status status = CQ_ERROR;
-  char const * fname = NULL;
+  char * fname = NULL;
 
   // proceed iff there are any shots
   // and the qreg is non-null
@@ -88,21 +88,25 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
     status = find_qkern_name(kernel, &fname);    
 
     if (status == CQ_SUCCESS) {
-      qkern_params qk_par = {
-        .FNAME = fname,
-        .NQUBITS = NQUBITS,
-        .creg = crp,
-        .qreg = qrp,
-        .params = NULL
-      };
+      qkern_params qk_pars[NSHOTS]; 
 
       for (size_t shot = 0; shot < NSHOTS; ++shot) {
-        host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, &qk_par);
-        host_wait_all_ops();
-        if (qk_par.creg != NULL) qk_par.creg += NMEASURE;
+        qk_pars[shot].fname = fname;
+        qk_pars[shot].nqubits = NQUBITS;
+        qk_pars[shot].creg = crp + shot * NMEASURE;
+        qk_pars[shot].qreg = qrp;
+        qk_pars[shot].params = NULL;
+        host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, &qk_pars[shot]);
       }
+      host_wait_all_ops();
     }
   }
 
   return status;
+}
+
+cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
+struct exec * const ehp) {
+  return CQ_SUCCESS;
 }

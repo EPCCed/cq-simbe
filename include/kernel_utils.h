@@ -32,8 +32,8 @@ extern struct qkern_registry qk_reg;
 extern struct pqkern_registry pqk_reg;
 
 typedef struct qkern_params {
-  const char * FNAME;
-  const size_t NQUBITS;
+  char * fname;
+  size_t nqubits;
   qubit * qreg;
   cstate * creg;
   void * params;
@@ -49,10 +49,10 @@ cq_status register_pqkern(pqkern kernel);
 
 cq_status find_qkern_pointer(const char * FNAME, qkern * qk);
 
-cq_status find_qkern_name(qkern const QK, char const ** fname);
+cq_status find_qkern_name(qkern const QK, char ** fname);
 
 cq_status find_pqkern_pointer(const char * FNAME, pqkern * pqk);
 
-cq_status find_pqkern_name(pqkern const PQK, char const ** fname);
+cq_status find_pqkern_name(pqkern const PQK, char ** fname);
 
 #endif
