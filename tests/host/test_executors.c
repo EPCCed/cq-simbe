@@ -18,6 +18,7 @@ void test_first_run(void) {
   const size_t NMEASURE = NQUBITS;
   const size_t NSHOTS = 1;
   const cstate CR_INIT_VAL = -1;
+  struct exec eh;
 
   cstate * cr;
   cr = (cstate*) malloc(NMEASURE*NSHOTS*sizeof(cstate));
@@ -38,9 +39,37 @@ void test_first_run(void) {
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
-  TEST_ASSERT_EQUAL_INT16(CQ_SUCCESS,
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE*NSHOTS);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, 
+    am_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
+  );
+  TEST_ASSERT(eh.exec_init);
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_FALSE(eh.exec_init);
+  TEST_ASSERT(eh.complete);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.completed_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, eh.status);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
+
+  init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
+
+  init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    am_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, 
+      &eh)
+  );
+  TEST_ASSERT(eh.exec_init);
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_FALSE(eh.exec_init);
+  TEST_ASSERT(eh.complete);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.completed_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, eh.status);
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
@@ -51,9 +80,37 @@ void test_first_run(void) {
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    am_qrun(all_site_hadamard, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
+  );
+  TEST_ASSERT(eh.exec_init);
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_FALSE(eh.exec_init);
+  TEST_ASSERT(eh.complete);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.completed_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, eh.status);
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
+
+  init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     // we use NMEASURE=1 here
     sm_qrun(only_measure_first_site, qr, NQUBITS, cr, 1, NSHOTS)
   );
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NSHOTS);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr+NSHOTS, (NMEASURE-1)*NSHOTS);
+
+  init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    // we use NMEASURE=1 here
+    am_qrun(only_measure_first_site, qr, NQUBITS, cr, 1, NSHOTS, &eh)
+  );
+  TEST_ASSERT(eh.exec_init);
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_FALSE(eh.exec_init);
+  TEST_ASSERT(eh.complete);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.completed_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, eh.status);
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NSHOTS);
   TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr+NSHOTS, (NMEASURE-1)*NSHOTS);
 
@@ -62,6 +119,19 @@ void test_first_run(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     sm_qrun(no_measure_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NSHOTS*NMEASURE);
+
+  init_creg(NSHOTS*NMEASURE, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    am_qrun(no_measure_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
+  );
+  TEST_ASSERT(eh.exec_init);
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_FALSE(eh.exec_init);
+  TEST_ASSERT(eh.complete);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.completed_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, eh.status);
   TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NSHOTS*NMEASURE);
 
   free_qureg(&qr);
