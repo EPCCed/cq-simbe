@@ -88,11 +88,12 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
     status = find_qkern_name(kernel, &fname);    
 
     if (status == CQ_SUCCESS) {
-      qkern_params qk_pars[NSHOTS]; 
+      // safe because we wait on all ops before exiting this function
+      qkern_params qk_pars[NSHOTS];   
 
       for (size_t shot = 0; shot < NSHOTS; ++shot) {
-        qk_pars[shot].fname = fname;
         qk_pars[shot].nqubits = NQUBITS;
+        qk_pars[shot].fname = fname;
         qk_pars[shot].creg = crp + shot * NMEASURE;
         qk_pars[shot].qreg = qrp;
         qk_pars[shot].params = NULL;
@@ -107,6 +108,55 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
 
 cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
 cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
-struct exec * const ehp) {
-  return CQ_SUCCESS;
+cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  char * fname = NULL;
+
+  if (NSHOTS == 0) {
+    status = CQ_SUCCESS;
+  } else if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
+    status = find_qkern_name(kernel, &fname);
+
+    if (status == CQ_SUCCESS) {
+      // init_exec_handle will malloc qkern_param array
+      init_exec_handle(NSHOTS, ehp);
+
+      for (size_t shot = 0; shot < NSHOTS; ++shot) {
+        ehp->qk_pars[shot].nqubits = NQUBITS;
+        ehp->qk_pars[shot].fname = fname;
+        ehp->qk_pars[shot].qreg = qrp;
+        ehp->qk_pars[shot].creg = crp + shot * NMEASURE;
+        ehp->qk_pars[shot].params = NULL;
+        host_send_exec(CQ_CTRL_RUN_QKERNEL, ehp, shot);
+      }
+    }
+
+  }
+
+  return status;
+}
+
+// Synchronisation
+
+cq_status sync_qrun(cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  if (ehp->exec_init) {
+    host_sync_exec(ehp);
+    status = CQ_SUCCESS;
+  }
+  return status;  
+}
+
+cq_status wait_qrun(cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  if (ehp->exec_init) {
+    size_t shots_completed = host_wait_exec(ehp);
+    if (shots_completed == ehp->expected_shots) {
+      status = CQ_SUCCESS;
+    } else {
+      status = CQ_WARNING;
+    }
+    finalise_exec_handle(ehp);
+  }
+  return status;
 }

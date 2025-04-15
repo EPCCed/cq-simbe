@@ -1,3 +1,6 @@
+#include <stdbool.h>
+#include <stdlib.h>
+#include <pthread.h>
 #include <string.h>
 #include "kernel_utils.h"
 
@@ -6,7 +9,7 @@ struct pqkern_registry pqk_reg;
 
 cq_status register_qkern(qkern kernel) {
   cq_status status = CQ_ERROR;
-  const char * fname;
+  char * fname;
   
   if (kernel != NULL && qk_reg.next_available_slot < __CQ_MAX_NUM_QKERN__) {
     status = find_qkern_name(kernel, &fname);
@@ -99,4 +102,30 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
   if (*fname == NULL) status = CQ_ERROR;
 
   return status;
+}
+
+void init_exec_handle(const size_t NSHOTS, cq_exec * ehp) {
+  if (!ehp->exec_init) { 
+    ehp->exec_init = true;
+    ehp->complete = false;
+    ehp->status = CQ_ERROR;
+    ehp->completed_shots = 0;
+    ehp->expected_shots = NSHOTS;
+    ehp->qk_pars = (qkern_params *) malloc(NSHOTS * sizeof(qkern_params));
+    pthread_mutex_init(&(ehp->lock), NULL);
+    pthread_cond_init(&(ehp->cond_exec_complete), NULL);
+  }
+  return;
+}
+
+void finalise_exec_handle(cq_exec * ehp) {
+  if (ehp->exec_init) {
+    pthread_mutex_lock(&(ehp->lock));
+    ehp->exec_init = false;
+    free(ehp->qk_pars);
+    pthread_mutex_unlock(&(ehp->lock));
+    pthread_mutex_destroy(&(ehp->lock));
+    pthread_cond_destroy(&(ehp->cond_exec_complete));
+  }
+  return;
 }

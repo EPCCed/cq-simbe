@@ -24,6 +24,7 @@ struct dev_link {
   size_t next_op_out;
   enum ctrl_code op_buffer[__CQ_DEVICE_QUEUE_SIZE__];
   void * op_params_buffer[__CQ_DEVICE_QUEUE_SIZE__];
+  cq_exec * exec_handle_buffer[__CQ_DEVICE_QUEUE_SIZE__];
 };
 
 typedef struct device_alloc_params {
@@ -37,6 +38,13 @@ extern struct dev_link dev_ctrl;
 int initialise_device(const unsigned int VERBOSITY);
 
 size_t host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params);
+
+size_t host_send_exec(const enum ctrl_code OP, cq_exec * const ehp,
+  const size_t SHOT);
+
+size_t host_sync_exec(cq_exec * const ehp);
+
+size_t host_wait_exec(cq_exec * const ehp);
 
 size_t host_wait_all_ops();
 

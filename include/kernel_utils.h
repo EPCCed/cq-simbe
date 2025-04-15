@@ -32,8 +32,8 @@ extern struct qkern_registry qk_reg;
 extern struct pqkern_registry pqk_reg;
 
 typedef struct qkern_params {
-  char * fname;
   size_t nqubits;
+  char * fname;
   qubit * qreg;
   cstate * creg;
   void * params;
@@ -54,5 +54,11 @@ cq_status find_qkern_name(qkern const QK, char ** fname);
 cq_status find_pqkern_pointer(const char * FNAME, pqkern * pqk);
 
 cq_status find_pqkern_name(pqkern const PQK, char ** fname);
+
+// set exec handles
+
+void init_exec_handle(const size_t NSHOTS, cq_exec * ehp);
+
+void finalise_exec_handle(cq_exec * ehp);
 
 #endif
