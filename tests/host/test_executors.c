@@ -18,7 +18,7 @@ void test_first_run(void) {
   const size_t NMEASURE = NQUBITS;
   const size_t NSHOTS = 1;
   const cstate CR_INIT_VAL = -1;
-  struct exec eh;
+  cq_exec eh;
 
   cstate * cr;
   cr = (cstate*) malloc(NMEASURE*NSHOTS*sizeof(cstate));
@@ -44,7 +44,8 @@ void test_first_run(void) {
     am_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -64,7 +65,8 @@ void test_first_run(void) {
       &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -83,7 +85,8 @@ void test_first_run(void) {
     am_qrun(all_site_hadamard, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -105,7 +108,8 @@ void test_first_run(void) {
     am_qrun(only_measure_first_site, qr, NQUBITS, cr, 1, NSHOTS, &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -126,7 +130,8 @@ void test_first_run(void) {
     am_qrun(no_measure_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_WARNING, eh.status);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
