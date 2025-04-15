@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include "unity.h"
 #include "datatypes.h"
 #include "src/host/opcodes.h"
@@ -28,14 +27,14 @@ void test_initialise_device(void) {
 }
 
 void test_host_send_and_wait_ctrl_op(void) {
-  bool test_flag = false;
+  unsigned int test_count = 0;
 
-  TEST_ASSERT_FALSE(test_flag);
-  host_send_ctrl_op(CQ_CTRL_TEST, &test_flag);
-  TEST_ASSERT_FALSE(test_flag); // may be sensitive to timing
+  TEST_ASSERT_EQUAL_UINT(0, test_count);
+  host_send_ctrl_op(CQ_CTRL_TEST, &test_count);
+  TEST_ASSERT_EQUAL_UINT(0, test_count);  // may be sensitive to timing
 
   host_wait_all_ops();
-  TEST_ASSERT(test_flag);
+  TEST_ASSERT_EQUAL_UINT(1, test_count);
   TEST_ASSERT_EQUAL_size_t(0, dev_ctrl.num_ops);
   TEST_ASSERT_FALSE(dev_ctrl.device_busy);
   TEST_ASSERT_EACH_EQUAL_INT(CQ_CTRL_IDLE, dev_ctrl.op_buffer, __CQ_DEVICE_QUEUE_SIZE__);

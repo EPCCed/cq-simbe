@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stdio.h>
 #include "datatypes.h"
 #include "src/host-device/comms.h"
@@ -89,15 +88,9 @@ int run_pqkernel(void * par) {
 }
 
 int test_control_fn(void * par) {
-  cq_status status = CQ_ERROR;
-  bool * p_test_flag = (bool *) par;
+  unsigned int * p_test_count = (unsigned int *) par;
 
-  if (!(*p_test_flag)) {
-    *p_test_flag = true;
-    status = CQ_SUCCESS;
-  } else {
-    status = CQ_WARNING;
-  }
+  (*p_test_count)++;
 
-  return status;
+  return CQ_SUCCESS;
 }
