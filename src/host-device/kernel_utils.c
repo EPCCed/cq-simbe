@@ -121,6 +121,7 @@ void finalise_exec_handle(cq_exec * ehp) {
     pthread_mutex_lock(&(ehp->lock));
     ehp->exec_init = false;
     free(ehp->qk_pars);
+    ehp->qk_pars = NULL;
     pthread_mutex_unlock(&(ehp->lock));
     pthread_mutex_destroy(&(ehp->lock));
     pthread_cond_destroy(&(ehp->cond_exec_complete));
