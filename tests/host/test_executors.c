@@ -2,6 +2,7 @@
 #include "unity.h"
 #include "host_ops.h"
 #include "utils.h"
+#include "tests/test_qkerns.h"
 #include "test_executors.h"
 
 const size_t NQUBITS = 5;
