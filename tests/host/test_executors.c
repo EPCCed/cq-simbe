@@ -47,6 +47,7 @@ void test_first_run(void) {
   TEST_ASSERT(eh.exec_init);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -68,6 +69,7 @@ void test_first_run(void) {
   TEST_ASSERT(eh.exec_init);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -88,6 +90,7 @@ void test_first_run(void) {
   TEST_ASSERT(eh.exec_init);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -111,6 +114,7 @@ void test_first_run(void) {
   TEST_ASSERT(eh.exec_init);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
@@ -133,6 +137,7 @@ void test_first_run(void) {
   TEST_ASSERT(eh.exec_init);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
   TEST_ASSERT(eh.complete);
