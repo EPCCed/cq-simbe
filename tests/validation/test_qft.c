@@ -89,7 +89,19 @@ void test_zero_init_qft(void) {
 
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(zero_init_full_qft));
   
-  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sm_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS));
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, 
+    sm_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS));
+
+  // tests that all measurements are within range 0-2 (so not still -1)
+  TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE * NSHOTS);
+
+  init_creg(NMEASURE * NSHOTS, -1, cr);
+
+  cq_exec eh;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, 
+    am_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh));
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
 
   // tests that all measurements are within range 0-2 (so not still -1)
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE * NSHOTS);
@@ -102,9 +114,23 @@ void test_plus_init_qft(void) {
 
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(equal_superposition_full_qft));
 
-  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sm_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS));
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, 
+    sm_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS));
 
   TEST_ASSERT_EACH_EQUAL_INT16(0, cr, NMEASURE * NSHOTS);
 
+  init_creg(NMEASURE * NSHOTS, -1, cr);
+ 
+  cq_exec eh;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, 
+    am_qrun(
+      equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh
+    )
+  );
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+
+  TEST_ASSERT_EACH_EQUAL_INT16(0, cr, NMEASURE * NSHOTS);
+  
   return;
 }
