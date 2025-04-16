@@ -32,8 +32,8 @@ cq_status alloc_qureg(qubit ** qrp, size_t N) {
     return CQ_ERROR;
   }
   
-  host_send_ctrl_op(ALLOC, &alloc_params);
-  host_wait_ctrl_op();
+  host_send_ctrl_op(CQ_CTRL_ALLOC, &alloc_params);
+  host_wait_all_ops();
 
   if (alloc_params.status == CQ_SUCCESS) {
     for (size_t i = 0; i < N; ++i) {
@@ -61,8 +61,8 @@ cq_status free_qureg(qubit ** qrp) {
     .status = CQ_ERROR
   };
 
-  host_send_ctrl_op(DEALLOC, &dealloc_params);
-  host_wait_ctrl_op();
+  host_send_ctrl_op(CQ_CTRL_DEALLOC, &dealloc_params);
+  host_wait_all_ops();
 
   if (dealloc_params.status == CQ_SUCCESS) {
     free(*qrp);
@@ -77,7 +77,7 @@ cq_status free_qureg(qubit ** qrp) {
 cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
 cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   cq_status status = CQ_ERROR;
-  char const * fname = NULL;
+  char * fname = NULL;
 
   // proceed iff there are any shots
   // and the qreg is non-null
@@ -88,21 +88,78 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
     status = find_qkern_name(kernel, &fname);    
 
     if (status == CQ_SUCCESS) {
-      qkern_params qk_par = {
-        .FNAME = fname,
-        .NQUBITS = NQUBITS,
-        .creg = crp,
-        .qreg = qrp,
-        .params = NULL
-      };
+      // safe because we wait on all ops before exiting this function
+      qkern_params qk_pars[NSHOTS];   
 
       for (size_t shot = 0; shot < NSHOTS; ++shot) {
-        host_send_ctrl_op(RUN_QKERNEL, &qk_par);
-        host_wait_ctrl_op();
-        if (qk_par.creg != NULL) qk_par.creg += NMEASURE;
+        qk_pars[shot].nqubits = NQUBITS;
+        qk_pars[shot].fname = fname;
+        qk_pars[shot].creg = crp + shot * NMEASURE;
+        qk_pars[shot].qreg = qrp;
+        qk_pars[shot].params = NULL;
+        host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, &qk_pars[shot]);
       }
+      host_wait_all_ops();
     }
   }
 
+  return status;
+}
+
+cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
+cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  char * fname = NULL;
+
+  // init_exec_handle will malloc qkern_param array
+  init_exec_handle(NSHOTS, ehp);
+
+  if (NSHOTS == 0) {
+    status = CQ_SUCCESS;
+    finalise_exec_handle(ehp);
+  } else if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
+    status = find_qkern_name(kernel, &fname);
+
+    if (status == CQ_SUCCESS) {
+      for (size_t shot = 0; shot < NSHOTS; ++shot) {
+        ehp->qk_pars[shot].nqubits = NQUBITS;
+        ehp->qk_pars[shot].fname = fname;
+        ehp->qk_pars[shot].qreg = qrp;
+        ehp->qk_pars[shot].creg = crp + shot * NMEASURE;
+        ehp->qk_pars[shot].params = NULL;
+        host_send_exec(CQ_CTRL_RUN_QKERNEL, ehp, shot);
+      }
+    }
+
+  } else {
+    finalise_exec_handle(ehp);
+  }
+
+  return status;
+}
+
+// Synchronisation
+
+cq_status sync_qrun(cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  if (ehp != NULL && ehp->exec_init) {
+    host_sync_exec(ehp);
+    status = CQ_SUCCESS;
+  }
+  return status;  
+}
+
+cq_status wait_qrun(cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  if (ehp != NULL && ehp->exec_init) {
+    size_t shots_completed = host_wait_exec(ehp);
+    if (shots_completed == ehp->expected_shots) {
+      status = CQ_SUCCESS;
+    } else {
+      status = CQ_WARNING;
+    }
+    finalise_exec_handle(ehp);
+  }
   return status;
 }

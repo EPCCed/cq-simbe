@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stdio.h>
 #include "datatypes.h"
 #include "src/host-device/comms.h"
@@ -63,11 +62,11 @@ int run_qkernel(void * par) {
 
   // find local function pointer
   qkern qk = NULL;
-  int status = find_qkern_pointer(qk_par->FNAME, &qk);
+  int status = find_qkern_pointer(qk_par->fname, &qk);
 
   // run it!
   if (!status) {
-    qk(qk_par->NQUBITS, qk_par->qreg, qk_par->creg, NULL);
+    qk(qk_par->nqubits, qk_par->qreg, qk_par->creg, NULL);
   }
 
   return status;
@@ -78,26 +77,20 @@ int run_pqkernel(void * par) {
 
   // find local function pointer
   pqkern pqk = NULL;
-  int status = find_pqkern_pointer(pqk_par->FNAME, &pqk);
+  int status = find_pqkern_pointer(pqk_par->fname, &pqk);
 
   // run it!
   if (!status) {
-    pqk(pqk_par->NQUBITS, pqk_par->qreg, pqk_par->creg, pqk_par->params, NULL);
+    pqk(pqk_par->nqubits, pqk_par->qreg, pqk_par->creg, pqk_par->params, NULL);
   }
 
  return status;
 }
 
 int test_control_fn(void * par) {
-  cq_status status = CQ_ERROR;
-  bool * p_test_flag = (bool *) par;
+  unsigned int * p_test_count = (unsigned int *) par;
 
-  if (!(*p_test_flag)) {
-    *p_test_flag = true;
-    status = CQ_SUCCESS;
-  } else {
-    status = CQ_WARNING;
-  }
+  (*p_test_count)++;
 
-  return status;
+  return CQ_SUCCESS;
 }

@@ -1,3 +1,6 @@
+#include <stdbool.h>
+#include <stdlib.h>
+#include <pthread.h>
 #include <string.h>
 #include "kernel_utils.h"
 
@@ -6,9 +9,9 @@ struct pqkern_registry pqk_reg;
 
 cq_status register_qkern(qkern kernel) {
   cq_status status = CQ_ERROR;
-  const char * fname;
+  char * fname;
   
-  if (kernel != NULL && qk_reg.next_available_slot < __MAX_NUM_QKERN__) {
+  if (kernel != NULL && qk_reg.next_available_slot < __CQ_MAX_NUM_QKERN__) {
     status = find_qkern_name(kernel, &fname);
     if (status == CQ_SUCCESS) {
       // This kernel has already been registered!
@@ -50,7 +53,7 @@ cq_status find_qkern_pointer(char const * const FNAME, qkern * qk) {
   return status;
 }
 
-cq_status find_qkern_name(const qkern QK, char const ** fname) {
+cq_status find_qkern_name(const qkern QK, char ** fname) {
   *fname = NULL;
   cq_status status = CQ_SUCCESS;
 
@@ -84,7 +87,7 @@ cq_status find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
   return status;
 }
 
-cq_status find_pqkern_name(pqkern const PQK, char const ** fname) {
+cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
   *fname = NULL;
   int status = CQ_SUCCESS;
 
@@ -99,4 +102,29 @@ cq_status find_pqkern_name(pqkern const PQK, char const ** fname) {
   if (*fname == NULL) status = CQ_ERROR;
 
   return status;
+}
+
+void init_exec_handle(const size_t NSHOTS, cq_exec * ehp) {
+  ehp->exec_init = true;
+  ehp->complete = false;
+  ehp->status = CQ_ERROR;
+  ehp->completed_shots = 0;
+  ehp->expected_shots = NSHOTS;
+  ehp->qk_pars = (qkern_params *) malloc(NSHOTS * sizeof(qkern_params));
+  pthread_mutex_init(&(ehp->lock), NULL);
+  pthread_cond_init(&(ehp->cond_exec_complete), NULL);
+  return;
+}
+
+void finalise_exec_handle(cq_exec * ehp) {
+  if (ehp->exec_init) {
+    pthread_mutex_lock(&(ehp->lock));
+    ehp->exec_init = false;
+    free(ehp->qk_pars);
+    ehp->qk_pars = NULL;
+    pthread_mutex_unlock(&(ehp->lock));
+    pthread_mutex_destroy(&(ehp->lock));
+    pthread_cond_destroy(&(ehp->cond_exec_complete));
+  }
+  return;
 }

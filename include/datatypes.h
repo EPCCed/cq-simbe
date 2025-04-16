@@ -3,9 +3,12 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <pthread.h>
 
-#define __MAX_NUM_QKERN__ 256
-#define __MAX_QKERN_NAME_LENGTH__ 1024
+#define __CQ_MAX_NUM_QKERN__ 256
+#define __CQ_MAX_QKERN_NAME_LENGTH__ 1024
+
+struct qkern_params;
 
 typedef enum cq_status {
   CQ_ERROR = -1,
@@ -23,10 +26,15 @@ typedef struct qubit {
 } qubit;
 
 typedef struct exec {
+  bool exec_init;
   bool complete;
-  unsigned int qdev_status;
+  cq_status status;
   size_t completed_shots;
-} exec;
+  size_t expected_shots;
+  pthread_mutex_t lock;
+  pthread_cond_t cond_exec_complete;
+  struct qkern_params * qk_pars;
+} cq_exec;
 
 struct qkern_map;
 struct pqkern_map;
@@ -41,12 +49,12 @@ typedef void (*pqkern)
 
 typedef struct qkern_map {
   qkern fn;
-  char fname[__MAX_QKERN_NAME_LENGTH__];
+  char fname[__CQ_MAX_QKERN_NAME_LENGTH__];
 } qkern_map;
 
 typedef struct pqkern_map {
   pqkern fn;
-  char fname[__MAX_QKERN_NAME_LENGTH__];
+  char fname[__CQ_MAX_QKERN_NAME_LENGTH__];
 } pqkern_map;
 
 #endif

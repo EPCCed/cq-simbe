@@ -39,9 +39,9 @@ void test_register_qkern(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(unregistered_kernel));
   TEST_ASSERT_EQUAL_size_t(5, qk_reg.next_available_slot);
 
-  qk_reg.next_available_slot = __MAX_NUM_QKERN__;
+  qk_reg.next_available_slot = __CQ_MAX_NUM_QKERN__;
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(zero_init_full_qft));
-  TEST_ASSERT_EQUAL_size_t(__MAX_NUM_QKERN__, qk_reg.next_available_slot);
+  TEST_ASSERT_EQUAL_size_t(__CQ_MAX_NUM_QKERN__, qk_reg.next_available_slot);
   // reset our vandalism of the qkern registry as there's no function to clear
   // it currently
   qk_reg.next_available_slot = 5;
@@ -55,7 +55,7 @@ void test_register_qkern(void) {
 }
 
 void test_find_qkern_pointer(void) {
-  char msg[128 + __MAX_QKERN_NAME_LENGTH__];
+  char msg[128 + __CQ_MAX_QKERN_NAME_LENGTH__];
   qkern qk = NULL;
 
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
@@ -73,7 +73,7 @@ void test_find_qkern_pointer(void) {
 
 void test_find_qkern_name(void) {
   char msg[64];
-  const char * fname = NULL;
+  char * fname = NULL;
 
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     sprintf(msg, "i = %zu, fn = %p", i, (void*) qk_reg.qkernels[i].fn);
@@ -85,5 +85,28 @@ void test_find_qkern_name(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, find_qkern_name(unregistered_kernel, &fname));
   TEST_ASSERT_NULL(fname);
 
+  return;
+}
+
+void test_init_and_finalise_exec_handle(void) {
+  const size_t NSHOTS = 10;
+  cq_exec eh;
+
+  init_exec_handle(NSHOTS, &eh);
+  TEST_ASSERT(eh.exec_init);
+  TEST_ASSERT_FALSE(eh.complete);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(0, eh.completed_shots);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_NOT_NULL(eh.qk_pars);
+
+  finalise_exec_handle(&eh);
+  TEST_ASSERT_FALSE(eh.exec_init);
+  TEST_ASSERT_FALSE(eh.complete);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(0, eh.completed_shots);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_NULL(eh.qk_pars);
+  
   return;
 }
