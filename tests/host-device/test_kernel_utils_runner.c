@@ -11,6 +11,7 @@ int main (void)
   RUN_TEST(test_register_qkern);
   RUN_TEST(test_find_qkern_pointer);
   RUN_TEST(test_find_qkern_name);
+  RUN_TEST(test_init_and_finalise_exec_handle);
 
   cq_finalise(0);
 

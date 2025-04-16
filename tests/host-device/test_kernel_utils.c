@@ -87,3 +87,26 @@ void test_find_qkern_name(void) {
 
   return;
 }
+
+void test_init_and_finalise_exec_handle(void) {
+  const size_t NSHOTS = 10;
+  cq_exec eh;
+
+  init_exec_handle(NSHOTS, &eh);
+  TEST_ASSERT(eh.exec_init);
+  TEST_ASSERT_FALSE(eh.complete);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(0, eh.completed_shots);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_NOT_NULL(eh.qk_pars);
+
+  finalise_exec_handle(&eh);
+  TEST_ASSERT_FALSE(eh.exec_init);
+  TEST_ASSERT_FALSE(eh.complete);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(0, eh.completed_shots);
+  TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
+  TEST_ASSERT_NULL(eh.qk_pars);
+  
+  return;
+}
