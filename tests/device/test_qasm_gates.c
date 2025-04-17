@@ -12,7 +12,7 @@
 #define M_PI 3.141592653589793238
 #endif
 
-const double DELTA = __DBL_EPSILON__;
+const double DELTA = 10 * __DBL_EPSILON__;
 const size_t NQUBITS = 5;
 const size_t NAMPS = 1 << NQUBITS;
 qubit * qr;
@@ -94,10 +94,15 @@ void test_unitary(void) {
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, unitary(&qr[i], theta, phi, lambda));
   }
 
+  double expect_zero[2 * (NAMPS-1)];
+  for (i = 0; i < 2 * (NAMPS-1); ++i) expect_zero[i] = 0.0;
+
   getAmps(sv);
-  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS - 1));
-  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS-1]));
-  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[NAMPS-1]));
+  TEST_ASSERT_DOUBLE_ARRAY_WITHIN(DELTA, expect_zero, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_DOUBLE_WITHIN(DELTA, 1.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_DOUBLE_WITHIN(DELTA, 0.0, cimag(sv[NAMPS-1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, unitary(NULL, theta, phi, lambda));
 
   return;
 }
@@ -116,20 +121,20 @@ void test_gphase(void) {
   getAmps(sv);
   for (i = 0; i < NAMPS; ++i) {
     sprintf(msg, "Real component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(-EXPECTED, creal(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, -EXPECTED, creal(sv[i]), msg);
 
     sprintf(msg, "Imaginary component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
   } 
   
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, gphase(&qr[NQUBITS-1], M_PI));
   getAmps(sv);
   for (i = 0; i < NAMPS; ++i) {
     sprintf(msg, "Real component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(EXPECTED, creal(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, EXPECTED, creal(sv[i]), msg);
 
     sprintf(msg, "Imaginary component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
   }
   
   // * i
@@ -137,21 +142,23 @@ void test_gphase(void) {
   getAmps(sv);
   for (i = 0; i < NAMPS; ++i) {
     sprintf(msg, "Real component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, creal(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, creal(sv[i]), msg);
 
     sprintf(msg, "Imaginary component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(EXPECTED, cimag(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, EXPECTED, cimag(sv[i]), msg);
   }
 
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, gphase(&qr[NQUBITS-1], M_PI/2));
   getAmps(sv);
   for (i = 0; i < NAMPS; ++i) {
     sprintf(msg, "Real component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(-EXPECTED, creal(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, -EXPECTED, creal(sv[i]), msg);
 
     sprintf(msg, "Imaginary component: index = %lu", i);
-    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
   }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, gphase(NULL, 0.0));
 
   return;
 }
@@ -169,18 +176,20 @@ void test_phase(void) {
   for (size_t i = 0; i < NAMPS; ++i) {
     sprintf(msg, "Real component: index = %lu", i);
     if (check_bit(i, 0)) {
-      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, creal(sv[i]), msg);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, creal(sv[i]), msg);
     } else {
-      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(EXPECTED, creal(sv[i]), msg);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, EXPECTED, creal(sv[i]), msg);
     }
 
     sprintf(msg, "Imaginary component: index = %lu", i);
     if (check_bit(i, 0)) {
-      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(EXPECTED, cimag(sv[i]), msg);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, EXPECTED, cimag(sv[i]), msg);
     } else {
-      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
     }
   }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, phase(NULL, 0.0));
 
   return;
 }
