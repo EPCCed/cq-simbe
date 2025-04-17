@@ -4,7 +4,7 @@
 // Note that we are not trying to re-test QuEST here!
 
 void test_unitary(void);
-void test_gphas(void);
+void test_gphase(void);
 void test_phase(void);
 void test_paulix(void);
 void test_pauliy(void);
