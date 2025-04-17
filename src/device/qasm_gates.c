@@ -6,16 +6,43 @@
 cq_status unitary(qubit * qh, const double THETA, const double PHI,
 const double LAMBDA) {
   cq_status status = CQ_ERROR;
+  qcomp z_th = cexp(I * THETA);
+  qcomp a = (1.0 + z_th) / 2;
+  qcomp b = -I * cexp(I*LAMBDA) * (1.0 - z_th) / 2;
+  qcomp c = I * cexp(I * PHI) * (1.0 - z_th) / 2;
+  qcomp d = cexp(I * (PHI+LAMBDA)) * (1.0 + z_th) / 2;
+  CompMatr1 U = getInlineCompMatr1({{a, b}, {c, d}});
+
+  if (qh != NULL) {
+    applyCompMatr1(qregistry.registers[qh->registry_index], qh->offset, U);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status gphase(qubit * qh, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  qcomp z = cexp(I*THETA);
+  DiagMatr1 g = getInlineDiagMatr1({z,z});
+
+  if (qh != NULL) {
+    applyDiagMatr1(qregistry.registers[qh->registry_index], qh->offset, g);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status phase(qubit * qh, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyPhaseShift(qregistry.registers[qh->registry_index], qh->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
