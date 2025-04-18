@@ -446,6 +446,22 @@ void test_sqrtx(void) {
   return;
 }
 
+void test_rotx(void) {
+  return;
+}
+
+void test_roty(void) {
+  return;
+}
+
+void test_rotz(void) {
+  return;
+}
+
+void test_cpaulix(void) {
+  return;
+}
+
 void test_cphase(void) {
   char msg[128];
   complex double sv[NAMPS];
@@ -501,6 +517,26 @@ void test_cphase(void) {
   return;
 }
 
+void test_crotx(void) {
+  return;
+}
+
+void test_croty(void) {
+  return;
+}
+
+void test_crotz(void) {
+  return;
+}
+
+void test_chadamard(void) {
+  return;
+}
+
+void test_cunitary(void) {
+  return;
+}
+
 void test_swap(void) {
   char msg[128];
   complex double sv[NAMPS];
@@ -537,5 +573,13 @@ void test_swap(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, swap(NULL, &qr[0]));
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, swap(NULL, NULL));
 
+  return;
+}
+
+void test_ccpaulix(void) {
+  return;
+}
+
+void test_cswap(void) {
   return;
 }
