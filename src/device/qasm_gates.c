@@ -48,16 +48,34 @@ cq_status phase(qubit * qh, const double THETA) {
 
 cq_status paulix(qubit * qh) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyPauliX(qregistry.registers[qh->registry_index], qh->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status pauliy(qubit * qh) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyPauliY(qregistry.registers[qh->registry_index], qh->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status pauliz(qubit * qh) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyPauliZ(qregistry.registers[qh->registry_index], qh->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
