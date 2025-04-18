@@ -447,14 +447,128 @@ void test_sqrtx(void) {
 }
 
 void test_rotx(void) {
+  size_t i;
+  complex double sv[NAMPS];
+  char msg[64];
+  double theta;
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+
+  init_plus_state();
+
+  // identity
+  theta = 0;
+  for (i = 0; i < NQUBITS; ++i) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, rotx(&qr[i], theta));
+  }
+
+  getAmps(sv);
+  for (i = 0; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+  }
+
+  // { {0, -I}, {-I, 0} }
+  theta = M_PI;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, rotx(&qr[0], theta));
+
+  getAmps(sv);
+  for (i = 0; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, -NORM_AMP, cimag(sv[i]), msg);
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, rotx(NULL, theta));
+
   return;
 }
 
 void test_roty(void) {
+  size_t i;
+  complex double sv[NAMPS];
+  char msg[64];
+  double theta;
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+
+  init_plus_state();
+
+  // identity
+  theta = 0;
+  for (i = 0; i < NQUBITS; ++i) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, roty(&qr[i], theta));
+  }
+
+  getAmps(sv);
+  for (i = 0; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+  }
+
+  // { {0, 1}, {-1, 0} }
+  theta = M_PI;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, roty(&qr[0], theta));
+
+  getAmps(sv);
+  for (i = 0; i < NAMPS; i += 2) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, -NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+  }
+  for (i = 1; i < NAMPS; i += 2) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, roty(NULL, theta));
+
   return;
 }
 
 void test_rotz(void) {
+  size_t i;
+  complex double sv[NAMPS];
+  char msg[64];
+  double theta;
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+
+  init_plus_state();
+
+  // identity
+  theta = 0;
+  for (i = 0; i < NQUBITS; ++i) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, roty(&qr[i], theta));
+  }
+
+  getAmps(sv);
+  for (i = 0; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+  }
+
+  // negative identity
+  theta = 2 * M_PI;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, rotz(&qr[0], theta));
+
+  getAmps(sv);
+  for (i = 0; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, -NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, rotz(NULL, theta));
+
   return;
 }
 

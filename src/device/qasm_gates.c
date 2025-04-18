@@ -157,16 +157,34 @@ cq_status sqrtx(qubit * qh) {
 
 cq_status rotx(qubit * qh, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyRotateX(qregistry.registers[qh->registry_index], qh->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status roty(qubit * qh, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyRotateY(qregistry.registers[qh->registry_index], qh->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status rotz(qubit * qh, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyRotateZ(qregistry.registers[qh->registry_index], qh->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
