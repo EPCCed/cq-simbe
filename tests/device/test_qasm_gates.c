@@ -194,6 +194,76 @@ void test_phase(void) {
   return;
 }
 
+void test_paulix(void) {
+  complex double sv[NAMPS];
+
+  // init to all zero
+  set_qureg(qr, 0, NQUBITS);
+
+  // flip each qubit
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, paulix(&qr[i]));
+  }
+
+  // sv should now be in the all ones state
+  getAmps(sv);
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, creal(sv[NAMPS-1]));
+
+  return;
+}
+
+void test_pauliy(void) {
+  complex double sv[NAMPS];
+
+  set_qureg(qr, 0, NQUBITS);
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, pauliy(&qr[0]));
+  // qubit 0 now in state 1 with amp i
+  getAmps(sv);
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, creal(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, creal(sv[1]));
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, cimag(sv[1]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS - 2));
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, pauliy(&qr[0]));
+  // and back to all zeros
+  getAmps(sv);
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
+
+  return;
+}
+
+void test_pauliz(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+
+  init_plus_state();
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, pauliz(&qr[NQUBITS-1]));
+  // first half of sv should be as initialised, second half should be * -1
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS / 2; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+  }
+  for (size_t i = NAMPS / 2; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(-NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+  }
+
+  return;
+}
+
 void test_hadamard(void) {
   const double EXPECTED = 1.0 / sqrt(NAMPS);
   char msg[64];
