@@ -1,3 +1,5 @@
+#include <math.h>
+#include <complex.h>
 #include "datatypes.h"
 #include "resources.h"
 #include "qasm_gates.h"
@@ -92,26 +94,64 @@ cq_status hadamard(qubit * qh) {
 
 cq_status sqrtz(qubit * qh) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyS(qregistry.registers[qh->registry_index], qh->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status sqrtzhc(qubit * qh) {
   cq_status status = CQ_ERROR;
+  DiagMatr1 conjS = getInlineDiagMatr1({1, -I});
+
+  if (qh != NULL) {
+    applyDiagMatr1(qregistry.registers[qh->registry_index], qh->offset, conjS);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status sqrts(qubit * qh) {
   cq_status status = CQ_ERROR;
+
+  if (qh != NULL) {
+    applyT(qregistry.registers[qh->registry_index], qh->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status sqrtshc(qubit * qh) { 
   cq_status status = CQ_ERROR;
+  DiagMatr1 conjT = getInlineDiagMatr1({1, (1.0 - I)/sqrt(2)});
+
+  if (qh != NULL) {
+    applyDiagMatr1(qregistry.registers[qh->registry_index], qh->offset, conjT);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status sqrtx(qubit * qh) {
   cq_status status = CQ_ERROR;
+  CompMatr1 SX = getInlineCompMatr1(
+    {
+      { (1 + I) / 2, (1 - I) / 2 },
+      { (1 - I) / 2, (1 + I) / 2 }
+    }
+  );
+
+  if (qh != NULL) {
+    applyCompMatr1(qregistry.registers[qh->registry_index], qh->offset, SX);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 

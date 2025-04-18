@@ -309,6 +309,143 @@ void test_hadamard(void) {
   return;
 }
 
+void test_sqrtz(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+
+  init_plus_state();
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sqrtz(&qr[NQUBITS-1]));
+  // first half of sv should be as initialised, second half should be * i
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS / 2; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+  }
+  for (size_t i = NAMPS / 2; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP, cimag(sv[i]), msg);
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, sqrtz(NULL));
+
+  return;
+}
+
+void test_sqrtzhc(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+
+  init_plus_state();
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sqrtzhc(&qr[NQUBITS-1]));
+  // first half of sv should be as initialised, second half should be * -i
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS / 2; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+  }
+  for (size_t i = NAMPS / 2; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(-NORM_AMP, cimag(sv[i]), msg);
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, sqrtzhc(NULL));
+
+  return;
+}
+
+void test_sqrts(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+  const double root_S = 1.0 / sqrt(2);
+
+  init_plus_state();
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sqrts(&qr[NQUBITS-1]));
+  // first half of sv should be as initialised, second half should be * (1 + I)/sqrt(2)
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS / 2; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+  }
+  for (size_t i = NAMPS / 2; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP * root_S, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP * root_S, cimag(sv[i]), msg);
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, sqrts(NULL));
+
+  return;
+}
+
+void test_sqrtshc(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+  const double root_S = 1.0 / sqrt(2);
+
+  init_plus_state();
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sqrtshc(&qr[NQUBITS-1]));
+  // first half of sv should be as initialised, second half should be * (1 - I)/sqrt(2)
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS / 2; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+  }
+  for (size_t i = NAMPS / 2; i < NAMPS; ++i) {
+    sprintf(msg, "Real component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(NORM_AMP * root_S, creal(sv[i]), msg);
+    sprintf(msg, "Imaginary component: index = %lu", i);
+    TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(-NORM_AMP * root_S, cimag(sv[i]), msg);
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, sqrtshc(NULL));
+
+  return;
+}
+
+void test_sqrtx(void) {
+  complex double sv[NAMPS];
+
+  // init to all zero
+  set_qureg(qr, 0, NQUBITS);
+
+  // flip each qubit
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sqrtx(&qr[i]));
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sqrtx(&qr[i]));
+  }
+
+  // sv should now be in the all ones state
+  getAmps(sv);
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[NAMPS-1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, sqrtx(NULL));
+  
+  return;
+}
+
 void test_cphase(void) {
   char msg[128];
   complex double sv[NAMPS];

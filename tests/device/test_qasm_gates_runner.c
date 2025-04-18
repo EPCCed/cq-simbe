@@ -14,6 +14,11 @@ int main(void)
   RUN_TEST(test_paulix);
   RUN_TEST(test_pauliy);
   RUN_TEST(test_pauliz);
+  RUN_TEST(test_sqrtz);
+  RUN_TEST(test_sqrtzhc);
+  RUN_TEST(test_sqrts);
+  RUN_TEST(test_sqrtshc);
+  RUN_TEST(test_sqrtx);
   RUN_TEST(test_hadamard);
   RUN_TEST(test_cphase);
   RUN_TEST(test_swap);
