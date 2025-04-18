@@ -209,8 +209,10 @@ void test_paulix(void) {
   getAmps(sv);
   TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
   TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS-1]));
-  TEST_ASSERT_EQUAL_DOUBLE(0.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[NAMPS-1]));
 
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, paulix(NULL));
+  
   return;
 }
 
@@ -226,14 +228,16 @@ void test_pauliy(void) {
   TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
   TEST_ASSERT_EQUAL_DOUBLE(0.0, creal(sv[1]));
   TEST_ASSERT_EQUAL_DOUBLE(1.0, cimag(sv[1]));
-  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS - 2));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS - 2));
 
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, pauliy(&qr[0]));
   // and back to all zeros
   getAmps(sv);
   TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
   TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
-  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, pauliy(NULL));
 
   return;
 }
@@ -260,6 +264,8 @@ void test_pauliz(void) {
     sprintf(msg, "Imaginary component: index = %lu", i);
     TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
   }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, pauliz(NULL));
 
   return;
 }
