@@ -190,16 +190,34 @@ cq_status rotz(qubit * qh, const double THETA) {
 
 cq_status cpaulix(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledPauliX(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cpauliy(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledPauliY(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cpauliz(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledPauliZ(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 

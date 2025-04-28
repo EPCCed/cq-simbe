@@ -573,6 +573,151 @@ void test_rotz(void) {
 }
 
 void test_cpaulix(void) {
+  size_t tgt, ctrl;
+  complex double sv[NAMPS];
+  cq_status status;
+
+  // init qureg to all zeros
+  set_qureg(qr, 0, NQUBITS);
+
+  getAmps(sv);
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, &sv[1], 2 * (NAMPS-1));
+
+  // should be all identities!
+  for (ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        status = CQ_ERROR;
+      } else {
+        status = CQ_SUCCESS;
+      }
+
+      TEST_ASSERT_EQUAL_INT(status, cpaulix(&qr[ctrl], &qr[tgt]));
+
+      getAmps(sv);
+      TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+      TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+      TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, &sv[1], 2 * (NAMPS-1));
+    }
+  }
+
+  // set 0th qubit to 1
+  set_qureg(qr, 1, NQUBITS);
+  getAmps(sv);
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, &sv[2], 2 * (NAMPS-2));
+
+  // flip each other qubit using 0 as ctrl
+  ctrl = 0;
+  for (tgt = 1; tgt < NQUBITS; ++tgt) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cpaulix(&qr[ctrl], &qr[tgt]));
+  }
+  getAmps(sv);
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[NAMPS-1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpaulix(NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpaulix(NULL, &qr[0]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpaulix(&qr[0], NULL));
+
+  return;
+}
+
+void test_cpauliy(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+
+  set_qureg(qr, 1, NQUBITS);
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cpauliy(&qr[0], &qr[NQUBITS-1]));
+  // qubit 0 in state 1 and qubit N-1 now in state 1 with amp i 
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS; ++i) {
+    if (i == (NAMPS/2) + 1) {
+      sprintf(msg, "Real component: index = %lu", i);
+      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, creal(sv[i]), msg);
+      sprintf(msg, "Imaginary component: index = %lu", i);
+      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.0, cimag(sv[i]), msg);
+    } else {
+      TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv + i, 2);
+    }
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cpauliy(&qr[0], &qr[NQUBITS-1]));
+  // and back to state 1
+  getAmps(sv);
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, creal(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS-2));
+
+  for (size_t ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (size_t tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliy(&qr[ctrl], &qr[tgt]));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cpauliy(&qr[ctrl], &qr[tgt]));
+      }
+    }
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliy(NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliy(&qr[0], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliy(NULL, &qr[0]));
+
+  return;
+}
+
+void test_cpauliz(void) {
+  complex double sv[NAMPS];
+  size_t ctrl, tgt;
+
+  // initialise to zeros
+  set_qureg(qr, 0, NQUBITS);
+  getAmps(sv);
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+
+  // should be all identities!
+  for (ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliz(&qr[ctrl], &qr[tgt]));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cpauliz(&qr[ctrl], &qr[tgt]));
+        
+        getAmps(sv);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+      }
+    }
+  }
+
+  // set qubit 0 to 1, and qubit N-1 to +
+  set_qureg(qr, 1, NQUBITS);
+  hadamard(&qr[NQUBITS-1]);
+  getAmps(sv);
+  const double NORM_FAC = 1.0 / sqrt(2);
+  TEST_ASSERT_EQUAL_DOUBLE(NORM_FAC, creal(sv[1]));
+  TEST_ASSERT_EQUAL_DOUBLE(NORM_FAC, creal(sv[NAMPS/2 + 1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cpauliz(&qr[0], &qr[NQUBITS-1]));
+  getAmps(sv);
+  TEST_ASSERT_EQUAL_DOUBLE(NORM_FAC, creal(sv[1]));
+  TEST_ASSERT_EQUAL_DOUBLE(-NORM_FAC, creal(sv[NAMPS/2 + 1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliz(NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliz(&qr[0], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cpauliz(NULL, &qr[0]));
+
   return;
 }
 

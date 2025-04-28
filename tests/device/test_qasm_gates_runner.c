@@ -23,6 +23,9 @@ int main(void)
   RUN_TEST(test_rotx);
   RUN_TEST(test_roty);
   RUN_TEST(test_rotz);
+  RUN_TEST(test_cpaulix);
+  RUN_TEST(test_cpauliy);
+  RUN_TEST(test_cpauliz);
   RUN_TEST(test_cphase);
   RUN_TEST(test_swap);
 
