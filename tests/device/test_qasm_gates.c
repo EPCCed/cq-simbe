@@ -850,6 +850,7 @@ void test_croty(void) {
   set_qureg(qr, 0, NQUBITS);
 
   // identity
+  theta = 0;
   for (size_t ctrl = 0; ctrl < NQUBITS; ++ctrl) {
     for (size_t tgt = 0; tgt < NQUBITS; ++tgt) {
       if (tgt == ctrl) {
