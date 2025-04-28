@@ -27,6 +27,9 @@ int main(void)
   RUN_TEST(test_cpauliy);
   RUN_TEST(test_cpauliz);
   RUN_TEST(test_cphase);
+  RUN_TEST(test_crotx);
+  RUN_TEST(test_croty);
+  RUN_TEST(test_crotz);
   RUN_TEST(test_swap);
 
   cq_finalise(0);

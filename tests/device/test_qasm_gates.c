@@ -777,14 +777,197 @@ void test_cphase(void) {
 }
 
 void test_crotx(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  double theta;
+  const double NORM_AMP = 1.0 / sqrt(2);
+
+  set_qureg(qr, 0, NQUBITS);
+
+  // identity
+  theta = 0;
+  for (size_t ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (size_t tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotx(&qr[ctrl], &qr[tgt], theta));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, crotx(&qr[ctrl], &qr[tgt], theta));
+      
+        getAmps(sv);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+      }
+    }
+  }
+
+  // set qubit 0 to |1>
+  set_qureg(qr, 1, NQUBITS);
+  for (size_t tgt = 1; tgt < NQUBITS; ++tgt) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, crotx(&qr[0], &qr[tgt], theta));
+  
+    getAmps(sv);
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+    TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS-2));
+  }
+
+  // set qubit N-1 to |+>
+  hadamard(&qr[NQUBITS-1]);
+
+  // { {0, -I}, {-I, 0} }
+  theta = M_PI;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, crotx(&qr[0], &qr[NQUBITS-1], theta));
+
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS; ++i) {
+    if (i == 1 || i == NAMPS/2 + 1) {
+      sprintf(msg, "Real component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, creal(sv[i]), msg);
+      sprintf(msg, "Imaginary component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, -NORM_AMP, cimag(sv[i]), msg);
+    } else {
+      sprintf(msg, "Real component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, creal(sv[i]), msg);
+      sprintf(msg, "Imaginary component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+    }
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotx(NULL, NULL, theta));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotx(&qr[0], NULL, theta));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotx(NULL, &qr[0], theta));
+
   return;
 }
 
 void test_croty(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  double theta;
+
+  set_qureg(qr, 0, NQUBITS);
+
+  // identity
+  for (size_t ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (size_t tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (tgt == ctrl) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, croty(&qr[ctrl], &qr[tgt], 0.0));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, croty(&qr[ctrl], &qr[tgt], 0.0));
+
+        getAmps(sv);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+      }
+    }
+  }
+
+  // set qubit 0 to |1>
+  set_qureg(qr, 1, NQUBITS);
+  for (size_t tgt = 1; tgt < NQUBITS; ++tgt) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, croty(&qr[0], &qr[tgt], theta));
+    
+    getAmps(sv);
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+    TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS-2));
+  }
+
+  // set qubit N-1 to |+>
+  hadamard(&qr[NQUBITS-1]);
+
+  // { {0, 1}, {-1, 0} }
+  theta = M_PI;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, croty(&qr[0], &qr[NQUBITS-1], theta));
+
+  const double NORM_FAC = 1.0 / sqrt(2);
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS; i += 2) {
+    if (i == 1) {
+      TEST_ASSERT_DOUBLE_WITHIN(DELTA, NORM_FAC, creal(sv[i]));
+      TEST_ASSERT_DOUBLE_WITHIN(DELTA, 0.0, cimag(sv[i]));
+    } else if (i == NAMPS / 2 + 1) {
+      TEST_ASSERT_DOUBLE_WITHIN(DELTA, -NORM_FAC, creal(sv[i]));
+      TEST_ASSERT_DOUBLE_WITHIN(DELTA, 0.0, cimag(sv[i]));
+    } else {
+      sprintf(msg, "Real component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, creal(sv[i]), msg);
+      sprintf(msg, "Imaginary component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+    }
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, croty(NULL, NULL, theta));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, croty(&qr[0], NULL, theta));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, croty(NULL, &qr[0], theta));
+ 
   return;
 }
 
 void test_crotz(void) {
+  complex double sv[NAMPS];
+  char msg[64];
+  double theta;
+
+  // identities
+  theta = 0;
+  set_qureg(qr, 0, NQUBITS);
+  for (size_t ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (size_t tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotz(&qr[ctrl], &qr[tgt], theta));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, crotz(&qr[ctrl], &qr[tgt], theta));
+
+        getAmps(sv);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+      }
+    }
+  }
+
+  // set qubit 0 to |1>
+  set_qureg(qr, 1, NQUBITS);
+  for (size_t tgt = 1; tgt < NQUBITS; ++tgt) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, crotz(&qr[0], &qr[tgt], theta));
+    
+    getAmps(sv);
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+    TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS-2));
+  }
+
+  // set qubit N-1 to |+>
+  hadamard(&qr[NQUBITS-1]);
+
+  // negative identity
+  theta = 2 * M_PI;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, crotz(&qr[0], &qr[NQUBITS-1], theta));
+
+  const double NORM_FAC = 1.0 / sqrt(2);
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS; ++i) {
+    if (i == 1 || i == NAMPS / 2 + 1) {
+      TEST_ASSERT_DOUBLE_WITHIN(DELTA, -NORM_FAC, creal(sv[i]));
+      TEST_ASSERT_DOUBLE_WITHIN(DELTA, 0.0, cimag(sv[i]));
+    } else {
+      sprintf(msg, "Real component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, creal(sv[i]), msg);
+      sprintf(msg, "Imaginary component: index = %lu", i);
+      TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(DELTA, 0.0, cimag(sv[i]), msg);
+    }
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotz(NULL, NULL, theta));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotz(&qr[0], NULL, theta));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, crotz(NULL, &qr[0], theta));
+
   return;
 }
 

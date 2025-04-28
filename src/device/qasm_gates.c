@@ -235,16 +235,37 @@ cq_status cphase(qubit * ctrl, qubit * target, const double THETA) {
 
 cq_status crotx(qubit * ctrl, qubit * target, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledRotateX(qureg, ctrl->offset, target->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status croty(qubit * ctrl, qubit * target, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledRotateY(qureg, ctrl->offset, target->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status crotz(qubit * ctrl, qubit * target, const double THETA) {
   cq_status status = CQ_ERROR;
+  
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledRotateZ(qureg, ctrl->offset, target->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+  
   return status;
 }
 
