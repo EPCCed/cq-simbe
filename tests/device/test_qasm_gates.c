@@ -1145,9 +1145,163 @@ void test_swap(void) {
 }
 
 void test_ccpaulix(void) {
+  complex double sv[NAMPS];
+  size_t ctrl_A, ctrl_B, target;
+
+  // identities
+
+  // everything |0>
+  set_qureg(qr, 0, NQUBITS);
+
+  for (ctrl_A = 0; ctrl_A < NQUBITS; ++ctrl_A) {
+    for (ctrl_B = 0; ctrl_B < NQUBITS; ++ctrl_B) {
+      for (target = 0; target < NQUBITS; ++target) {
+        if (ctrl_A == ctrl_B || ctrl_A == target || ctrl_B == target) {
+          TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(&qr[ctrl_A], &qr[ctrl_B], &qr[target]));
+        } else {
+          TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, ccpaulix(&qr[ctrl_A], &qr[ctrl_B], &qr[target]));
+
+          getAmps(sv);
+          TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+          TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+          TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+        }
+      }
+    }
+  }
+
+  // ctrl A is |1> ctrl B is |0>
+  set_qureg(qr, 1, NQUBITS);
+  for (ctrl_B = 1; ctrl_B < NQUBITS; ++ctrl_B) {
+    for (target = 1; target < NQUBITS; ++target) {
+      if (ctrl_B == target) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(&qr[0], &qr[ctrl_B], &qr[target]));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, ccpaulix(&qr[0], &qr[ctrl_B], &qr[target]));
+
+        getAmps(sv);
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS-2));
+      }
+    }
+  }
+
+  // ctrl B is |1> ctrl A is |0>
+  for (ctrl_A = 1; ctrl_A < NQUBITS; ++ctrl_A) {
+    for (target = 1; target < NQUBITS; ++target) {
+      if (ctrl_A == target) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(&qr[ctrl_A], &qr[0], &qr[target]));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, ccpaulix(&qr[ctrl_A], &qr[0], &qr[target]));
+
+        getAmps(sv);
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS-2));
+      }
+    }
+  }
+
+  // first and last qubit in |1>
+  set_qureg(qr, NAMPS / 2 + 1, NQUBITS);
+
+  // set all remaining qubits to |1>
+  for (target = 1; target < NQUBITS - 1; ++target) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, ccpaulix(&qr[0], &qr[NQUBITS-1], &qr[target]));
+  }
+
+  getAmps(sv);
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[NAMPS-1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(NULL, NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(&qr[0], &qr[1], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(&qr[0], NULL, &qr[1]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(NULL, &qr[0], &qr[1]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(&qr[0], NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(NULL, &qr[0], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, ccpaulix(NULL, NULL, &qr[0]));
+
   return;
 }
 
 void test_cswap(void) {
+  complex double sv[NAMPS];
+  size_t ctrl, a, b;
+  char msg[64];
+
+  // Identities
+  set_qureg(qr, 1, NQUBITS);
+
+  // we fix a to 0 (which is in |1>) as otherwise 
+  // errors would be undetectable
+  a = 0;
+  for (ctrl = 1; ctrl < NQUBITS; ++ctrl) {
+    for (b = 1; b < NQUBITS; ++b) {
+      if (ctrl == b) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(&qr[ctrl], &qr[a], &qr[b]));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cswap(&qr[ctrl], &qr[a], &qr[b]));
+
+        getAmps(sv);
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS - 2));
+      }
+    }
+  }
+
+  b = 0;
+  for (ctrl = 1; ctrl < NQUBITS; ++ctrl) {
+    for (a = 1; a < NQUBITS; ++a) {
+      if (ctrl == a) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(&qr[ctrl], &qr[a], &qr[b]));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cswap(&qr[ctrl], &qr[a], &qr[b]));
+
+        getAmps(sv);
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS - 2));
+      }
+    }
+  }
+
+  // now set to state 3, and move the msb up by one each time
+  set_qureg(qr, 3, NQUBITS);
+  ctrl = 0;
+  a = 1;
+  for (b = 2; b < NQUBITS; ++b) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cswap(&qr[0], &qr[a], &qr[b]));
+
+    getAmps(sv);
+    for (size_t i = 0; i < NAMPS; ++i) {
+      sprintf(msg, "i = %lu, a = %lu, b = %lu", i, a, b);
+      if (check_bit(i, 0) && check_bit(i, b) && pop_count(i) == 2) {
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.0, creal(sv[i]), msg);
+      } else {
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, creal(sv[i]), msg);
+      }
+      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
+    }
+    
+    a = b;
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(&qr[0], &qr[1], &qr[1]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(NULL, NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(&qr[0], &qr[1], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(&qr[0], NULL, &qr[1]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(NULL, &qr[0], &qr[1]));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(&qr[0], NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(NULL, &qr[0], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cswap(NULL, NULL, &qr[0]));
+
   return;
 }

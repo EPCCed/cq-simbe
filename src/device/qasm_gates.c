@@ -313,10 +313,39 @@ cq_status swap(qubit * a, qubit * b) {
 
 cq_status ccpaulix(qubit * ctrl_a, qubit * ctrl_b, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (
+    ctrl_a != NULL
+    && ctrl_b != NULL
+    && target != NULL
+    && ctrl_a != ctrl_b
+    && ctrl_a != target 
+    && ctrl_b != target
+  ) {
+    Qureg qureg = qregistry.registers[ctrl_a->registry_index];
+    int ctrls[2] = { ctrl_a->offset, ctrl_b->offset };
+    applyMultiControlledPauliX(qureg, ctrls, 2, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cswap(qubit * ctrl, qubit * a, qubit * b) {
   cq_status status = CQ_ERROR;
+
+  if (
+    ctrl != NULL
+    && a != NULL
+    && b != NULL
+    && ctrl != a
+    && ctrl != b
+    && a != b
+  ) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledSwap(qureg, ctrl->offset, a->offset, b->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }

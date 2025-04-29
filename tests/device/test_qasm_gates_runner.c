@@ -33,6 +33,8 @@ int main(void)
   RUN_TEST(test_chadamard);
   RUN_TEST(test_cunitary);
   RUN_TEST(test_swap);
+  RUN_TEST(test_ccpaulix);
+  RUN_TEST(test_cswap);
 
   cq_finalise(0);
 
