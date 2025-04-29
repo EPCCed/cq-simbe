@@ -271,12 +271,31 @@ cq_status crotz(qubit * ctrl, qubit * target, const double THETA) {
 
 cq_status chadamard(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledHadamard(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cunitary(qubit * ctrl, qubit * target, const double THETA, 
 const double PHI, const double LAMBDA) {
   cq_status status = CQ_ERROR;
+  qcomp z_th = cexp(I * THETA);
+  qcomp a = (1.0 + z_th) / 2;
+  qcomp b = -I * cexp(I*LAMBDA) * (1.0 - z_th) / 2;
+  qcomp c = I * cexp(I * PHI) * (1.0 - z_th) / 2;
+  qcomp d = cexp(I * (PHI+LAMBDA)) * (1.0 + z_th) / 2;
+  CompMatr1 U = getInlineCompMatr1({{a, b}, {c, d}});
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledCompMatr1(qureg, ctrl->offset, target->offset, U);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 

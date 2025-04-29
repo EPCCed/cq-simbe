@@ -973,10 +973,135 @@ void test_crotz(void) {
 }
 
 void test_chadamard(void) {
+  complex double sv[NAMPS];
+
+  set_qureg(qr, 0, NQUBITS);
+
+  // Identities
+  for (size_t ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (size_t tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, chadamard(&qr[ctrl], &qr[tgt]));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, chadamard(&qr[ctrl], &qr[tgt]));
+
+        getAmps(sv);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+      }
+    }
+  }
+
+  set_qureg(qr, 1, NQUBITS);
+
+  for (size_t tgt = 1; tgt < NQUBITS; ++tgt) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, chadamard(&qr[0], &qr[tgt]));
+  }
+
+  hadamard(&qr[0]);
+
+  // Minus sign where qubit 0 in |1> because of the hadamard
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+  getAmps(sv);
+  for (size_t i = 0; i < NAMPS; i += 2) {
+    TEST_ASSERT_EQUAL_DOUBLE(NORM_AMP, creal(sv[i]));
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[i]));
+  }
+  for (size_t i = 1; i < NAMPS; i += 2) {
+    TEST_ASSERT_EQUAL_DOUBLE(-NORM_AMP, creal(sv[i]));
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[i]));
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, chadamard(NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, chadamard(&qr[0], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, chadamard(NULL, &qr[0]));
+
   return;
 }
 
 void test_cunitary(void) {
+  const double NORM_AMP = 1.0 / sqrt(NAMPS);
+  complex double sv[NAMPS];
+  char msg[64];
+  double theta, phi, lambda;
+  size_t ctrl, tgt;
+
+  // Identities
+  theta = 0.0;
+  phi = 0.0;
+  lambda = 0.0;
+
+  set_qureg(qr, 0, NQUBITS);
+  for (ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, cunitary(&qr[ctrl], &qr[tgt], theta, phi, lambda));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cunitary(&qr[ctrl], &qr[tgt], theta, phi, lambda));
+
+        getAmps(sv);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+      }
+    }
+  }
+
+  set_qureg(qr, 1, NQUBITS);
+  for (tgt = 1; tgt < NQUBITS; ++tgt) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cunitary(&qr[0], &qr[tgt], theta, phi, lambda));
+
+    getAmps(sv);
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2);
+    TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[1]));
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[1]));
+    TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+2, 2 * (NAMPS-2));
+  }
+
+
+  // NOT
+  theta = M_PI;
+  phi = 3 * M_PI / 2;
+  lambda = M_PI / 2;
+
+  // ctrl = |0>
+  set_qureg(qr, 0, NQUBITS);
+  for (ctrl = 0; ctrl < NQUBITS; ++ctrl) {
+    for (tgt = 0; tgt < NQUBITS; ++tgt) {
+      if (ctrl == tgt) {
+        TEST_ASSERT_EQUAL_INT(CQ_ERROR, cunitary(&qr[ctrl], &qr[tgt], theta, phi, lambda));
+      } else {
+        TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cunitary(&qr[ctrl], &qr[tgt], theta, phi, lambda));
+
+        getAmps(sv);
+        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+        TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+      }
+    }
+  }
+
+  // ctrl = |1>
+
+  set_qureg(qr, 1, NQUBITS);
+  for (tgt = 1; tgt < NQUBITS; ++tgt) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cunitary(&qr[0], &qr[tgt], theta, phi, lambda));
+  }
+
+  
+  double expected[2 * (NAMPS-1)];
+  for (size_t i = 0; i < 2 * (NAMPS-1); ++i) expected[i] = 0.0;
+
+  getAmps(sv);
+  TEST_ASSERT_DOUBLE_ARRAY_WITHIN(DELTA, expected, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_DOUBLE_WITHIN(DELTA, 1.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_DOUBLE_WITHIN(DELTA, 0.0, cimag(sv[NAMPS-1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cunitary(NULL, NULL, theta, phi, lambda));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cunitary(&qr[0], NULL, theta, phi, lambda));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cunitary(NULL, &qr[0], theta, phi, lambda));
+
   return;
 }
 

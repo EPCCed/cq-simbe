@@ -30,6 +30,8 @@ int main(void)
   RUN_TEST(test_crotx);
   RUN_TEST(test_croty);
   RUN_TEST(test_crotz);
+  RUN_TEST(test_chadamard);
+  RUN_TEST(test_cunitary);
   RUN_TEST(test_swap);
 
   cq_finalise(0);
