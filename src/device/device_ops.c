@@ -4,6 +4,11 @@
 #include "quest/include/initialisations.h"
 #include "quest/include/operations.h"
 
+cq_status set_qubit(qubit qh, cstate cs) {
+  cq_status status = CQ_ERROR;
+  return status;
+}
+
 cq_status set_qureg(qubit * qrp, const unsigned long long STATE_IDX, const size_t N) {
   cq_status status = CQ_ERROR;
 
