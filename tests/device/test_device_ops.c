@@ -44,6 +44,11 @@ void test_qureg_setters(void) {
     }
   }
 
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg(NULL, 0, NQUBITS));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg(qr, 0, NQUBITS+1));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg(qr, 2, 1));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg(qr, 1lu << NQUBITS, NQUBITS));
+
   return;
 }
 
@@ -62,6 +67,10 @@ void test_qureg_measure(void) {
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, measure_qureg(qr, NQUBITS, cr));
     TEST_ASSERT_EQUAL_INT16_ARRAY(expected, cr, NQUBITS);
   }
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qureg(NULL, NQUBITS, cr));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qureg(qr, NQUBITS, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qureg(qr, NQUBITS + 1, cr));
 
   return;
 }
