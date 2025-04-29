@@ -74,6 +74,58 @@ cq_status free_qureg(qubit ** qrp) {
 
 // Executors
 
+cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
+cstate * crp, const size_t NMEASURE) {
+  cq_status status = CQ_ERROR;
+  char * fname = NULL;
+
+  if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
+    status = find_qkern_name(kernel, &fname);
+
+    if (status == CQ_SUCCESS) {
+      qkern_params qk_pars;
+
+      qk_pars.nqubits = NQUBITS;
+      qk_pars.fname = fname;
+      qk_pars.creg = crp;
+      qk_pars.qreg = qrp;
+      qk_pars.params = NULL;
+
+      host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, &qk_pars);
+      host_wait_all_ops();
+    }
+  }
+
+  return status;
+}
+
+cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
+cstate * crp, const size_t NMEASURE, cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  char * fname = NULL;
+
+  // init_exec_handle will malloc qkern_param array
+  init_exec_handle(1, ehp);
+
+  if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
+    status = find_qkern_name(kernel, &fname);
+
+    if (status == CQ_SUCCESS) {
+      ehp->qk_pars[0].nqubits = NQUBITS;
+      ehp->qk_pars[0].fname = fname;
+      ehp->qk_pars[0].creg = crp;
+      ehp->qk_pars[0].qreg = qrp;
+      ehp->qk_pars[0].params = NULL;
+
+      host_send_exec(CQ_CTRL_RUN_QKERNEL, ehp, 0);
+    }
+  } else {
+    finalise_exec_handle(ehp);
+  }
+
+  return status;
+}
+
 cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
 cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   cq_status status = CQ_ERROR;
