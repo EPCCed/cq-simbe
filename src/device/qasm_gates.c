@@ -190,16 +190,34 @@ cq_status rotz(qubit * qh, const double THETA) {
 
 cq_status cpaulix(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledPauliX(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cpauliy(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledPauliY(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cpauliz(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledPauliZ(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
@@ -217,27 +235,67 @@ cq_status cphase(qubit * ctrl, qubit * target, const double THETA) {
 
 cq_status crotx(qubit * ctrl, qubit * target, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledRotateX(qureg, ctrl->offset, target->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status croty(qubit * ctrl, qubit * target, const double THETA) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledRotateY(qureg, ctrl->offset, target->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status crotz(qubit * ctrl, qubit * target, const double THETA) {
   cq_status status = CQ_ERROR;
+  
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledRotateZ(qureg, ctrl->offset, target->offset, THETA);
+    status = CQ_SUCCESS;
+  }
+  
   return status;
 }
 
 cq_status chadamard(qubit * ctrl, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    applyControlledHadamard(qregistry.registers[ctrl->registry_index], ctrl->offset, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cunitary(qubit * ctrl, qubit * target, const double THETA, 
 const double PHI, const double LAMBDA) {
   cq_status status = CQ_ERROR;
+  qcomp z_th = cexp(I * THETA);
+  qcomp a = (1.0 + z_th) / 2;
+  qcomp b = -I * cexp(I*LAMBDA) * (1.0 - z_th) / 2;
+  qcomp c = I * cexp(I * PHI) * (1.0 - z_th) / 2;
+  qcomp d = cexp(I * (PHI+LAMBDA)) * (1.0 + z_th) / 2;
+  CompMatr1 U = getInlineCompMatr1({{a, b}, {c, d}});
+
+  if (ctrl != NULL && target != NULL && ctrl != target) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledCompMatr1(qureg, ctrl->offset, target->offset, U);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
@@ -255,10 +313,39 @@ cq_status swap(qubit * a, qubit * b) {
 
 cq_status ccpaulix(qubit * ctrl_a, qubit * ctrl_b, qubit * target) {
   cq_status status = CQ_ERROR;
+
+  if (
+    ctrl_a != NULL
+    && ctrl_b != NULL
+    && target != NULL
+    && ctrl_a != ctrl_b
+    && ctrl_a != target 
+    && ctrl_b != target
+  ) {
+    Qureg qureg = qregistry.registers[ctrl_a->registry_index];
+    int ctrls[2] = { ctrl_a->offset, ctrl_b->offset };
+    applyMultiControlledPauliX(qureg, ctrls, 2, target->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }
 
 cq_status cswap(qubit * ctrl, qubit * a, qubit * b) {
   cq_status status = CQ_ERROR;
+
+  if (
+    ctrl != NULL
+    && a != NULL
+    && b != NULL
+    && ctrl != a
+    && ctrl != b
+    && a != b
+  ) {
+    Qureg qureg = qregistry.registers[ctrl->registry_index];
+    applyControlledSwap(qureg, ctrl->offset, a->offset, b->offset);
+    status = CQ_SUCCESS;
+  }
+
   return status;
 }

@@ -23,8 +23,18 @@ int main(void)
   RUN_TEST(test_rotx);
   RUN_TEST(test_roty);
   RUN_TEST(test_rotz);
+  RUN_TEST(test_cpaulix);
+  RUN_TEST(test_cpauliy);
+  RUN_TEST(test_cpauliz);
   RUN_TEST(test_cphase);
+  RUN_TEST(test_crotx);
+  RUN_TEST(test_croty);
+  RUN_TEST(test_crotz);
+  RUN_TEST(test_chadamard);
+  RUN_TEST(test_cunitary);
   RUN_TEST(test_swap);
+  RUN_TEST(test_ccpaulix);
+  RUN_TEST(test_cswap);
 
   cq_finalise(0);
 
