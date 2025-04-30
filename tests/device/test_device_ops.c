@@ -35,18 +35,20 @@ void test_qureg_setters(void) {
   TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
   TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
 
+  size_t hot_amp = 0;
   for (size_t tgt = 0; tgt < NQUBITS; ++tgt) {
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, set_qubit(qr[tgt], 1));
 
+    hot_amp += (1lu << tgt);
     getQuregAmps(sv, qregistry.registers[qr[0].registry_index], 0, NAMPS);
-    size_t hot_amp = (1lu << tgt) + 1;
     for (size_t i = 0; i < NAMPS; ++i) {
+      sprintf(msg, "target = %lu, i = %lu", tgt, i);
       if (i == hot_amp) {
-        TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[i]));
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(1.0, creal(sv[i]), msg);
       } else {
-        TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[i]));
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
       }
-      TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[i]));
+      TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, cimag(sv[i]), msg);
     }
   }
 
@@ -74,6 +76,50 @@ void test_qureg_setters(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg(qr, 0, NQUBITS+1));
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg(qr, 2, 1));
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg(qr, 1lu << NQUBITS, NQUBITS));
+
+  cstate cr[NQUBITS];
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    cr[i] = 0;
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, set_qureg_cstate(qr, cr, NQUBITS));
+
+  getQuregAmps(sv, qregistry.registers[qr[0].registry_index], 0, NAMPS);
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[0]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[0]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv+1, 2 * (NAMPS-1));
+
+  // set last qubit to 1
+  cr[NQUBITS-1] = 1;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, set_qureg_cstate(qr, cr, NQUBITS));
+
+  getQuregAmps(sv, qregistry.registers[qr[0].registry_index], 0, NAMPS);
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, NAMPS); // 2 * (NAMPS/2)
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS/2]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[NAMPS/2]));
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv + (NAMPS/2) + 1, NAMPS - 2); // 2 * (NAMPS/2 -1)
+
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    cr[i] = 1;
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, set_qureg_cstate(qr, cr, NQUBITS));
+
+  getQuregAmps(sv, qregistry.registers[qr[0].registry_index], 0, NAMPS);
+  TEST_ASSERT_EACH_EQUAL_DOUBLE(0.0, sv, 2 * (NAMPS-1));
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, creal(sv[NAMPS-1]));
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, cimag(sv[NAMPS-1]));
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg_cstate(NULL, NULL, 0));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg_cstate(qr, NULL, NQUBITS));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg_cstate(NULL, cr, NQUBITS));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg_cstate(qr, cr, NQUBITS+1));
+  
+  cr[NQUBITS-1] = -1;
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg_cstate(qr, cr, NQUBITS));
+
+  cr[NQUBITS-1] = 2;
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, set_qureg_cstate(qr, cr, NQUBITS));
 
   return;
 }
