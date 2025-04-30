@@ -2,6 +2,7 @@
 #include "unity.h"
 #include "host_ops.h"
 #include "datatypes.h"
+#include "utils.h"
 #include "src/device/resources.h"
 #include "src/device/device_utils.h"
 #include "quest/include/qureg.h"
@@ -129,10 +130,29 @@ void test_qureg_measure(void) {
   cstate cr[NQUBITS];
   cstate expected[NQUBITS];
   unsigned long long state;
-  
+
+  init_creg(NQUBITS, -1, cr);
+  set_qureg(qr, 0, NQUBITS);
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, measure_qubit(&qr[i], &cr[i]));
+  }
+  TEST_ASSERT_EACH_EQUAL_INT16(0, cr, NQUBITS);
+
+  init_creg(NQUBITS, -1, cr);
+  set_qureg(qr, (1lu << NQUBITS) - 1, NQUBITS);
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, measure_qubit(&qr[i], &cr[i]));
+  }
+  TEST_ASSERT_EACH_EQUAL_INT16(1, cr, NQUBITS);
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qubit(NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qubit(&qr[0], NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qubit(NULL, &cr[0]));
+
   for (state = 0; state < NAMPS; ++state) {
     sprintf(msg, "state = %llu", state);
 
+    init_creg(NQUBITS, -1, cr);
     set_qureg(qr, state, NQUBITS);
     qindex_to_cstate(state, expected, NQUBITS);
 

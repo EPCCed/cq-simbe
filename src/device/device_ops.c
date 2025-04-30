@@ -49,6 +49,17 @@ cq_status set_qureg_cstate(qubit * qrp, cstate const * const CRP, const size_t N
   return status;
 }
 
+cq_status measure_qubit(qubit * qbp, cstate * csp) {
+  cq_status status = CQ_ERROR;
+
+  if (qbp != NULL && csp != NULL) {
+    *csp = applyQubitMeasurement(qregistry.registers[qbp->registry_index], qbp->offset);
+    status = CQ_SUCCESS;
+  }
+
+  return status;
+}
+
 cq_status measure_qureg(qubit * qr, const size_t NQUBITS, cstate * cr) {
   cq_status status = CQ_ERROR;
 
