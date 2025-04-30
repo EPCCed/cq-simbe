@@ -15,3 +15,18 @@ cq_status qindex_to_cstate(qindex state, cstate * creg, const size_t BIT_WIDTH)
 
   return status;
 }
+
+cq_status cstate_to_qindex(cstate const * const CREG, qindex * state, const size_t BIT_WIDTH) {
+  *state = 0;
+
+  for (size_t i = 0; i < BIT_WIDTH; ++i) {
+    if (CREG[i] > -1 && CREG[i] < 2) {
+      *state += (1lu << i) * CREG[i];
+    } else {
+      *state = -1;
+      return CQ_ERROR;
+    }
+  }
+
+  return CQ_SUCCESS;
+}
