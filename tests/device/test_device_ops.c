@@ -164,5 +164,40 @@ void test_qureg_measure(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qureg(qr, NQUBITS, NULL));
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure_qureg(qr, NQUBITS + 1, cr));
 
+  init_creg(NQUBITS, -1, cr);
+  set_qureg(qr, 0, NQUBITS);
+
+  size_t targets[NQUBITS];
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    targets[i] = i;
+  }
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, measure(qr, NQUBITS, targets, NQUBITS, cr));
+  TEST_ASSERT_EACH_EQUAL_INT16(0, cr, NQUBITS);
+
+  init_creg(NQUBITS, -1, cr);
+  set_qureg(qr, NAMPS/2 - 1, NQUBITS);
+  for(size_t i = 0; i < NQUBITS - 1; ++i) {
+    targets[i] = i;
+  }
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, measure(qr, NQUBITS, targets, NQUBITS-1, cr));
+  TEST_ASSERT_EACH_EQUAL_INT16(1, cr, NQUBITS-1);
+
+  init_creg(NQUBITS, -1, cr);
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    targets[i] = NQUBITS - i - 1;
+  }
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, measure(qr, NQUBITS, targets, NQUBITS, cr));
+  TEST_ASSERT_EACH_EQUAL_INT16(1, cr, NQUBITS-1);
+  TEST_ASSERT_EQUAL_INT16(0, cr[NQUBITS-1]);
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(NULL, 0, NULL, 0, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(qr, 0, targets, 0, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(qr, 0, NULL, 0, cr));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(NULL, 0, targets, 0, cr));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(NULL, 0, NULL, 0, cr));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(NULL, 0, targets, 0, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(qr, 0, NULL, 0, NULL));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, measure(qr, NQUBITS+1, targets, NQUBITS, cr));
+
   return;
 }

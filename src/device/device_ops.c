@@ -80,3 +80,21 @@ cq_status measure_qureg(qubit * qr, const size_t NQUBITS, cstate * cr) {
 
   return status;
 }
+
+cq_status measure(qubit * qr, const size_t NQUBITS, size_t const * const TARGETS,
+const size_t NTARGETS, cstate * cr) {
+  cq_status status = CQ_ERROR;
+
+  if (qr != NULL && TARGETS != NULL && cr != NULL && NQUBITS <= qr[0].N) {
+    Qureg qureg = qregistry.registers[qr[0].registry_index];
+
+    int targs[NTARGETS];
+    for (size_t i = 0; i < NTARGETS; ++i) targs[i] = TARGETS[i];
+
+    qindex outcome = applyMultiQubitMeasurement(qureg, targs, NTARGETS);
+    qindex_to_cstate(outcome, cr, NTARGETS);
+    status = CQ_SUCCESS;
+  }
+
+  return status;
+}
