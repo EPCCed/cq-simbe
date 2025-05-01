@@ -16,6 +16,18 @@ void tearDown(void) {
   return;
 }
 
+void test_first_alloc_qubit(void) {
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, alloc_qubit(&g_qr));
+  TEST_ASSERT_NOT_NULL(g_qr);
+  return;
+}
+
+void test_first_free_qubit(void) {
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, free_qubit(&g_qr));
+  TEST_ASSERT_NULL(g_qr);
+  return;
+}
+
 void test_first_alloc_qureg(void) {
   const size_t NQ = 1;
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, alloc_qureg(&g_qr, NQ));
@@ -35,7 +47,14 @@ void test_alloc_and_free_qureg(void) {
   size_t idx;
   char msg[12];
   
-  nqubits = 1; 
+  nqubits = 1;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, alloc_qubit(&qr));
+  TEST_ASSERT_NOT_NULL(qr);
+  TEST_ASSERT_EQUAL_size_t(0, qr->offset);
+  TEST_ASSERT_EQUAL_size_t(nqubits, qr->N);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, free_qubit(&qr));
+  TEST_ASSERT_NULL(qr);
+  
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, alloc_qureg(&qr, nqubits));
   TEST_ASSERT_NOT_NULL(qr);
   TEST_ASSERT_EQUAL_size_t(0, qr[0].offset);
@@ -83,6 +102,10 @@ void test_realloc_qureg(void) {
 void test_double_free_qureg(void) {
   qubit * qr = NULL;
   const size_t NQ = 3;
+
+  alloc_qubit(&qr);
+  free_qubit(&qr);
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, free_qubit(&qr));
 
   alloc_qureg(&qr, NQ);
   free_qureg(&qr);

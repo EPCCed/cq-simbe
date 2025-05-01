@@ -144,3 +144,50 @@ void test_qindex_to_cstate(void) {
 
   return;
 }
+
+void test_cstate_to_qindex(void) {
+  const size_t N = 10;
+  const int MAX = (1lu << N) - 1;
+  cstate cr[N];
+  long long int state;
+
+  for (size_t i = 0; i < N; ++i) {
+    cr[i] = 0;
+  }
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(0, state);
+
+  cr[0] = 1;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(1, state);
+
+  cr[0] = 0;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(0, state);
+
+  cr[0] = 1;
+  cr[1] = 1;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(3, state);
+
+  cr[3] = 1;
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(11, state);
+
+  for (size_t i = 0; i < N; ++i) {
+    cr[i] = 1;
+  }
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(MAX, state);
+
+  cr[N-1] = -1;
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(-1, state);
+
+  cr[N-1] = 2;
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, cstate_to_qindex(cr, &state, N));
+  TEST_ASSERT_EQUAL_INT(-1, state);
+  
+  return;
+}
