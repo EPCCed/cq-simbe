@@ -8,6 +8,8 @@ int main ()
 
   cq_init(0);
 
+  RUN_TEST(test_first_alloc_qubit);
+  RUN_TEST(test_first_free_qubit);
   RUN_TEST(test_first_alloc_qureg);
   RUN_TEST(test_first_free_qureg);
   RUN_TEST(test_alloc_and_free_qureg);

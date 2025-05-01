@@ -6,6 +6,10 @@
 
 // Resource Management
 
+cq_status alloc_qubit(qubit ** qhp) {
+  return alloc_qureg(qhp, 1);
+}
+
 cq_status alloc_qureg(qubit ** qrp, size_t N) {
   cq_status status = CQ_SUCCESS;
   
@@ -50,6 +54,10 @@ cq_status alloc_qureg(qubit ** qrp, size_t N) {
   }
 
   return status;
+}
+
+cq_status free_qubit(qubit ** qhp) {
+  return free_qureg(qhp);
 }
 
 cq_status free_qureg(qubit ** qrp) {
