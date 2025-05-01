@@ -34,6 +34,8 @@ const size_t NTARGETS, cstate * cr) {
 
 // API functions
 
+// Resource management
+
 cq_status set_qubit(qubit qh, cstate cs) {
   // to avoid normalisation issues we fix the qubit to its
   // "natural" classical state, then flip if needed
@@ -77,6 +79,30 @@ cq_status set_qureg_cstate(qubit * qrp, cstate const * const CRP, const size_t N
   }
 
   return status;
+}
+
+// Measurements
+
+cq_status dmeasure_qubit(qubit * qbp, cstate * csp) {
+  return _single_measurement(qbp, csp);
+}
+
+cq_status dmeasure_qureg(qubit * qr, const size_t NQUBITS, cstate * cr) {
+  int targs[NQUBITS];
+  for (size_t i = 0; i < NQUBITS; ++i) targs[i] = i;
+  return _multi_measurement(qr, NQUBITS, targs, NQUBITS, cr);
+}
+
+cq_status dmeasure(qubit * qr, const size_t NQUBITS, size_t const * const TARGETS,
+const size_t NTARGETS, cstate * cr) {
+  int targs[NTARGETS];
+  if (TARGETS == NULL) {
+    return CQ_ERROR;
+  } else { 
+    for (size_t i = 0; i < NTARGETS; ++i) targs[i] = TARGETS[i];
+  }
+  
+  return _multi_measurement(qr, NQUBITS, targs, NTARGETS, cr);
 }
 
 cq_status measure_qubit(qubit * qbp, cstate * csp) {

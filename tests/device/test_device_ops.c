@@ -126,6 +126,7 @@ void test_qureg_setters(void) {
 }
 
 void test_qureg_measure(void) {
+  // the d/non-d functions are in fact identical
   char msg[32];
   cstate cr[NQUBITS];
   cstate expected[NQUBITS];
