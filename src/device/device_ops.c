@@ -4,6 +4,36 @@
 #include "quest/include/initialisations.h"
 #include "quest/include/operations.h"
 
+// Internal functions
+
+cq_status _single_measurement(qubit * qbp, cstate * csp) {
+  cq_status status = CQ_ERROR;
+
+  if (qbp != NULL && csp != NULL) {
+    *csp = applyQubitMeasurement(qregistry.registers[qbp->registry_index], qbp->offset);
+    status = CQ_SUCCESS;
+  }
+
+  return status;
+}
+
+cq_status _multi_measurement(qubit * qr, const size_t NQUBITS, int * targets,
+const size_t NTARGETS, cstate * cr) {
+  cq_status status = CQ_ERROR;
+
+  if (qr != NULL && cr != NULL && NQUBITS <= qr[0].N) {
+    Qureg qureg = qregistry.registers[qr[0].registry_index];
+
+    qindex outcome = applyMultiQubitMeasurement(qureg, targets, NTARGETS);
+    qindex_to_cstate(outcome, cr, NTARGETS);
+    status = CQ_SUCCESS;
+  }
+
+  return status;
+}
+
+// API functions
+
 cq_status set_qubit(qubit qh, cstate cs) {
   // to avoid normalisation issues we fix the qubit to its
   // "natural" classical state, then flip if needed
@@ -50,51 +80,23 @@ cq_status set_qureg_cstate(qubit * qrp, cstate const * const CRP, const size_t N
 }
 
 cq_status measure_qubit(qubit * qbp, cstate * csp) {
-  cq_status status = CQ_ERROR;
-
-  if (qbp != NULL && csp != NULL) {
-    *csp = applyQubitMeasurement(qregistry.registers[qbp->registry_index], qbp->offset);
-    status = CQ_SUCCESS;
-  }
-
-  return status;
+  return _single_measurement(qbp, csp);
 }
 
 cq_status measure_qureg(qubit * qr, const size_t NQUBITS, cstate * cr) {
-  cq_status status = CQ_ERROR;
-
-  if (qr != NULL && cr != NULL && NQUBITS <= qr[0].N) {
-    int targets[NQUBITS];
-    for (int i = 0; i < NQUBITS; ++i) {
-      targets[i] = i;
-    }
-
-    qindex outcome = applyMultiQubitMeasurement(
-      qregistry.registers[qr[0].registry_index], targets, NQUBITS
-    );
-
-    qindex_to_cstate(outcome, cr, NQUBITS);
-
-    status = CQ_SUCCESS;
-  }
-
-  return status;
+  int targs[NQUBITS];
+  for (size_t i = 0; i < NQUBITS; ++i) targs[i] = i;
+  return _multi_measurement(qr, NQUBITS, targs, NQUBITS, cr);
 }
 
 cq_status measure(qubit * qr, const size_t NQUBITS, size_t const * const TARGETS,
 const size_t NTARGETS, cstate * cr) {
-  cq_status status = CQ_ERROR;
-
-  if (qr != NULL && TARGETS != NULL && cr != NULL && NQUBITS <= qr[0].N) {
-    Qureg qureg = qregistry.registers[qr[0].registry_index];
-
-    int targs[NTARGETS];
+  int targs[NTARGETS];
+  if (TARGETS == NULL) {
+    return CQ_ERROR;
+  } else { 
     for (size_t i = 0; i < NTARGETS; ++i) targs[i] = TARGETS[i];
-
-    qindex outcome = applyMultiQubitMeasurement(qureg, targs, NTARGETS);
-    qindex_to_cstate(outcome, cr, NTARGETS);
-    status = CQ_SUCCESS;
   }
-
-  return status;
+  
+  return _multi_measurement(qr, NQUBITS, targs, NTARGETS, cr);
 }
