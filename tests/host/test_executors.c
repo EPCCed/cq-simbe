@@ -360,7 +360,7 @@ void test_nshots(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     am_qrun(zero_init_full_qft, NULL, NQUBITS, NULL, NMEASURE, nshots, &eh)
   );
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, wait_qrun(&eh));
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
 
   qubit * qr = NULL;
   alloc_qureg(&qr, NQUBITS);
