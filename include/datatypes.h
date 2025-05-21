@@ -39,11 +39,11 @@ typedef struct exec {
 struct qkern_map;
 struct pqkern_map;
 
-typedef void (*qkern)
+typedef cq_status (*qkern)
   (const size_t NQUBITS, qubit * qreg, cstate * creg, 
   struct qkern_map * registration);
 
-typedef void (*pqkern)
+typedef cq_status (*pqkern)
   (const size_t NQUBITS, qubit * qreg, cstate * creg, void * params, 
   struct pqkern_map * registration);
 

@@ -11,7 +11,7 @@
 #define M_PI 3.1415926535897932384
 #endif
 
-void qft_circuit(const size_t NQUBITS, qubit * qr) {
+cq_status qft_circuit(const size_t NQUBITS, qubit * qr) {
   // Run QFT
   for (size_t i = 0; i < NQUBITS; ++i) {
     hadamard(&qr[i]); 
@@ -27,11 +27,11 @@ void qft_circuit(const size_t NQUBITS, qubit * qr) {
     swap(&qr[i], &qr[j]);
   } 
 
-  return;
+  return CQ_SUCCESS;
 }
 
 
-void zero_init_full_qft(
+cq_status zero_init_full_qft(
 const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg)
 
@@ -44,10 +44,10 @@ const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
   // Measure
   measure_qureg(qr, NQUBITS, cr);
   
-  return;
+  return CQ_SUCCESS;
 }
 
-void equal_superposition_full_qft(
+cq_status equal_superposition_full_qft(
 const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
@@ -63,10 +63,10 @@ const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
   // Measure
   measure_qureg(qr, NQUBITS, cr);
 
-  return;
+  return CQ_SUCCESS;
 }
 
-void all_site_hadamard(const size_t NQUBITS, qubit * qr, cstate * cr,
+cq_status all_site_hadamard(const size_t NQUBITS, qubit * qr, cstate * cr,
 qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
@@ -77,10 +77,10 @@ qkern_map * reg) {
 
   measure_qureg(qr, NQUBITS, cr);
   
-  return;
+  return CQ_SUCCESS;
 }
 
-void only_measure_first_site(const size_t NQUBITS, qubit * qr,
+cq_status only_measure_first_site(const size_t NQUBITS, qubit * qr,
 cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
@@ -91,25 +91,25 @@ cstate * cr, qkern_map * reg) {
   // TODO: implement with measure_qubit once implemented
   measure_qureg(qr, 1, cr);
 
-  return;
+  return CQ_SUCCESS;
 }
 
-void no_measure_qkern(const size_t NQUBITS, qubit * qr, cstate * cr,
+cq_status no_measure_qkern(const size_t NQUBITS, qubit * qr, cstate * cr,
 qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
   // a tree falls in the forest with no-one to hear it...
 
-  return;
+  return CQ_SUCCESS;
 }
 
-void unregistered_kernel(const size_t NQUBITS, qubit * qr,
+cq_status unregistered_kernel(const size_t NQUBITS, qubit * qr,
 cstate * cr, qkern_map * reg) {
   printf("I'm an unregistered kernel. How did you get here?\n");
-  return;
+  return CQ_ERROR;
 }
 
-void overly_long_qkern_name(const size_t NQUBITS, qubit * qr,
+cq_status overly_long_qkern_name(const size_t NQUBITS, qubit * qr,
 cstate * cr, qkern_map * reg) {
   // "overly_long_qkern_name" is of course fine, but the string
   // we're about to build isn't!
@@ -129,8 +129,8 @@ cstate * cr, qkern_map * reg) {
     } else {
       reg->fname[0] = '\0';
     }
-    return;
+    return CQ_SUCCESS;
   }
 
-  return;
+  return CQ_SUCCESS;
 }

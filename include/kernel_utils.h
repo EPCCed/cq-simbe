@@ -12,9 +12,10 @@ if (reg != NULL) {\
   size_t strsz = sizeof(__func__);\
   if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {\
     strcpy(reg->fname, __func__);\
-    return;\
+    return CQ_SUCCESS;\
   } else {\
     reg->fname[0] = '\0';\
+    return CQ_ERROR;\
   }\
 }
 
