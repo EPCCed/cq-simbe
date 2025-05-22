@@ -23,6 +23,7 @@ void test_initialise_simulator(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, initialise_simulator((void*) &VERBOSE));
   TEST_ASSERT(isQuESTEnvInit());
   TEST_ASSERT_EQUAL_size_t(0, qregistry.num_registers);
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, initialise_simulator((void *) &VERBOSE));
 
   return;
 }
@@ -77,6 +78,8 @@ void test_finalise_simulator(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, finalise_simulator((void*) &VERBOSE));
   TEST_ASSERT_FALSE(isQuESTEnvInit());
   TEST_ASSERT_EQUAL_size_t(0, qregistry.num_registers);
+
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, finalise_simulator((void *) &VERBOSE));
 
   return;
 }
