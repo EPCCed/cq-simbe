@@ -158,21 +158,25 @@ void * device_control_thread(void * par) {
 
     // handle exec handle if present
     if (current_exec_handle != NULL && current_exec_handle->exec_init) {
-      pthread_mutex_lock(&(current_exec_handle->lock));
-      ++(current_exec_handle->completed_shots);
-      // if all shots are complete
-      if (
-        current_exec_handle->completed_shots ==
-        current_exec_handle->expected_shots
-      ) {
-        current_exec_handle->status = status;
-        current_exec_handle->complete = true;
-        pthread_cond_signal(&(current_exec_handle->cond_exec_complete));
+      if (status == CQ_SUCCESS) {  
+        pthread_mutex_lock(&(current_exec_handle->lock));
+        ++(current_exec_handle->completed_shots);
+        // if all shots are complete
+        if (
+          current_exec_handle->completed_shots ==
+          current_exec_handle->expected_shots
+        ) {
+          current_exec_handle->status = status;
+          current_exec_handle->complete = true;
+          pthread_cond_signal(&(current_exec_handle->cond_exec_complete));
+        } else {
+          // use warning status to indicate partial completion
+          current_exec_handle->status = CQ_WARNING;
+        }
+        pthread_mutex_unlock(&(current_exec_handle->lock));
       } else {
-        // use warning status to indicate partial completion
-        current_exec_handle->status = CQ_WARNING;
+        // kernel reports something has gone wrong!
       }
-      pthread_mutex_unlock(&(current_exec_handle->lock));
     }
   }  
  

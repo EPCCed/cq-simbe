@@ -168,6 +168,8 @@ cq_exec * const ehp) {
         ehp->qk_pars[shot].creg = crp + shot * NMEASURE;
         ehp->qk_pars[shot].params = NULL;
         host_send_exec(CQ_CTRL_RUN_QKERNEL, ehp, shot);
+
+        // check exec status here
       }
     }
 
