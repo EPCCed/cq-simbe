@@ -12,7 +12,7 @@ int main ()
 
   register_qkern(all_site_hadamard);
   register_qkern(zero_init_full_qft);
-  register_qkern(equal_superposition_full_qft);
+  register_qkern(plus_init_full_qft);
   register_qkern(only_measure_first_site);
   register_qkern(no_measure_qkern);
 

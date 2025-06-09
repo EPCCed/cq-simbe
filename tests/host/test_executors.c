@@ -77,14 +77,14 @@ void test_first_run(void) {
   init_creg(NMEASURE, CR_INIT_VAL, cr);
   TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    s_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE)
+    s_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE)
   );
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE);
 
   init_creg(NMEASURE, CR_INIT_VAL, cr);
   TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    a_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, &eh)
+    a_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE, &eh)
   );
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
@@ -95,13 +95,13 @@ void test_first_run(void) {
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    sm_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS)
+    sm_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    am_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, 
+    am_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, 
       &eh)
   );
   TEST_ASSERT(eh.exec_init);

@@ -3,6 +3,7 @@ find_library(MATHS_LIBRARY m REQUIRED)
 add_executable(test_qft
   test_qft_runner.c
   test_qft.c
+  ../test_qkerns.c
 )
 
 target_link_libraries(test_qft

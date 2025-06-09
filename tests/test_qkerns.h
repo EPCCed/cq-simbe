@@ -6,7 +6,7 @@
 cq_status qft_circuit(const size_t NQUBITS, qubit * qr);
 cq_status zero_init_full_qft(const size_t NQUBITS, qubit * qr, 
   cstate * cr, qkern_map * reg);
-cq_status equal_superposition_full_qft(const size_t NQUBITS, qubit * qr,
+cq_status plus_init_full_qft(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);
 cq_status all_site_hadamard(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);

@@ -17,8 +17,8 @@ void test_register_qkern(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(zero_init_full_qft));
   TEST_ASSERT_EQUAL_PTR(zero_init_full_qft, qk_reg.qkernels[0].fn);
   TEST_ASSERT_EQUAL_size_t(1, qk_reg.next_available_slot);
-  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(equal_superposition_full_qft));
-  TEST_ASSERT_EQUAL_PTR(equal_superposition_full_qft, qk_reg.qkernels[1].fn);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(plus_init_full_qft));
+  TEST_ASSERT_EQUAL_PTR(plus_init_full_qft, qk_reg.qkernels[1].fn);
   TEST_ASSERT_EQUAL_size_t(2, qk_reg.next_available_slot);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(all_site_hadamard));
   TEST_ASSERT_EQUAL_PTR(all_site_hadamard, qk_reg.qkernels[2].fn);
