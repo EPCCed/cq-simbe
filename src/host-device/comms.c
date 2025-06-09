@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include "datatypes.h"
 #include "kernel_utils.h"
 #include "comms.h"
@@ -25,7 +26,6 @@ int initialise_device(const unsigned int VERBOSITY) {
   for (size_t i = 0; i < __CQ_DEVICE_QUEUE_SIZE__; ++i) {
     dev_ctrl.op_buffer[i] = CQ_CTRL_IDLE;
     dev_ctrl.op_params_buffer[i] = NULL;
-    dev_ctrl.exec_handle_buffer[i] = NULL;
   }
 
   pthread_create(&dev_ctrl.device_thread, NULL, &device_control_thread, NULL);
@@ -48,34 +48,10 @@ size_t host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params) {
 
   dev_ctrl.op_buffer[dev_ctrl.next_op_in] = OP;
   dev_ctrl.op_params_buffer[dev_ctrl.next_op_in] = ctrl_params;
-  // should be unnecessary
-  dev_ctrl.exec_handle_buffer[dev_ctrl.next_op_in] = NULL;  
   ++dev_ctrl.num_ops;
 
   // It's a ring buffer! 
   // advance next_op_in then mod out buffer size
-  ++dev_ctrl.next_op_in;
-  dev_ctrl.next_op_in %= __CQ_DEVICE_QUEUE_SIZE__;
-
-  pthread_cond_signal(&dev_ctrl.cond_queue_empty);
-  pthread_mutex_unlock(&dev_ctrl.device_lock);
-
-  return dev_ctrl.num_ops;
-}
-
-size_t host_send_exec(const enum ctrl_code OP, cq_exec * const ehp,
-const size_t SHOT) {
-  pthread_mutex_lock(&dev_ctrl.device_lock);
-
-  while(dev_ctrl.num_ops >= __CQ_DEVICE_QUEUE_SIZE__) {
-    pthread_cond_wait(&dev_ctrl.cond_queue_full, &dev_ctrl.device_lock);
-  }
-
-  dev_ctrl.op_buffer[dev_ctrl.next_op_in] = OP;
-  dev_ctrl.exec_handle_buffer[dev_ctrl.next_op_in] = ehp;
-  dev_ctrl.op_params_buffer[dev_ctrl.next_op_in] = ehp->qk_pars + SHOT;
-  ++dev_ctrl.num_ops;
-
   ++dev_ctrl.next_op_in;
   dev_ctrl.next_op_in %= __CQ_DEVICE_QUEUE_SIZE__;
 
@@ -117,11 +93,31 @@ size_t host_wait_all_ops() {
   return dev_ctrl.num_ops;
 }
 
+size_t device_sync_exec(const cq_status STATUS, const size_t SHOT, 
+cstate const * const RESULT, cq_exec * ehp) {
+  pthread_mutex_lock(&ehp->lock);
+  
+  ehp->status = STATUS;
+  ehp->completed_shots += 1;
+
+  // copy local result register to exec
+  cstate * dest_creg = ehp->creg + SHOT * ehp->nmeasure;
+  memcpy(dest_creg, RESULT, ehp->nmeasure * sizeof(cstate));
+  
+  // check if the whole execution is done
+  if (ehp->completed_shots == ehp->expected_shots || STATUS != CQ_SUCCESS) {
+    ehp->complete = true;
+    pthread_cond_signal(&(ehp->cond_exec_complete));
+  }
+
+  pthread_mutex_unlock(&ehp->lock);
+
+  return SHOT;
+}
+
 void * device_control_thread(void * par) {
   enum ctrl_code current_op = CQ_CTRL_IDLE;
   void * current_op_params = NULL;
-  cq_exec * current_exec_handle = NULL;
-  cq_status status;
 
   // run_device set to FALSE at cq_finalise
   while (dev_ctrl.run_device) {
@@ -139,11 +135,8 @@ void * device_control_thread(void * par) {
     // take the next op and params out of the dev_ctrl buffer, and then tidy up the dev_ctrl buffer
     current_op = dev_ctrl.op_buffer[dev_ctrl.next_op_out];
     current_op_params = dev_ctrl.op_params_buffer[dev_ctrl.next_op_out];
-    current_exec_handle = dev_ctrl.exec_handle_buffer[dev_ctrl.next_op_out];
     dev_ctrl.op_buffer[dev_ctrl.next_op_out] = CQ_CTRL_IDLE;
     dev_ctrl.op_params_buffer[dev_ctrl.next_op_out] = NULL;
-    dev_ctrl.exec_handle_buffer[dev_ctrl.next_op_out] = NULL;
-    status = CQ_ERROR;
 
     // decrease the number of queued operations and advance next_op_out
     --dev_ctrl.num_ops;
@@ -154,30 +147,7 @@ void * device_control_thread(void * par) {
     pthread_cond_signal(&dev_ctrl.cond_queue_full);
     pthread_mutex_unlock(&dev_ctrl.device_lock);
 
-    status = control_registry[current_op](current_op_params);
-
-    // handle exec handle if present
-    if (current_exec_handle != NULL && current_exec_handle->exec_init) {
-      if (status == CQ_SUCCESS) {  
-        pthread_mutex_lock(&(current_exec_handle->lock));
-        ++(current_exec_handle->completed_shots);
-        // if all shots are complete
-        if (
-          current_exec_handle->completed_shots ==
-          current_exec_handle->expected_shots
-        ) {
-          current_exec_handle->status = status;
-          current_exec_handle->complete = true;
-          pthread_cond_signal(&(current_exec_handle->cond_exec_complete));
-        } else {
-          // use warning status to indicate partial completion
-          current_exec_handle->status = CQ_WARNING;
-        }
-        pthread_mutex_unlock(&(current_exec_handle->lock));
-      } else {
-        // kernel reports something has gone wrong!
-      }
-    }
+    control_registry[current_op](current_op_params);
   }  
  
   pthread_mutex_unlock(&dev_ctrl.device_lock);

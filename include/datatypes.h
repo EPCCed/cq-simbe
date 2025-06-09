@@ -29,11 +29,16 @@ typedef struct exec {
   bool exec_init;
   bool complete;
   cq_status status;
+  size_t nqubits;
   size_t completed_shots;
   size_t expected_shots;
+  size_t nmeasure;
   pthread_mutex_t lock;
   pthread_cond_t cond_exec_complete;
-  struct qkern_params * qk_pars;
+  char * fname;
+  qubit * qreg;
+  cstate * creg;
+  void * params;
 } cq_exec;
 
 struct qkern_map;

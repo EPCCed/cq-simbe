@@ -105,20 +105,19 @@ cstate * crp, const size_t NMEASURE, cq_exec * const ehp) {
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
-  // init_exec_handle will malloc qkern_param array
-  init_exec_handle(1, ehp);
+  init_exec_handle(NQUBITS, 1, NMEASURE, ehp);
 
   if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
     status = find_qkern_name(kernel, &fname);
 
     if (status == CQ_SUCCESS) {
-      ehp->qk_pars[0].nqubits = NQUBITS;
-      ehp->qk_pars[0].fname = fname;
-      ehp->qk_pars[0].creg = crp;
-      ehp->qk_pars[0].qreg = qrp;
-      ehp->qk_pars[0].params = NULL;
+      ehp->fname = fname;
+      ehp->qreg = qrp;
+      ehp->creg = crp;
 
-      host_send_exec(CQ_CTRL_RUN_QKERNEL, ehp, 0);
+      host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, ehp);
+    } else {
+      finalise_exec_handle(ehp);
     }
   } else {
     finalise_exec_handle(ehp);
@@ -152,7 +151,7 @@ cq_exec * const ehp) {
   char * fname = NULL;
 
   // init_exec_handle will malloc qkern_param array
-  init_exec_handle(NSHOTS, ehp);
+  init_exec_handle(NQUBITS, NSHOTS, NMEASURE, ehp);
 
   if (NSHOTS == 0) {
     status = CQ_SUCCESS;
@@ -161,16 +160,12 @@ cq_exec * const ehp) {
     status = find_qkern_name(kernel, &fname);
 
     if (status == CQ_SUCCESS) {
-      for (size_t shot = 0; shot < NSHOTS; ++shot) {
-        ehp->qk_pars[shot].nqubits = NQUBITS;
-        ehp->qk_pars[shot].fname = fname;
-        ehp->qk_pars[shot].qreg = qrp;
-        ehp->qk_pars[shot].creg = crp + shot * NMEASURE;
-        ehp->qk_pars[shot].params = NULL;
-        host_send_exec(CQ_CTRL_RUN_QKERNEL, ehp, shot);
-
-        // check exec status here
-      }
+      ehp->fname = fname;
+      ehp->qreg = qrp;
+      ehp->creg = crp;
+      host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, ehp);
+    } else {
+      finalise_exec_handle(ehp);
     }
 
   } else {
