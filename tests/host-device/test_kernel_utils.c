@@ -17,8 +17,8 @@ void test_register_qkern(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(zero_init_full_qft));
   TEST_ASSERT_EQUAL_PTR(zero_init_full_qft, qk_reg.qkernels[0].fn);
   TEST_ASSERT_EQUAL_size_t(1, qk_reg.next_available_slot);
-  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(equal_superposition_full_qft));
-  TEST_ASSERT_EQUAL_PTR(equal_superposition_full_qft, qk_reg.qkernels[1].fn);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(plus_init_full_qft));
+  TEST_ASSERT_EQUAL_PTR(plus_init_full_qft, qk_reg.qkernels[1].fn);
   TEST_ASSERT_EQUAL_size_t(2, qk_reg.next_available_slot);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, register_qkern(all_site_hadamard));
   TEST_ASSERT_EQUAL_PTR(all_site_hadamard, qk_reg.qkernels[2].fn);
@@ -89,16 +89,23 @@ void test_find_qkern_name(void) {
 }
 
 void test_init_and_finalise_exec_handle(void) {
-  const size_t NSHOTS = 10;
+  const size_t NQUBITS = 8;
+  const size_t NSHOTS = 100;
+  const size_t NMEASURE = 4;
   cq_exec eh;
 
-  init_exec_handle(NSHOTS, &eh);
+  init_exec_handle(NQUBITS, NSHOTS, NMEASURE, &eh);
   TEST_ASSERT(eh.exec_init);
   TEST_ASSERT_FALSE(eh.complete);
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(NQUBITS, eh.nqubits);
   TEST_ASSERT_EQUAL_size_t(0, eh.completed_shots);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
-  TEST_ASSERT_NOT_NULL(eh.qk_pars);
+  TEST_ASSERT_EQUAL_size_t(NMEASURE, eh.nmeasure);
+  TEST_ASSERT_NULL(eh.fname);
+  TEST_ASSERT_NULL(eh.qreg);
+  TEST_ASSERT_NULL(eh.creg);
+  TEST_ASSERT_NULL(eh.params);
 
   finalise_exec_handle(&eh);
   TEST_ASSERT_FALSE(eh.exec_init);
@@ -106,7 +113,6 @@ void test_init_and_finalise_exec_handle(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(0, eh.completed_shots);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
-  TEST_ASSERT_NULL(eh.qk_pars);
   
   return;
 }

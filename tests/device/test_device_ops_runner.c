@@ -9,6 +9,7 @@ int main (void)
   cq_init(0);
 
   RUN_TEST(test_qureg_setters);
+  RUN_TEST(test_qabort);
   RUN_TEST(test_qureg_measure);
 
   cq_finalise(0);

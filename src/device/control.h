@@ -1,18 +1,18 @@
 #ifndef DEVICE_CONTROL_H
 #define DEVICE_CONTROL_H
 
-extern int (*control_registry[8])(void *);
+extern cq_status (*control_registry[8])(void *);
 
-int initialise_simulator(void *);
+cq_status initialise_simulator(void *);
 
-int abort_current_kernel(void *);
+cq_status abort_current_kernel(void *);
 
-int finalise_simulator(void *);
+cq_status finalise_simulator(void *);
 
-int run_qkernel(void *);
+cq_status run_qkernel(void *);
 
-int run_pqkernel(void *);
+cq_status run_pqkernel(void *);
 
-int test_control_fn(void *);
+cq_status test_control_fn(void *);
 
 #endif 
