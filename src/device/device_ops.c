@@ -81,6 +81,26 @@ cq_status set_qureg_cstate(qubit * qrp, cstate const * const CRP, const size_t N
   return status;
 }
 
+// Control
+
+cq_status qabort(const int STATUS) {
+  // if there's anything we could do within the
+  // kernel to ensure graceful exit, we should do it
+  // here
+  // (currently there is not)
+
+  // at least make sure we don't return success,
+  // because the kernel runner won't end execution
+  // if we do
+
+  cq_status status = STATUS;
+  if (STATUS == CQ_SUCCESS) {
+    status = CQ_EARLY_SUCCESS;
+  }
+
+  return status;
+}
+
 // Measurements
 
 cq_status dmeasure_qubit(qubit * qbp, cstate * csp) {

@@ -12,9 +12,10 @@ if (reg != NULL) {\
   size_t strsz = sizeof(__func__);\
   if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {\
     strcpy(reg->fname, __func__);\
-    return;\
+    return CQ_SUCCESS;\
   } else {\
     reg->fname[0] = '\0';\
+    return CQ_ERROR;\
   }\
 }
 
@@ -30,14 +31,6 @@ struct pqkern_registry {
 
 extern struct qkern_registry qk_reg;
 extern struct pqkern_registry pqk_reg;
-
-typedef struct qkern_params {
-  size_t nqubits;
-  char * fname;
-  qubit * qreg;
-  cstate * creg;
-  void * params;
-} qkern_params;
 
 // Kernel registration
 
@@ -57,7 +50,7 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname);
 
 // set exec handles
 
-void init_exec_handle(const size_t NSHOTS, cq_exec * ehp);
+void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NMEASURE, cq_exec * ehp);
 
 void finalise_exec_handle(cq_exec * ehp);
 

@@ -125,6 +125,17 @@ void test_qureg_setters(void) {
   return;
 }
 
+void test_qabort(void) {
+  const int TEST_STATUS = 666;
+  const int TEST_STATUS2 = -666;
+
+  TEST_ASSERT_EQUAL_INT(TEST_STATUS, qabort(TEST_STATUS));
+  TEST_ASSERT_EQUAL_INT(TEST_STATUS2, qabort(TEST_STATUS2));
+  TEST_ASSERT_EQUAL_INT(CQ_EARLY_SUCCESS, qabort(CQ_SUCCESS));
+
+  return;
+}
+
 void test_qureg_measure(void) {
   // the d/non-d functions are in fact identical
   char msg[32];

@@ -3,20 +3,28 @@
 
 #include "datatypes.h"
 
-void qft_circuit(const size_t NQUBITS, qubit * qr);
-void zero_init_full_qft(const size_t NQUBITS, qubit * qr, 
+cq_status qft_circuit(const size_t NQUBITS, qubit * qr);
+cq_status zero_init_full_qft(const size_t NQUBITS, qubit * qr, 
   cstate * cr, qkern_map * reg);
-void equal_superposition_full_qft(const size_t NQUBITS, qubit * qr,
+cq_status plus_init_full_qft(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);
-void all_site_hadamard(const size_t NQUBITS, qubit * qr,
+cq_status all_site_hadamard(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);
-void only_measure_first_site(const size_t NQUBITS, qubit * qr,
+cq_status only_measure_first_site(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);
-void no_measure_qkern(const size_t NQUBITS, qubit * qr, cstate * cr,
+cq_status no_measure_qkern(const size_t NQUBITS, qubit * qr, cstate * cr,
   qkern_map * reg);
-void unregistered_kernel(const size_t NQUBITS, qubit * qr,
+cq_status unregistered_kernel(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);
-void overly_long_qkern_name(const size_t NQUBITS, qubit * qr,
+cq_status overly_long_qkern_name(const size_t NQUBITS, qubit * qr,
+  cstate * cr, qkern_map * reg);
+cq_status immediate_qabort(const size_t NQUBITS, qubit * qr, cstate * cr,
+  qkern_map * reg);
+cq_status successful_qabort(const size_t NQUBITS, qubit * qr,
+  cstate * cr, qkern_map * reg);
+cq_status cq_error_qabort(const size_t NQUBITS, qubit * qr,
+  cstate * cr, qkern_map * reg);
+cq_status custom_error_qabort(const size_t NQUBITS, qubit * qr,
   cstate * cr, qkern_map * reg);
 
 #endif

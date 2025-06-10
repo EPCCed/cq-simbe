@@ -77,14 +77,14 @@ void test_first_run(void) {
   init_creg(NMEASURE, CR_INIT_VAL, cr);
   TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    s_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE)
+    s_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE)
   );
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE);
 
   init_creg(NMEASURE, CR_INIT_VAL, cr);
   TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    a_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, &eh)
+    a_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE, &eh)
   );
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_FALSE(eh.exec_init);
@@ -95,13 +95,13 @@ void test_first_run(void) {
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    sm_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS)
+    sm_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS)
   );
   TEST_ASSERT_INT16_ARRAY_WITHIN(1, expected, cr, NMEASURE*NSHOTS);
 
   init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-    am_qrun(equal_superposition_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, 
+    am_qrun(plus_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, 
       &eh)
   );
   TEST_ASSERT(eh.exec_init);
@@ -360,7 +360,7 @@ void test_nshots(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
     am_qrun(zero_init_full_qft, NULL, NQUBITS, NULL, NMEASURE, nshots, &eh)
   );
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, wait_qrun(&eh));
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
 
   qubit * qr = NULL;
   alloc_qureg(&qr, NQUBITS);
@@ -477,6 +477,73 @@ void test_bad_inputs(void) {
 
   free_qureg(&qr);
   free(cr);
+
+  return;
+}
+
+void test_kernel_abort(void) {
+  const size_t NMEASURE = NQUBITS;
+  const size_t NSHOTS = 10;
+  const size_t EXP_SHOTS = 4;
+  const cstate CR_INIT_VAL = -1;
+  const int CUSTOM_STATUS = 666;
+  cstate * cr;
+  qubit * qr;
+  cq_exec eh;
+
+  cr = (cstate *) malloc(NMEASURE * NSHOTS * sizeof(cstate));
+  alloc_qureg(&qr, NQUBITS);
+
+  init_creg(NMEASURE*NSHOTS, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR,
+    s_qrun(immediate_qabort, qr, NQUBITS, cr, NMEASURE)
+  );
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE * NSHOTS);
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    a_qrun(immediate_qabort, qr, NQUBITS, cr, NMEASURE, &eh)
+  );
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(1, eh.completed_shots);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NMEASURE * NSHOTS);
+
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR,
+    sm_qrun(immediate_qabort, qr, NQUBITS, cr, NMEASURE, NSHOTS)
+  );
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr, NSHOTS * NMEASURE);
+
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    am_qrun(successful_qabort, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
+  );
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, eh.status);
+  TEST_ASSERT_EQUAL_size_t(EXP_SHOTS, eh.completed_shots);
+  TEST_ASSERT_EACH_EQUAL_INT16(1, cr, EXP_SHOTS * NMEASURE);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr + EXP_SHOTS*NMEASURE, (NSHOTS-EXP_SHOTS)*NMEASURE);
+
+  init_creg(NMEASURE * NSHOTS, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    am_qrun(cq_error_qabort, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
+  );
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
+  TEST_ASSERT_EQUAL_size_t(EXP_SHOTS, eh.completed_shots);
+  TEST_ASSERT_EACH_EQUAL_INT16(1, cr, EXP_SHOTS * NMEASURE);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr + EXP_SHOTS*NMEASURE, (NSHOTS-EXP_SHOTS)*NMEASURE);
+
+  init_creg(NMEASURE * NSHOTS, CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+    am_qrun(custom_error_qabort, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
+  );
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
+  TEST_ASSERT_EQUAL_INT(CUSTOM_STATUS, eh.status);
+  TEST_ASSERT_EQUAL_size_t(EXP_SHOTS, eh.completed_shots);
+  TEST_ASSERT_EACH_EQUAL_INT16(1, cr, EXP_SHOTS * NMEASURE);
+  TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr + EXP_SHOTS*NMEASURE, (NSHOTS-EXP_SHOTS)*NMEASURE);
+
+  free(cr);
+  free_qureg(&qr);
 
   return;
 }
