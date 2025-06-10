@@ -12,5 +12,6 @@ void test_first_run(void);
 void test_nmeasure(void);
 void test_nshots(void);
 void test_bad_inputs(void);
+void test_kernel_abort(void);
 
 #endif

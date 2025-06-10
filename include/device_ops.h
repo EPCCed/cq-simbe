@@ -14,7 +14,7 @@ cq_status set_qureg_cstate(qubit * qrp, cstate const * const CRP, const size_t N
 
 // Control
 
-cq_status qabort(const unsigned int STATUS);
+cq_status qabort(const int STATUS);
 
 // Measurements
 

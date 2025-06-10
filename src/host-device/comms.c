@@ -97,8 +97,18 @@ size_t device_sync_exec(const cq_status STATUS, const size_t SHOT,
 cstate const * const RESULT, cq_exec * ehp) {
   pthread_mutex_lock(&ehp->lock);
   
-  ehp->status = STATUS;
+  if (STATUS == CQ_EARLY_SUCCESS) {
+    // generally speaking we should respect the kernel-provided
+    // status code, but CQ_EARLY_SUCCESS really means CQ_SUCCESS
+    // but needed to be != so we could break execution
+    ehp->status = CQ_SUCCESS;
+  } else {
+    ehp->status = STATUS;
+  }
+  
   ehp->completed_shots += 1;
+
+  printf("%s: STATUS = %d, ehp->completed_shots = %lu\n", __func__, STATUS, ehp->completed_shots);
 
   // copy local result register to exec
   cstate * dest_creg = ehp->creg + SHOT * ehp->nmeasure;

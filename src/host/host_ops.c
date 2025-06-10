@@ -189,13 +189,9 @@ cq_status sync_qrun(cq_exec * const ehp) {
 cq_status wait_qrun(cq_exec * const ehp) {
   cq_status status = CQ_ERROR;
   if (ehp != NULL && ehp->exec_init) {
-    size_t shots_completed = host_wait_exec(ehp);
-    if (shots_completed == ehp->expected_shots) {
-      status = CQ_SUCCESS;
-    } else {
-      status = CQ_WARNING;
-    }
+    host_wait_exec(ehp);
     finalise_exec_handle(ehp);
+    status = CQ_SUCCESS;
   } else if (ehp != NULL && ehp->expected_shots == 0) {
     status = CQ_SUCCESS;
     ehp->status = CQ_SUCCESS;

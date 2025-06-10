@@ -13,7 +13,8 @@ struct qkern_params;
 typedef enum cq_status {
   CQ_ERROR = -1,
   CQ_SUCCESS = 0,
-  CQ_WARNING = 1
+  CQ_WARNING = 1,
+  CQ_EARLY_SUCCESS
 } cq_status;
 
 typedef short int cstate;

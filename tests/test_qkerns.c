@@ -134,3 +134,67 @@ cstate * cr, qkern_map * reg) {
 
   return CQ_SUCCESS;
 }
+
+cq_status immediate_qabort(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
+  CQ_REGISTER_KERNEL(reg);
+  return qabort(CQ_ERROR);
+}
+
+// these qabort kernels will abort on the FOURTH shot
+
+cq_status successful_qabort(const size_t NQUBITS, qubit * qr, cstate * cr,
+qkern_map * reg) {
+  CQ_REGISTER_KERNEL(reg);
+  const unsigned int COUNT_LIMIT = 4;
+  static unsigned int count = 0;
+
+  // "measure" into the creg
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    cr[i] = 1;
+  }
+
+  printf("%s: count = %d on entry\n", __func__, count);
+
+  // increment count and abort on 4th shot (or greater)
+  if (++count >= COUNT_LIMIT) {
+    return qabort(CQ_SUCCESS);
+  }
+
+  return CQ_SUCCESS;
+}
+
+cq_status cq_error_qabort(const size_t NQUBITS, qubit * qr, cstate * cr,
+qkern_map * reg) {
+  CQ_REGISTER_KERNEL(reg);
+  const unsigned int COUNT_LIMIT = 4;
+  static unsigned int count = 0;
+
+  // "measure" into creg
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    cr[i] = 1;
+  }
+
+  if (++count >= COUNT_LIMIT) {
+    return qabort(CQ_ERROR);
+  }
+
+  return CQ_SUCCESS;
+}
+
+cq_status custom_error_qabort(const size_t NQUBITS, qubit * qr, cstate * cr,
+qkern_map * reg) {
+  CQ_REGISTER_KERNEL(reg);
+  const int CUSTOM_ERROR = 666;
+  const unsigned int COUNT_LIMIT = 4;
+  static unsigned int count = 0;
+
+  for (size_t i = 0; i < NQUBITS; ++i) {
+    cr[i] = 1;
+  }
+
+  if (++count >= COUNT_LIMIT) {
+    return qabort(CUSTOM_ERROR);
+  }
+
+  return CQ_SUCCESS;
+}
