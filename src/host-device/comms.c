@@ -108,8 +108,6 @@ cstate const * const RESULT, cq_exec * ehp) {
   
   ehp->completed_shots += 1;
 
-  printf("%s: STATUS = %d, ehp->completed_shots = %lu\n", __func__, STATUS, ehp->completed_shots);
-
   // copy local result register to exec
   cstate * dest_creg = ehp->creg + SHOT * ehp->nmeasure;
   memcpy(dest_creg, RESULT, ehp->nmeasure * sizeof(cstate));
