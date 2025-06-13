@@ -42,6 +42,8 @@ size_t host_sync_exec(cq_exec * const ehp);
 
 size_t host_wait_exec(cq_exec * const ehp);
 
+void host_request_halt(cq_exec * const ehp);
+
 size_t host_wait_all_ops();
 
 size_t device_sync_exec(const cq_status STATUS, const size_t SHOT, 

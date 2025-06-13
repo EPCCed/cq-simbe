@@ -81,6 +81,13 @@ size_t host_wait_exec(cq_exec * const ehp) {
   return ehp->completed_shots;
 }
 
+void host_request_halt(cq_exec * const ehp) {
+  pthread_mutex_lock(&(ehp->lock));
+  ehp->halt = true;
+  pthread_mutex_unlock(&(ehp->lock));
+  return;
+}
+
 size_t host_wait_all_ops() {
   pthread_mutex_lock(&dev_ctrl.device_lock);
   while(dev_ctrl.num_ops > 0 || dev_ctrl.device_busy) {
@@ -113,7 +120,11 @@ cstate const * const RESULT, cq_exec * ehp) {
   memcpy(dest_creg, RESULT, ehp->nmeasure * sizeof(cstate));
   
   // check if the whole execution is done
-  if (ehp->completed_shots == ehp->expected_shots || STATUS != CQ_SUCCESS) {
+  if (
+    ehp->completed_shots == ehp->expected_shots 
+    || STATUS != CQ_SUCCESS
+    || ehp->halt
+  ) {
     ehp->complete = true;
     pthread_cond_signal(&(ehp->cond_exec_complete));
   }

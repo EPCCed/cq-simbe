@@ -94,7 +94,7 @@ cq_status run_qkernel(void * par) {
       status = qk(NQUBITS, p_exec->qreg, local_creg, NULL);
 
       device_sync_exec(status, shot, local_creg, p_exec);
-      if (status != CQ_SUCCESS) break;
+      if (status != CQ_SUCCESS || p_exec->halt) break;
     }
 
     free(local_creg);
@@ -124,7 +124,7 @@ cq_status run_pqkernel(void * par) {
       status = pqk(NQUBITS, p_exec->qreg, local_creg, p_exec->params, NULL);
 
       device_sync_exec(status, shot, local_creg, p_exec);
-      if (status != CQ_SUCCESS) break;
+      if (status != CQ_SUCCESS || p_exec->halt) break;
     }
 
     free(local_creg);

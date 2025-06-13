@@ -542,6 +542,16 @@ void test_kernel_abort(void) {
   TEST_ASSERT_EACH_EQUAL_INT16(1, cr, EXP_SHOTS * NMEASURE);
   TEST_ASSERT_EACH_EQUAL_INT16(CR_INIT_VAL, cr + EXP_SHOTS*NMEASURE, (NSHOTS-EXP_SHOTS)*NMEASURE);
 
+  init_creg(NMEASURE * NSHOTS,  CR_INIT_VAL, cr);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, 
+    am_qrun(all_site_hadamard, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
+  );
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, halt_qrun(&eh));
+  TEST_ASSERT_GREATER_THAN_size_t(0, eh.completed_shots);
+  TEST_ASSERT_LESS_THAN_size_t(NSHOTS, eh.completed_shots);
+  TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, eh.status);
+
   free(cr);
   free_qureg(&qr);
 

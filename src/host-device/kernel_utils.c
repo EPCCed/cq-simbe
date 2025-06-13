@@ -107,6 +107,7 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
 void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NMEASURE, cq_exec * ehp) {
   ehp->exec_init = true;
   ehp->complete = false;
+  ehp->halt = false;
   ehp->status = CQ_ERROR;
   ehp->nqubits = NQUBITS;
   ehp->completed_shots = 0;

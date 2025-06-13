@@ -198,3 +198,12 @@ cq_status wait_qrun(cq_exec * const ehp) {
   }
   return status;
 }
+
+cq_status halt_qrun(cq_exec * const ehp) {
+  cq_status status = CQ_ERROR;
+  if (ehp != NULL && ehp->exec_init) {
+    host_request_halt(ehp);
+    status = wait_qrun(ehp);
+  }
+  return status;
+}
