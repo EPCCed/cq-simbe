@@ -28,7 +28,6 @@ void test_init_creg(void) {
 
   init_val = 10;
   init_creg(10, init_val, len_ten);
-  for (size_t i = 0; i < 10; ++i) printf("%s: len_ten[%lu] = %d\n", __func__, i, len_ten[i]);
   TEST_ASSERT_EACH_EQUAL_INT16(init_val, len_ten, 10);
 
   return;

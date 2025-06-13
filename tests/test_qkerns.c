@@ -153,8 +153,6 @@ qkern_map * reg) {
     cr[i] = 1;
   }
 
-  printf("%s: count = %d on entry\n", __func__, count);
-
   // increment count and abort on 4th shot (or greater)
   if (++count >= COUNT_LIMIT) {
     return qabort(CQ_SUCCESS);
