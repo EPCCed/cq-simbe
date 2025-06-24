@@ -24,7 +24,7 @@ jobs:
           cd ${{ env.DEPENDENCY_DIR }}
           git clone https://github.com/QuEST-Kit/QuEST.git
           cd QuEST
-          git checkout -b v4.1.0 tags/v4.1.0
+          git checkout -b develop origin/develop
         
       - name: Checkout Unity
         run: |
