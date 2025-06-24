@@ -24,13 +24,15 @@ jobs:
           cd ${{ env.DEPENDENCY_DIR }}
           git clone https://github.com/QuEST-Kit/QuEST.git
           cd QuEST
-          git checkout -b develop origin/develop
+          git fetch
+          git checkout -b devel origin/devel
         
       - name: Checkout Unity
         run: |
           cd ${{ env.DEPENDENCY_DIR }}
           git clone https://github.com/ThrowTheSwitch/Unity.git
           cd Unity
+          git fetch
           git checkout -b v2.6.1 tags/v2.6.1
 
       - name: Upload QuEST Source
