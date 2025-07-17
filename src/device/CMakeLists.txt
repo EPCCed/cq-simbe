@@ -6,3 +6,5 @@ target_sources(cq-simbe
   resources.c
   device_utils.c
 )
+
+add_subdirectory(analog)
