@@ -94,3 +94,5 @@ add_test(
   NAME test_qasm_gates
   COMMAND ./test_qasm_gates
 )
+
+add_subdirectory(analog)

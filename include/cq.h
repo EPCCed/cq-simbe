@@ -1,6 +1,7 @@
 #ifndef CQ_H
 #define CQ_H
 
+#include "analog.h"
 #include "datatypes.h"
 #include "env.h"
 #include "device_ops.h"
