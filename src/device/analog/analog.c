@@ -16,17 +16,11 @@
 #include "pulse.h"
 #include "waveforms.h"
 
+#include "utils.h"
+
 #include <stdio.h>
 
 //============================ VALIDATION =====================================
-#define HANDLE_CQA_ERR(x)                           \
-        {                                           \
-            if (x == CQ_ERROR)                      \
-            {                                       \
-                printf(" From: %s\n", __func__);    \
-                return CQ_ERROR;                    \
-            }                                       \
-        };
 
 static cq_status validate_num_qubits(int num_qubits) {
     if (num_qubits <= 0 || num_qubits > __CQ_ANALOG_MAX_NUM_QUBITS__) {
@@ -222,93 +216,93 @@ cq_status cq_enable_analog_mode(device_mode mode) {
 }
 
 cq_status cq_enable_analog_qreg(int qreg_id, int num_qubits) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_qreg_id(qreg_id));
-    HANDLE_CQA_ERR(validate_num_qubits(num_qubits));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
+    HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
     return enable_analog_qreg(qreg_id, num_qubits);
 }
 
 cq_status cq_disable_analog_qreg(int qreg_id) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_qreg_id(qreg_id));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return disable_analog_qreg(qreg_id);
 }
 
 cq_status cq_get_global_channel(channel *ch, int type, int qreg_id) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_channel(ch));
-    HANDLE_CQA_ERR(validate_channel_type(type, GLOBAL));
-    HANDLE_CQA_ERR(validate_qreg_id(qreg_id));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
+    HANDLE_CQ_ERROR(validate_channel_type(type, GLOBAL));
+    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return get_global_channel(ch, type, qreg_id);
 }
 
 cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_channel(ch));
-    HANDLE_CQA_ERR(validate_channel_type(type, LOCAL));
-    HANDLE_CQA_ERR(validate_qubits_idx(target));
-    HANDLE_CQA_ERR(validate_qreg_id(qreg_id));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
+    HANDLE_CQ_ERROR(validate_channel_type(type, LOCAL));
+    HANDLE_CQ_ERROR(validate_qubits_idx(target));
+    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return get_local_channel(ch, type, target, qreg_id);
 }
 
 cq_status cq_update_qreg_pos(const qpos *new_positions, int num_qubits, int qreg_id) {
-    HANDLE_CQA_ERR(is_analog_device_init());
+    HANDLE_CQ_ERROR(is_analog_device_init());
     if (!new_positions) {
         printf("Error: Passed nullptr positions. From: %s\n", __func__);
         return CQ_ERROR;
     }
 
-    HANDLE_CQA_ERR(validate_num_qubits(num_qubits));
-    HANDLE_CQA_ERR(validate_qreg_id(qreg_id));
+    HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
+    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return update_qreg_pos(new_positions, num_qubits, qreg_id);
 }
 
 //================================ PULSE ======================================
 cq_status cq_init_pulse(pulse *pulse, double duration) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_pulse(pulse));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_pulse(pulse));
     return init_pulse(pulse, duration);
 }
 
 cq_status cq_play(channel *ch, pulse *pulse) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_channel(ch));
-    HANDLE_CQA_ERR(validate_channel_params(ch));
-    HANDLE_CQA_ERR(validate_pulse(pulse));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
+    HANDLE_CQ_ERROR(validate_channel_params(ch));
+    HANDLE_CQ_ERROR(validate_pulse(pulse));
     return play(ch, pulse);
 }
 
 cq_status cq_capture(channel *ch, pulse *pulse, int *result, int shots) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_channel(ch));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
     // can capture only with channels that have valid target
-    HANDLE_CQA_ERR(validate_channel_type(ch->type, LOCAL));
-    HANDLE_CQA_ERR(validate_channel_params(ch));
-    HANDLE_CQA_ERR(validate_pulse(pulse));
-    HANDLE_CQA_ERR(validate_result(result));
-    HANDLE_CQA_ERR(validate_num_shots(shots));
+    HANDLE_CQ_ERROR(validate_channel_type(ch->type, LOCAL));
+    HANDLE_CQ_ERROR(validate_channel_params(ch));
+    HANDLE_CQ_ERROR(validate_pulse(pulse));
+    HANDLE_CQ_ERROR(validate_result(result));
+    HANDLE_CQ_ERROR(validate_num_shots(shots));
     return capture(ch, pulse, result, shots);
 }
 
 cq_status cq_delay(channel *ch, double dt) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_channel(ch));
-    HANDLE_CQA_ERR(validate_channel_params(ch));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
+    HANDLE_CQ_ERROR(validate_channel_params(ch));
     return delay(ch, dt);
 }
 
 cq_status cq_barrier(channel **ch, int num_channels) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_channels(ch, num_channels));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channels(ch, num_channels));
     return barrier(ch, num_channels);
 }
 
 //=============================== WAVEFORMS ===================================
 
 cq_status cq_gaussian_wf(double *samples, double duration, double amp, double sigma) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(prevalidate_duration(duration));
-    HANDLE_CQA_ERR(validate_samples(samples));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(prevalidate_duration(duration));
+    HANDLE_CQ_ERROR(validate_samples(samples));
     return gaussian_wf(samples, duration, amp, sigma);
 }
 
@@ -317,7 +311,7 @@ cq_status cq_gaussian_sqr_wf(double *samples, double duration, double amp,
     printf("Error: Not implemented!\n");
     return CQ_ERROR;
 
-    HANDLE_CQA_ERR(validate_samples(samples));
+    HANDLE_CQ_ERROR(validate_samples(samples));
     if (width > duration) {
         printf("Error: Specified width would produce negative risefall. "
                "Width must be < duration. From: %s\n", __func__);
@@ -330,9 +324,9 @@ cq_status cq_gaussian_sqr_wf(double *samples, double duration, double amp,
 
 cq_status cq_interpolated_wf(double *samples, double duration,
                           double *points, int num_points) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(prevalidate_duration(duration));
-    HANDLE_CQA_ERR(validate_samples(samples));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(prevalidate_duration(duration));
+    HANDLE_CQ_ERROR(validate_samples(samples));
     if (!points) {
         printf("Error: Passed nullptr instead of array of points. "
                "From: %s\n", __func__);
@@ -350,62 +344,62 @@ cq_status cq_interpolated_wf(double *samples, double duration,
 }
 
 cq_status cq_sech_wf(double *samples, double duration, double amp, double sigma) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(prevalidate_duration(duration));
-    HANDLE_CQA_ERR(validate_samples(samples));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(prevalidate_duration(duration));
+    HANDLE_CQ_ERROR(validate_samples(samples));
     return sech_wf(samples, duration, amp, sigma);
 }
 
 cq_status cq_sin_wf(double *samples, double duration, double amp,
                  double freq, double phase) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(prevalidate_duration(duration));
-    HANDLE_CQA_ERR(validate_samples(samples));
-    HANDLE_CQA_ERR(validate_freq(freq));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(prevalidate_duration(duration));
+    HANDLE_CQ_ERROR(validate_samples(samples));
+    HANDLE_CQ_ERROR(validate_freq(freq));
     return sin_wf(samples, duration, amp,
                  freq, phase);
 }
 
 cq_status cq_cos_wf(double *samples, double duration, double amp,
                  double freq, double phase) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(prevalidate_duration(duration));
-    HANDLE_CQA_ERR(validate_samples(samples));
-    HANDLE_CQA_ERR(validate_freq(freq));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(prevalidate_duration(duration));
+    HANDLE_CQ_ERROR(validate_samples(samples));
+    HANDLE_CQ_ERROR(validate_freq(freq));
     return cos_wf(samples, duration, amp,
                  freq, phase);
 }
 
 cq_status cq_blackman_wf(double *samples, double duration, double amp) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(prevalidate_duration(duration));
-    HANDLE_CQA_ERR(validate_samples(samples));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(prevalidate_duration(duration));
+    HANDLE_CQ_ERROR(validate_samples(samples));
     return blackman_wf(samples, duration, amp);
 }
 
 cq_status cq_saw_wf(double *samples, double duration, double amp,
                  double freq, double phase) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(prevalidate_duration(duration));
-    HANDLE_CQA_ERR(validate_samples(samples));
-    HANDLE_CQA_ERR(validate_freq(freq));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(prevalidate_duration(duration));
+    HANDLE_CQ_ERROR(validate_samples(samples));
+    HANDLE_CQ_ERROR(validate_freq(freq));
     return saw_wf(samples, duration, amp,
                  freq, phase);
 }
 
 cq_status cq_custom_wf(double *samples, double *values, int num_samples) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_samples(samples));
-    HANDLE_CQA_ERR(validate_values(values));
-    HANDLE_CQA_ERR(validate_num_samples(num_samples));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_samples(samples));
+    HANDLE_CQ_ERROR(validate_values(values));
+    HANDLE_CQ_ERROR(validate_num_samples(num_samples));
     return custom_wf(samples, values, num_samples);
 }
 
 cq_status cq_composite_wf(double *samples, double **waveforms,
                        ptrdiff_t *num_samples, int num_waveforms,
                        ptrdiff_t *total_num_samples) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_composite_wf(samples, waveforms, num_samples,
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_composite_wf(samples, waveforms, num_samples,
                                          num_waveforms, total_num_samples));
     return composite_wf(samples, waveforms,
                        num_samples, num_waveforms,
@@ -413,41 +407,39 @@ cq_status cq_composite_wf(double *samples, double **waveforms,
 }
 
 cq_status cq_print_analog_device(void) {
-    HANDLE_CQA_ERR(is_analog_device_init());
+    HANDLE_CQ_ERROR(is_analog_device_init());
     print_analog_device();
     return CQ_SUCCESS;
 }
 cq_status cq_print_avail_channels(void) {
-    HANDLE_CQA_ERR(is_analog_device_init());
+    HANDLE_CQ_ERROR(is_analog_device_init());
     print_avail_channels();
     return CQ_SUCCESS;
 }
 
 cq_status cq_print_channel(channel *ch) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_channel(ch));
-    HANDLE_CQA_ERR(validate_channel_params(ch));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
+    HANDLE_CQ_ERROR(validate_channel_params(ch));
     print_channel(ch);
     return CQ_SUCCESS;
 }
 
 cq_status cq_print_qpos(int qreg_id) {
-    HANDLE_CQA_ERR(is_analog_device_init());
-    HANDLE_CQA_ERR(validate_qreg_id(qreg_id));
-    HANDLE_CQA_ERR(print_qpos(qreg_id));
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
+    HANDLE_CQ_ERROR(print_qpos(qreg_id));
     return CQ_SUCCESS;
 }
 
 ptrdiff_t cq_duration_to_samples(double duration) {
-    HANDLE_CQA_ERR(is_analog_device_init());
+    HANDLE_CQ_ERROR(is_analog_device_init());
     if (duration < 0.0) return 0;
     return duration_to_samples(duration);
 }
 
 double cq_samples_to_duration(ptrdiff_t num_samples) {
-    HANDLE_CQA_ERR(is_analog_device_init());
+    HANDLE_CQ_ERROR(is_analog_device_init());
     if (num_samples < 0) return 0.0;
     return samples_to_duration(num_samples);
 }
-
-#undef HANDLE_CQA_ERR

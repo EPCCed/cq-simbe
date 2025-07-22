@@ -18,52 +18,29 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void report_results(cstate const * const CR, const size_t NMEASURE,
-const size_t NSHOTS) {
-  printf("Reporting measurement outcomes:\n");
-  for (size_t shot = 0; shot < NSHOTS; ++shot) {
-    printf("Shot [%lu]: ", shot);
-    for (size_t i = shot * NMEASURE; i < (shot + 1) * NMEASURE; ++i) {
-      printf("%d ", CR[i]);
-    }
-    printf("\n");
-  }
-
-  return;
-};
-
-#define HANDLE_CQA_ERR(x)                           \
-        {                                           \
-            if (x == CQ_ERROR)                      \
-            {                                       \
-                printf(" From: %s\n", __func__);    \
-                return CQ_ERROR;                    \
-            }                                       \
-        };
-
 cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, qkern_map * reg)
 {
   CQ_REGISTER_KERNEL(reg);
   set_qureg(qr, 0, NQUBITS);
 
   int qreg_id = 0;
-  HANDLE_CQA_ERR(cq_enable_analog_qreg(qreg_id, NQUBITS));
+  HANDLE_CQ_ERROR(cq_enable_analog_qreg(qreg_id, NQUBITS));
   channel ch0 = {0};
-  HANDLE_CQA_ERR(cq_get_global_channel(&ch0, 0, qreg_id));
+  HANDLE_CQ_ERROR(cq_get_global_channel(&ch0, 0, qreg_id));
 
   pulse pulse = {0};
   double duration = 4000.0;
-  HANDLE_CQA_ERR(cq_init_pulse(&pulse, duration));
+  HANDLE_CQ_ERROR(cq_init_pulse(&pulse, duration));
   double data_points[3] = {1e-9, 3.0, 1e-9};
   int num_points = 3;
 
-  HANDLE_CQA_ERR(cq_interpolated_wf(pulse.freq, duration, data_points, num_points));
+  HANDLE_CQ_ERROR(cq_interpolated_wf(pulse.freq, duration, data_points, num_points));
 
   data_points[0] = -5.0;
   data_points[1] = 0.0;
   data_points[2] = 5.0;
 
-  HANDLE_CQA_ERR(cq_interpolated_wf(pulse.detuning, duration, data_points, num_points));
+  HANDLE_CQ_ERROR(cq_interpolated_wf(pulse.detuning, duration, data_points, num_points));
 
   qpos positions[5] = {
        { 5.53855359,  1.7891413 , 0.0},
@@ -72,15 +49,15 @@ cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, q
        { 1.62594084, 10.99193777, 0.0},
        {15.4687696 ,  2.96846731, 0.0}};
 
-  HANDLE_CQA_ERR(cq_update_qreg_pos(positions, NQUBITS, qreg_id));
-  HANDLE_CQA_ERR(cq_play(&ch0, &pulse));
+  HANDLE_CQ_ERROR(cq_update_qreg_pos(positions, NQUBITS, qreg_id));
+  HANDLE_CQ_ERROR(cq_play(&ch0, &pulse));
 
   measure_qureg(qr, NQUBITS, cr);
-  HANDLE_CQA_ERR(cq_disable_analog_qreg(qreg_id));
+  HANDLE_CQ_ERROR(cq_disable_analog_qreg(qreg_id));
   return CQ_SUCCESS;
 };
 
-#undef HANDLE_CQA_ERR
+#undef HANDLE_CQ_ERROR
 
 int main (void)
 {
