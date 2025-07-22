@@ -93,14 +93,12 @@ int main (void)
   cq_init(0);
 
   cq_enable_analog_mode(RYDBERG);
-  // We will reuse the quantum buffer as the quantum
-  // kernels cannot run simultaneously (for now...)
   qubit * qr = NULL;
   alloc_qureg(&qr, NQUBITS);
 
-  cstate cr_plus[NMEASURE * NSHOTS];
+  cstate cr[NMEASURE * NSHOTS];
 
-  init_creg(NMEASURE * NSHOTS, -1, cr_plus);
+  init_creg(NMEASURE * NSHOTS, -1, cr);
 
   register_qkern(quantum_adiabatic_algo);
 
@@ -114,7 +112,7 @@ int main (void)
 
   wait_qrun(&eh_maxcut);
   printf("Results from QAA:\n");
-  report_results(cr_plus, NMEASURE, NSHOTS);
+  report_results(cr, NMEASURE, NSHOTS);
 
   free_qureg(&qr);
 
