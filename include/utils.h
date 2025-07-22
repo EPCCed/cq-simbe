@@ -8,7 +8,7 @@ void init_creg(const size_t LENGTH, const cstate INIT_VAL, cstate * cr);
 void report_results(
     cstate const * const CR,
     const size_t NMEASURE,
-    const size_t NSHOTS)
+    const size_t NSHOTS);
 
 #define HANDLE_CQ_ERROR(x)                           \
         {                                           \
