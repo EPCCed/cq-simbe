@@ -105,7 +105,7 @@ int main (void)
   register_qkern(quantum_adiabatic_algo);
 
   printf("Offloading QAA circuit to the quantum device.\n");
-  am_qrun(quantum_adiabatic_algo, qr, NQUBITS, cr_plus, NMEASURE, NSHOTS, &eh_plus);
+  am_qrun(quantum_adiabatic_algo, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh_maxcut);
 
   printf("Hello from the host, pretend I'm doing something useful!\n");
   sleep(2);
