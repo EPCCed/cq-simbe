@@ -88,7 +88,7 @@ int main (void)
   const size_t NSHOTS = 10;
   const size_t NMEASURE = NQUBITS;
 
-  cq_exec eh_zero, eh_plus;
+  cq_exec eh_maxcut;
 
   cq_init(0);
 
