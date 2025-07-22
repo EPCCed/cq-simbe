@@ -112,7 +112,7 @@ int main (void)
   printf("Hello again, I'm done being 'useful' and will now wait for ");
   printf("the quantum device to return!\n");
 
-  wait_qrun(&eh_plus);
+  wait_qrun(&eh_maxcut);
   printf("Results from QAA:\n");
   report_results(cr_plus, NMEASURE, NSHOTS);
 
