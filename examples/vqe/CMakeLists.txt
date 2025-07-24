@@ -1,6 +1,6 @@
 add_executable(vqe
   vqe.c
-  #vqe_utils.c
+  vqe_utils.c
 )
 
 find_library(MATHS_LIBRARY m REQUIRED)
