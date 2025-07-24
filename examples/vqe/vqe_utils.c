@@ -18,17 +18,15 @@ cq_status ansatz(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg)
   // HF init state. For H2 we set NQUBITS/2 to 1
   init_hf_state(qr, NQUBITS / 2);
 
-  // preparing RYRZ ansatz
+  // preparing RYCZ ansatz
   for (ptrdiff_t i = 0; i < NLAYERS; ++i) {
     for (ptrdiff_t j = 0; j < NQUBITS; ++j) {
       ptrdiff_t param_idx = j + i * (NQUBITS * 2);
       roty(&qr[j], context.params[param_idx]);
-      //rotz(&qr[j], context.params[param_idx + 1]);
 
       if (j < NQUBITS - 1) {
         int control = j;
 	int target = j + 1;
-	//cpaulix(&qr[control], &qr[target]);
 	cpauliz(&qr[control], &qr[target]);
       }
 

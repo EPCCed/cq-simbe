@@ -18,7 +18,7 @@ typedef struct vqe_settings {
 #define NLAYERS 1
 #define MAX_NQUBITS 2
 
-#define NPARAMS NLAYERS * MAX_NQUBITS * 1
+#define NPARAMS NLAYERS * MAX_NQUBITS
 
 typedef struct vqe_context {
   double prev_energy;
