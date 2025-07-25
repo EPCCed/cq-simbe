@@ -4,7 +4,7 @@ add_executable(vqe
 )
 
 find_library(MATHS_LIBRARY m REQUIRED)
-find_library(NLopt nlopt REQUIRED)
+find_package(NLopt REQUIRED)
 
 target_link_libraries(vqe 
   PRIVATE
