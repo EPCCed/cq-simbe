@@ -2,6 +2,7 @@
 #define VQE_UTILS_H
 
 #include "cq.h"
+
 #include <stdlib.h>
 
 #ifndef M_PI
@@ -17,8 +18,9 @@ typedef struct vqe_settings {
 
 #define NLAYERS 1
 #define MAX_NQUBITS 2
-
 #define NPARAMS NLAYERS * MAX_NQUBITS
+#define PARAM_MIN 0.0
+#define PARAM_MAX 2.0 * M_PI
 
 typedef struct vqe_context {
   double prev_energy;
@@ -51,4 +53,5 @@ double vqe_iter(qubit * qr, cstate * cr, const size_t NQUBITS, const size_t NSHO
 double vqe_iter_nlopt(unsigned int n, const double *x, double *grad, void *f_data); 
 double vqe_optimize(qubit * qr, cstate * cr, const size_t NQUBITS,
 		    const size_t NMEASURE, const size_t NSHOTS); 
+
 #endif

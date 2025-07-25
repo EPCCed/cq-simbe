@@ -1,7 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include "cq.h"
 #include "vqe.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 hamiltonian h2_hamil = {
 	.paulis = { 
@@ -22,7 +23,7 @@ hamiltonian h2_hamil = {
 int main (void) {
   const double TRUE_ENERGY = -1.85728;
   const size_t NQUBITS = 2;
-  const size_t NSHOTS = 2024;
+  const size_t NSHOTS = 2000;
   const size_t NMEASURE = NQUBITS;
 
   cq_init(0);

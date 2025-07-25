@@ -14,7 +14,7 @@ void init_hf_state(qubit * qr, int num_spin_orbitals) {
 cq_status ansatz(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg)
 
-  set_qureg(qr, 0, NQUBITS);
+  HANDLE_CQ_ERROR(set_qureg(qr, 0, NQUBITS));
   // HF init state. For H2 we set NQUBITS/2 to 1
   init_hf_state(qr, NQUBITS / 2);
 
@@ -78,19 +78,21 @@ double get_term_expectation(int *histogram, int num_bins,
   return term_expectation;
 }
 
+#define EXAMPLE_SEED 102141
 void init_vqe_params(double *params, ptrdiff_t num_params) {
-  double min_val = 0.0;
-  double max_val = 2.0 * M_PI;
-  int min = 0;
-  int max = 100;
-  double shift = max_val / (double)max;
-  srand(102141);
+  const double min_val = PARAM_MIN;
+  const double max_val = PARAM_MAX;
+  const int min = 0;
+  const int max = 100;
+  const double shift = max_val / (double)max;
+  srand(EXAMPLE_SEED);
 
   for (ptrdiff_t i = 0; i < NPARAMS; ++i) {
-    int random_num = rand() % (max - min + 1) + min;
+    const int random_num = rand() % (max - min + 1) + min;
     params[i] = (double)random_num * shift;
   }
 }
+#undef EXAMPLE_SEED
 
 void init_vqe_settings(vqe_settings *settings, qubit * qr, cstate * cr,
 		const size_t NQUBITS, const size_t NSHOTS) {
@@ -105,7 +107,7 @@ static int result_to_int(cstate *cr, int num_qubits) {
   int base = 1;
   for (ptrdiff_t i = num_qubits - 1; i >= 0; --i) {
     if (cr[i] == -1) continue;
-    int digit = cr[i] * base;
+    const int digit = cr[i] * base;
     result += digit;
     base *= 2;
   }
@@ -116,7 +118,7 @@ static int result_to_int(cstate *cr, int num_qubits) {
 
 double vqe_iter(qubit * qr, cstate * cr, const size_t NQUBITS, const size_t NSHOTS) {
   int histogram[MAX_BINS] = {0};
-  ptrdiff_t num_bins = (ptrdiff_t)1 << NQUBITS;
+  const ptrdiff_t num_bins = (ptrdiff_t)1 << NQUBITS;
   double expectation = 0.0;
   const size_t NMEASURE = NQUBITS;
   h2_hamil.term_start_idx = 0;
@@ -177,8 +179,8 @@ double vqe_optimize(qubit * qr, cstate * cr, const size_t NQUBITS,
   init_vqe_settings(&settings, qr, cr, NQUBITS, NSHOTS);
 
   nlopt_result res = nlopt_set_min_objective(opt, vqe_iter_nlopt, (void *)&settings);
-  nlopt_set_lower_bounds1(opt, 0.0);
-  nlopt_set_upper_bounds1(opt, 2.0 * M_PI);
+  nlopt_set_lower_bounds1(opt, PARAM_MIN);
+  nlopt_set_upper_bounds1(opt, PARAM_MAX);
 
   double best_expectation = 0.0;
   res = nlopt_optimize(opt, context.params, &best_expectation);
