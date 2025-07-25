@@ -35,6 +35,14 @@ jobs:
           git fetch
           git checkout -b v2.6.1 tags/v2.6.1
 
+      - name: Checkout NLopt
+        run: |
+          cd ${{ env.DEPENDENCY_DIR }}
+          git clone https://github.com/stevengj/nlopt.git
+          cd nlopt
+          git fetch
+          git checkout -b v2.10.0 tags/v2.10.0
+
       - name: Upload QuEST Source
         uses: actions/upload-artifact@v4
         with:
@@ -47,6 +55,13 @@ jobs:
         with:
           name: Unity-Source
           path: ${{ env.DEPENDENCY_DIR }}/Unity/
+          if-no-files-found: error
+
+      - name: Upload NLopt Source
+        uses: actions/upload-artifact@v4
+        with:
+          name: NLopt-Source
+          path: ${{ env.DEPENDENCY_DIR }}/nlopt/
           if-no-files-found: error
 
   build-dependencies:
@@ -65,6 +80,12 @@ jobs:
           name: Unity-Source
           path: ${{ env.DEPENDENCY_DIR }}/Unity
 
+      - name: Download NLopt Source
+        uses: actions/download-artifact@v4
+        with:
+          name: NLopt-Source
+          path: ${{ env.DEPENDENCY_DIR }}/nlopt
+
       - name: Configure QuEST
         run:
           cmake
@@ -82,17 +103,31 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/Unity
             -DCMAKE_C_FLAGS="-DUNITY_INCLUDE_DOUBLE"
 
+      - name: Configure NLopt
+        run:
+          cmake
+            -B ${DEPENDENCY_DIR}/nlopt/build
+            -S ${DEPENDENCY_DIR}/nlopt
+            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/nlopt
+
       - name: Build QuEST
         run: cmake --build ${DEPENDENCY_DIR}/QuEST/build
 
       - name: Build Unity
         run: cmake --build ${DEPENDENCY_DIR}/Unity/build
 
+      - name: Build NLopt
+        run: cmake --build ${DEPENDENCY_DIR}/nlopt/build
+
       - name: Install QuEST
         run: cmake --install ${DEPENDENCY_DIR}/QuEST/build
 
       - name: Install Unity
         run: cmake --install ${DEPENDENCY_DIR}/Unity/build
+
+      - name: Install NLopt
+        run: cmake --install ${DEPENDENCY_DIR}/nlopt/build
 
       - name: Upload QuEST install
         uses: actions/upload-artifact@v4
@@ -106,6 +141,13 @@ jobs:
         with:
           name: Unity-Install
           path: ${{ env.DEPENDENCY_INSTALL_DIR }}/Unity/
+          if-no-files-found: error
+
+      - name: Upload NLopt install
+        uses: actions/upload-artifact@v4
+        with:
+          name: NLopt-Install
+          path: ${{ env.DEPENDENCY_INSTALL_DIR }}/nlopt/
           if-no-files-found: error
 
   build:
@@ -134,6 +176,12 @@ jobs:
         name: Unity-Install
         path: ${{ env.DEPENDENCY_INSTALL_DIR }}/Unity
 
+    - name: Download NLopt install
+      uses: actions/download-artifact@v4
+      with:
+        name: NLopt-Install
+        path: ${{ env.DEPENDENCY_INSTALL_DIR }}/nlopt
+
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
       id: strings
@@ -152,6 +200,7 @@ jobs:
         -DENABLE_TESTING=On
         -DQuEST_DIR=${DEPENDENCY_INSTALL_DIR}/quest/lib/cmake/QuEST
         -Dunity_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/unity
+        -DNLopt_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/nlopt
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
