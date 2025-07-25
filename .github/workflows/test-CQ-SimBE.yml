@@ -200,7 +200,7 @@ jobs:
         -DENABLE_TESTING=On
         -DQuEST_DIR=${DEPENDENCY_INSTALL_DIR}/quest/lib/cmake/QuEST
         -Dunity_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/unity
-        -DNLopt_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/nlopt
+        -DNLopt_DIR=${DEPENDENCY_INSTALL_DIR}/nlopt/lib/cmake/nlopt
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
