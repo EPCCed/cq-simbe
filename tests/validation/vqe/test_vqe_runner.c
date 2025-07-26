@@ -1,5 +1,6 @@
-#include "unity.h"
 #include "test_vqe.h"
+#include "cq.h"
+#include "unity.h"
 
 int main (void)
 {
