@@ -10,6 +10,6 @@ target_link_libraries(vqe
   PRIVATE
   CQ-SIMBE::cq-simbe
   ${MATHS_LIBRARY}
-  ${NLopt}
+  NLopt::nlopt
 )
 
