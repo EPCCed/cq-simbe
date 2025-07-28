@@ -36,8 +36,8 @@ static cq_status setup_device_params(device_mode mode) {
     //device.ising_coefficient = 865723.02;
     device.ising_coefficient = 5420158.53;
     device.xy_coefficient = 3700.0;
-    device.max_atom_dist_from_origin = 50.0;
-    device.min_dist_between_atom = 4.0;
+    //device.max_atom_dist_from_origin = 50.0;
+    device.min_qubit_dist = 4.0;
     device.max_num_shots = 2000;
     device.mode = mode;
 
@@ -205,9 +205,9 @@ double get_device_xy_coeff(void) {
     return device.xy_coefficient;
 }
 
-double get_device_min_atom_dist(void) {
+double get_device_min_qubit_dist(void) {
     assert(device.is_initialized);
-    return device.min_dist_between_atom;
+    return device.min_qubit_dist;
 }
 
 int get_device_max_num_shots(void) {
@@ -230,8 +230,8 @@ double samples_to_duration(ptrdiff_t num_samples) {
 
 static const char *get_mode_str(device_mode mode) {
     switch (mode) {
-        case RYDBERG:
-            return "RYDBERG";
+        case ISING:
+            return "ISING";
         case XY:
             return "XY";
         default:
@@ -243,17 +243,15 @@ void print_analog_device(void) {
     assert(device.is_initialized);
     printf("==============================================================\n"
         "Analog Device Specification:\n"
-           "Operating Modes: RYDBERG, XY\n"
+           "Operating Modes: ISING, XY\n"
            "Selected mode: %s\n"
            "Sample rate: %f\n"
            "Min pulse duration: %f\n"
            "Max pulse duration: %f\n"
            "Max number of shots: %d\n"
            "Ising coefficient: %f\n"
-           "\n-------- If RYDBERG or XY: --------\n"
            "XY coefficient: %f\n"
-           "Min distance between atoms: %f\n"
-           "Max atom distance from origin: %f\n"
+           "Min distance between qubits: %f\n"
            "==============================================================\n",
             get_mode_str(device.mode),
             device.sample_rate,
@@ -262,7 +260,6 @@ void print_analog_device(void) {
             device.max_num_shots            ,
             device.ising_coefficient        ,
             device.xy_coefficient           ,
-            device.min_dist_between_atom    ,
-            device.max_atom_dist_from_origin
+            device.min_qubit_dist    
     );
 }

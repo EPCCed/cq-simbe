@@ -27,7 +27,7 @@ double get_device_min_pulse_duration(void);
 double get_device_max_pulse_duration(void);
 double get_device_ising_coeff(void);
 double get_device_xy_coeff(void);
-double get_device_min_atom_dist(void);
+double get_device_min_qubit_dist(void);
 int get_device_max_num_shots(void);
 device_mode get_device_operating_mode(void);
 

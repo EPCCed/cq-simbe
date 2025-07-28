@@ -79,7 +79,7 @@ int main (void)
 
   cq_init(0);
 
-  cq_enable_analog_mode(RYDBERG);
+  cq_enable_analog_mode(ISING);
   qubit * qr = NULL;
   alloc_qureg(&qr, NQUBITS);
 

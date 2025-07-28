@@ -247,27 +247,42 @@ cq_status cq_disable_analog_qreg(qubit *qr) {
     return disable_analog_qreg(qreg_id);
 }
 
-cq_status cq_get_channel(channel *ch, int type, qubit *qr, int target) {
+cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_channel(ch));
     if (!qr) return CQ_ERROR;
     int qreg_id = qr->registry_index;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
-    HANDLE_CQ_ERROR(validate_qubits_idx(target));
 
     addressing mode = (addressing)type;
  
     switch (mode) {
-        case LOCAL:
-	    return get_local_channel(ch, 1, target, qreg_id);
+        case LOCAL: {
+	    if (!target) {
+                printf("Error: Target qubit is nullptr. From: %s\n", __func__);
+		return CQ_ERROR;
+	    }
+	    return get_local_channel(ch, 1, target->offset, qreg_id);
+	}
         case GLOBAL:
-	    //printf("Selected global channel, target argument will be ignored.\n");
 	    return get_global_channel(ch, 0, qreg_id);
 	default:
 	    printf("Error: Unknown addressing type.\n");
 	    return CQ_ERROR;
     }
     return CQ_SUCCESS;
+}
+
+cq_status cq_retarget_channel(channel *ch, qubit *new_target) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
+    HANDLE_CQ_ERROR(validate_channel_type(ch->type, LOCAL));
+    if (!new_target) {
+    	printf("Error: New target is nullptr. From %s\n", __func__);
+	return CQ_ERROR;
+    }
+    int new_target_ = new_target->offset;
+    return retarget_channel(ch, new_target_);
 }
 
 cq_status cq_get_global_channel(channel *ch, int type, int qreg_id) {

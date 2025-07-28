@@ -71,11 +71,11 @@ static cq_status ising_interaction(const qpos *q0, const qpos *q1, double *resul
 
     double C = get_device_ising_coeff();
     double dist6 = qubit_dist(q0, q1);
-    if (dist6 < get_device_min_atom_dist()) {
+    if (dist6 < get_device_min_qubit_dist()) {
         printf("Error: The distance between atoms is too small. "
                "Minimal distance between atoms is %f, given %f\n"
                "Setting interaction strength to 0.0!",
-               get_device_min_atom_dist(), dist6);
+               get_device_min_qubit_dist(), dist6);
         *result = 0.0;
         return CQ_ERROR;
     }
@@ -90,11 +90,11 @@ static cq_status xy_interaction(const qpos *q0, const qpos *q1, double *result) 
 
     double C3 = get_device_xy_coeff();
     double dist3 = qubit_dist(q0, q1);
-    if (dist3 < get_device_min_atom_dist()) {
+    if (dist3 < get_device_min_qubit_dist()) {
         printf("Error: The distance between atoms is too small. "
                "Minimal distance between atoms is %f, given %f\n"
                "Returning interaction strength = 0.0!",
-               get_device_min_atom_dist(), dist3);
+               get_device_min_qubit_dist(), dist3);
         *result = 0.0;
         return CQ_ERROR;
     }
@@ -108,7 +108,7 @@ static cq_status interaction(const qpos *q0, const qpos *q1, double *result) {
     assert(q1 != NULL);
 
     switch(get_device_operating_mode()) {
-        case RYDBERG:
+        case ISING:
             return ising_interaction(q0, q1, result);
         case XY:
             return xy_interaction(q0, q1, result);
@@ -315,7 +315,7 @@ cq_status add_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) 
     device_mode mode = get_device_operating_mode();
 
     switch (mode) {
-        case RYDBERG:
+        case ISING:
             add_rydberg_interaction_terms(qreg, hamiltonian);
             break;
         case XY:

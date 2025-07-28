@@ -75,13 +75,11 @@ typedef struct qpos {
 } qpos;
 
 #define __CQ_ANALOG_MAX_NUM_CHANNELS__ __CQ_ANALOG_MAX_NUM_QUBITS__ + 1
-//#define __CQ_ANALOG_MAX_QPOS_SIZE__ __CQ_ANALOG_MAX_NUM_QUBITS__ * 3
 typedef struct analog_qreg {
     int id;
     bool in_use;
     int num_qubits;
     qpos qubit_pos[__CQ_ANALOG_MAX_NUM_QUBITS__];
-    //double qubit_pos[__CQ_ANALOG_MAX_QPOS_SIZE__];
     term_range sys_terms_range;
 
     channel channels[__CQ_ANALOG_MAX_NUM_CHANNELS__];
@@ -98,8 +96,7 @@ typedef struct analog_device {
     double max_pulse_duration;          // ns
     double ising_coefficient;
     double xy_coefficient;
-    double max_atom_dist_from_origin;   // micrometers
-    double min_dist_between_atom;       // micrometers
+    double min_qubit_dist;              // micrometers
     int max_num_shots;
     bool is_initialized;
     device_mode mode;

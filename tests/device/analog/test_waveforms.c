@@ -3,7 +3,7 @@
 #include "analog.h"
 
 void setUp(void) {
-    cq_enable_analog_mode(RYDBERG);
+    cq_enable_analog_mode(ISING);
     return;
 }
 

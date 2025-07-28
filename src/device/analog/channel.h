@@ -14,6 +14,7 @@
 
 cq_status setup_channel_params(analog_qreg *qreg);
 cq_status copy_channel(channel *dest, const channel *src);
+cq_status retarget_channel(channel *ch, int new_target);
 void print_avail_channels(void);
 void print_channel(channel *ch);
 

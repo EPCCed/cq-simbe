@@ -14,7 +14,7 @@
 #include <stddef.h>
 
 typedef enum device_mode {
-    RYDBERG,
+    ISING,
     XY
 } device_mode;
 
@@ -50,8 +50,8 @@ cq_status cq_enable_analog_mode(int mode);
 cq_status cq_enable_analog_qreg(qubit *qr);
 cq_status cq_disable_analog_qreg(qubit *qr);
 
-cq_status cq_get_channel(channel *ch, int type, qubit *qr, int target);
-// TODO: cq_status cq_retarget_channel(channel *ch, int new_target);
+cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target);
+cq_status cq_retarget_channel(channel *ch, qubit *new_target);
 
 //cq_status cq_get_global_channel(channel *ch, int type, int qreg_id);
 //cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id);

@@ -108,10 +108,22 @@ cq_status copy_channel(channel *dest, const channel *src) {
     return CQ_SUCCESS;
 }
 
+cq_status retarget_channel(channel *ch, int new_target) {
+    assert(ch != NULL);
+    assert(new_target > -2);
+    assert(new_target < __CQ_ANALOG_MAX_NUM_QUBITS__);
+    assert(ch->params != NULL);
+ 
+    // TODO: enforce that only one qubit can be targetted
+    ch->target = new_target;
+    ch->time += ((channel_params *)ch->params)->retarget_delay;
+    return CQ_SUCCESS;
+}
+
 void print_avail_channels(void) {
     printf("==============================================================\n"
            "Available Channels:\n"
-           "----- RYDBERG_GLOBAL:     \n"
+           "----- GLOBAL:     \n"
             "\tmax_freq = 15.71       \n"
             "\tmax_detuning = 125.7   \n"
             "\tmin_amp = 0.0          \n"
@@ -122,7 +134,7 @@ void print_avail_channels(void) {
             "\tmax_targets = -1       \n"
             "\taddressing = GLOBAL    \n\n"
 
-           "----- RYDBERG_LOCAL:      \n"
+           "----- LOCAL:      \n"
             "\tmax_freq = 62.83       \n"
             "\tmax_detuning = 125.7   \n"
             "\tmin_amp = 0.0          \n"
@@ -139,9 +151,9 @@ void print_avail_channels(void) {
 static const char *get_channel_type_str(channel_type type) {
     switch (type) {
         case RYDBERG_LOCAL:
-            return "RYDBERG_LOCAL";
+            return "LOCAL";
         case RYDBERG_GLOBAL:
-            return "RYDBERG_GLOBAL";
+            return "GLOBAL";
         default:
             return "Unknown";
     }
