@@ -211,21 +211,61 @@ static cq_status validate_freq(double freq) {
     return CQ_SUCCESS;
 }
 //========================== ANALOG DEVICE OPS ================================
-cq_status cq_enable_analog_mode(device_mode mode) {
-    return enable_analog_mode(mode);
+cq_status cq_enable_analog_mode(int mode) {
+    device_mode mode_ = (device_mode)mode;    
+    return enable_analog_mode(mode_);
 }
 
-cq_status cq_enable_analog_qreg(int qreg_id, int num_qubits) {
+//cq_status cq_enable_analog_qreg(int qreg_id, int num_qubits) {
+//    HANDLE_CQ_ERROR(is_analog_device_init());
+//    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
+//    HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
+//    return enable_analog_qreg(qreg_id, num_qubits);
+//}
+
+//cq_status cq_disable_analog_qreg(int qreg_id) {
+//    HANDLE_CQ_ERROR(is_analog_device_init());
+//    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
+//    return disable_analog_qreg(qreg_id);
+//}
+
+cq_status cq_enable_analog_qreg(qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
+    if (!qr) return CQ_ERROR;
+    int qreg_id = qr->registry_index;
+    int num_qubits = qr->N;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
     return enable_analog_qreg(qreg_id, num_qubits);
 }
 
-cq_status cq_disable_analog_qreg(int qreg_id) {
+cq_status cq_disable_analog_qreg(qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
+    if (!qr) return CQ_ERROR;
+    int qreg_id = qr->registry_index;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return disable_analog_qreg(qreg_id);
+}
+
+cq_status cq_get_channel(channel *ch, int type, qubit *qr) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_channel(ch));
+    if (!qr) return CQ_ERROR;
+    int qreg_id = qr->registry_index;
+    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
+
+    addressing mode = (addressing)type;
+ 
+    switch (mode) {
+        case LOCAL:
+	    return get_local_channel(ch, 1, 0, qreg_id);
+        case GLOBAL:
+	    return get_global_channel(ch, 0, qreg_id);
+	default:
+	    printf("Error: Unknown addressing type.\n");
+	    return CQ_ERROR;
+    }
+    return CQ_SUCCESS;
 }
 
 cq_status cq_get_global_channel(channel *ch, int type, int qreg_id) {
@@ -245,18 +285,32 @@ cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id) {
     return get_local_channel(ch, type, target, qreg_id);
 }
 
-cq_status cq_update_qreg_pos(const qpos *new_positions, int num_qubits, int qreg_id) {
+//cq_status cq_update_qreg_pos(const qpos *new_positions, int num_qubits, int qreg_id) {
+//    HANDLE_CQ_ERROR(is_analog_device_init());
+//    if (!new_positions) {
+//        printf("Error: Passed nullptr positions. From: %s\n", __func__);
+//        return CQ_ERROR;
+//    }
+//
+//    HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
+//    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
+//    return update_qreg_pos(new_positions, num_qubits, qreg_id);
+//}
+
+cq_status cq_set_qubits_pos(const double *new_positions, qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     if (!new_positions) {
         printf("Error: Passed nullptr positions. From: %s\n", __func__);
         return CQ_ERROR;
     }
-
+    if (!qr) return CQ_ERROR;
+    int qreg_id = qr->registry_index;
+    int num_qubits = qr->N;
     HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
-    return update_qreg_pos(new_positions, num_qubits, qreg_id);
+    // TODO: This casting works but is dangerous... Just do the right thing...
+    return update_qreg_pos((qpos*)new_positions, num_qubits, qreg_id);
 }
-
 //================================ PULSE ======================================
 cq_status cq_init_pulse(pulse *pulse, double duration) {
     HANDLE_CQ_ERROR(is_analog_device_init());
