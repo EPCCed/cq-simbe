@@ -12,17 +12,12 @@ void setUp(void) {
     int param = 0;
     initialise_simulator(&param);
     const size_t NQUBITS = 5;
-    //int idx = get_next_available_qregistry_slot();
-    //qregistry.registers[idx] = createQureg(NQUBITS);
-    //qregistry.available[idx] = false;
-    //++qregistry.num_registers;
     alloc_qureg(&qr, NQUBITS);
     return;
 }
 
 void tearDown(void) {
     int param = 0;
-    //finalise_simulator(&param);
     free_qureg(&qr);
     return;
 }
@@ -88,25 +83,29 @@ void test_cq_disable_analog_mode(void) {
 
 void test_cq_get_channel(void) {
     channel ch0 = {0};
-    int type = 0; // LOCAL
+    int local = 0;
+    int global = 1;
 		  
     // Getting channel on uninitialised qreg.
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(&ch0, type, qr, &qr[0]));
+		    cq_get_channel(&ch0, local, qr, &qr[0]));
 
     cq_enable_analog_qreg(qr);
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-		    cq_get_channel(&ch0, type, qr, &qr[0]));
+		    cq_get_channel(&ch0, local, qr, &qr[0]));
+
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
+		    cq_get_channel(&ch0, global, qr, NULL));
 
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_print_channel(&ch0));
 
     // NULL channel
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(NULL, type, qr, &qr[0]));
+		    cq_get_channel(NULL, local, qr, &qr[0]));
     
     // NULL qr
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(&ch0, type, NULL, &qr[0]));
+		    cq_get_channel(&ch0, local, NULL, &qr[0]));
 
     // Bad type
     int negative_type = -1;
@@ -117,196 +116,32 @@ void test_cq_get_channel(void) {
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
 		    cq_get_channel(&ch0, too_big_type, qr, &qr[0]));
 
+    // Providing target but accessing global channel.
+    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
+		    cq_get_channel(&ch0, global, qr, &qr[0]));
+
     // Bad target
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(&ch0, type, qr, NULL));
+		    cq_get_channel(&ch0, local, qr, NULL));
 
 }
 
 void test_cq_retarget_channel(channel *ch, int new_target) {
     channel ch0 = {0};
+    int local = 0;
     int target = 1;
 
+    cq_get_channel(&ch0, local, qr, &qr[0]);
+
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-        cq_retarget_channel(NULL, &qr[0]));
+        cq_retarget_channel(NULL, &qr[1]));
 
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
         cq_retarget_channel(&ch0, NULL));
 
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-        cq_retarget_channel(&ch0, &qr[0]));
+        cq_retarget_channel(&ch0, &qr[1]));
 }
-
-//void test_cq_get_global_channel(void) {
-//    channel ch0 = {0};
-//    channel ch1;
-//    int global_type = 0; // aka ISING_GLOBAL
-//    int qreg_id = 0;
-//    int num_qubits = 5;
-//    double epsilon = 0.0000001;
-//
-//    // Getting channel on uninitialised qreg.
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_global_channel(&ch0, global_type, qreg_id));
-//
-//    cq_enable_analog_qreg(qreg_id, num_qubits);
-//    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-//                          cq_get_global_channel(&ch0, global_type, qreg_id));
-//    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_print_channel(&ch0));
-//
-//    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-//                          cq_get_global_channel(&ch1, global_type, qreg_id));
-//    TEST_ASSERT_EQUAL_INT(ch0.id, ch1.id);
-//    TEST_ASSERT_EQUAL_INT(ch0.type, ch1.type);
-//    TEST_ASSERT_EQUAL_INT(ch0.target, ch1.target);
-//    TEST_ASSERT(ch0.time < epsilon);
-//    TEST_ASSERT(ch1.time < epsilon);
-//    TEST_ASSERT(ch0.time - ch1.time < epsilon);
-//
-//    // NULL channel
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_global_channel(NULL, global_type, qreg_id));
-//
-//    int negative_type = -1;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_global_channel(&ch0, negative_type, qreg_id));
-//
-//    int local_type = 1; // aka ISING_LOCAL
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_global_channel(&ch0, local_type, qreg_id));
-//
-//    int unknown_type = 4;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_global_channel(&ch0, unknown_type, qreg_id));
-//
-//    // Bad qreg_id
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_global_channel(&ch0, 0, -1));
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_global_channel(&ch0, 0, 128));
-//}
-//
-//void test_cq_get_local_channel(void) {
-//    channel ch0 = {0};
-//    int local_type = 1; // aka ISING_LOCAL
-//    int qreg_id = 0;
-//    int target = 0;
-//    int num_qubits = 5;
-//
-//    cq_disable_analog_qreg(qreg_id);
-//    cq_enable_analog_qreg(qreg_id, num_qubits);
-//
-//
-//    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-//                          cq_get_local_channel(
-//                              &ch0, local_type, target, qreg_id));
-//
-//    // NULL channel
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              NULL, local_type, target, qreg_id));
-//
-//    // Bad channel types
-//    int negative_type = -1;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, negative_type, target, qreg_id));
-//    int global_type = 0;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, global_type, target, qreg_id));
-//
-//    int unknown_type = 4;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, unknown_type, target, qreg_id));
-//
-//    // Bad target
-//    int negative_target = -1;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, local_type, negative_target, qreg_id));
-//
-//    int target_bigger_than_num_qubits = num_qubits;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, local_type,
-//                              target_bigger_than_num_qubits, qreg_id));
-//
-//
-//    int too_big_target = 128;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, local_type, too_big_target, qreg_id));
-//
-//    // Bad qreg id
-//    int negative_qreg_id = -1;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, local_type, target, negative_qreg_id));
-//
-//    int too_big_qreg_id = 254;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_get_local_channel(
-//                              &ch0, local_type, target, too_big_target));
-//
-//
-//}
-
-//void test_cq_update_qreg_pos(void) {
-//    int num_qubits = 5;
-//    int qreg_id = 0;
-//    cq_disable_analog_qreg(qreg_id);
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_print_qpos(qreg_id));
-//    cq_enable_analog_qreg(qreg_id, num_qubits);
-//
-//    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_print_qpos(qreg_id));
-//
-//    qpos new_pos[5] = {
-//        {5.0, 5.0, 0.0},
-//        {15.0, 15.0, 0.0},
-//        {25.0, 25.0, 0.0},
-//        {35.0, 35.0, 0.0},
-//        {45.0, 45.0, 0.0},
-//    };
-//
-//    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-//                          cq_update_qreg_pos(new_pos, num_qubits, qreg_id));
-//
-//    cq_print_qpos(qreg_id);
-//    qpos bad_pos[5] = {
-//        {2.0, 5.0, 0.0},
-//        {3.0, 1.0, 0.0},
-//        {4.0, 0.0, 0.0},
-//        {5.0, 0.0, 0.0},
-//        {6.0, 0.0, 0.0},
-//    };
-//
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_update_qreg_pos(bad_pos, num_qubits, qreg_id));
-//
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_update_qreg_pos(NULL, num_qubits, qreg_id));
-//
-//    int neg_num_qubits = -1;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_update_qreg_pos(new_pos, neg_num_qubits, qreg_id));
-//
-//
-//    int bad_num_qubits = num_qubits + 1;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_update_qreg_pos(new_pos, bad_num_qubits, qreg_id));
-//
-//    int negative_qreg_id = -2;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_update_qreg_pos(new_pos, num_qubits, negative_qreg_id));
-//
-//
-//    int too_big_qreg_id = num_qubits;
-//    TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-//                          cq_update_qreg_pos(new_pos, num_qubits, too_big_qreg_id));
-//
-//}
 
 void test_cq_init_pulse(void) {
     pulse p = {0};
@@ -354,7 +189,6 @@ void test_cq_play(void) {
     cq_disable_analog_qreg(qr);
     cq_enable_analog_qreg(qr);
 
-    //cq_get_local_channel(&ch, 1, 0, 0);
     cq_get_channel(&ch, 0, qr, &qr[0]);
 
     // uninitialised pulse fails to play
@@ -404,12 +238,10 @@ void test_cq_capture(void) {
     double epsilon = 0.0000001;
 
     // Only local channel can capture
-    //cq_get_global_channel(&ch, 0, 0);
     cq_get_channel(&ch, 1, qr, &qr[0]);
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
                           cq_capture(&ch, &p, results, num_shots));
 
-    //cq_get_local_channel(&ch, 1, 0, 0);
     cq_get_channel(&ch, 0, qr, &qr[0]);
 
     // uninitialised pulse fails to capture
@@ -454,8 +286,7 @@ void test_cq_delay(void) {
     // uninitialised channel fails to delay
     TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_delay(&ch, dt));
 
-    //cq_get_global_channel(&ch, 0, 0);
-    cq_get_channel(&ch, 1, qr, 0);
+    cq_get_channel(&ch, 1, qr, NULL);
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_delay(&ch, dt));
     TEST_ASSERT(ch.time - dt < epsilon);
 
@@ -486,7 +317,6 @@ void test_cq_barrier(void) {
     TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_barrier(channels, num_qubits));
 
     for (ptrdiff_t i = 0; i < num_qubits; ++i) {
-        //cq_get_local_channel(channels[i], 1, i, 0);
     	cq_get_channel(channels[i], 0, qr, &qr[i]);
     }
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_barrier(channels, num_qubits));

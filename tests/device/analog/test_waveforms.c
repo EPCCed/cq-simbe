@@ -1,6 +1,6 @@
-#include "unity.h"
-
+#include "test_waveforms.h"
 #include "analog.h"
+#include "unity.h"
 
 void setUp(void) {
     cq_enable_analog_mode(ISING);
@@ -688,19 +688,4 @@ void test_cq_composite_wf(void) {
     }
 }
 
-// not needed when using generate_test_runner.rb
-int main(void) {
-    setUp();
-    UNITY_BEGIN();
-    RUN_TEST(test_cq_gaussian_wf);
-    RUN_TEST(test_cq_gaussian_sqr_wf);
-    RUN_TEST(test_cq_interpolated_wf);
-    RUN_TEST(test_cq_sech_wf);
-    RUN_TEST(test_cq_sin_wf);
-    RUN_TEST(test_cq_cos_wf);
-    RUN_TEST(test_cq_blackman_wf);
-    RUN_TEST(test_cq_saw_wf);
-    RUN_TEST(test_cq_custom_wf);
-    RUN_TEST(test_cq_composite_wf);
-    return UNITY_END();
-}
+

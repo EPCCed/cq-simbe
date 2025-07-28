@@ -28,9 +28,6 @@ typedef struct channel {
 
 #define __CQ_ANALOG_MAX_NUM_SAMPLES__ 4096
 typedef struct pulse {
-    //double freq[__CQ_ANALOG_MAX_NUM_SAMPLES__];
-    //double phase[__CQ_ANALOG_MAX_NUM_SAMPLES__];
-    //double detuning[__CQ_ANALOG_MAX_NUM_SAMPLES__];
     double *freq;
     double *phase;
     double *detuning;
@@ -52,11 +49,6 @@ cq_status cq_disable_analog_qreg(qubit *qr);
 
 cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target);
 cq_status cq_retarget_channel(channel *ch, qubit *new_target);
-
-//cq_status cq_get_global_channel(channel *ch, int type, int qreg_id);
-//cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id);
-
-//cq_status cq_update_qreg_pos(const qpos *new_positions, int num_qubits, int qreg_id);
 cq_status cq_set_qubit_pos(const double *new_positions, qubit *qr);
 
 cq_status cq_init_pulse(pulse *pulse, double duration);

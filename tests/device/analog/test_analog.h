@@ -7,6 +7,7 @@ void test_cq_duration_to_samples(void);
 void test_cq_enable_analog_qreg(void);
 void test_cq_disable_analog_mode(void);
 void test_cq_get_channel(void);
+void test_cq_retarget_channel(void);
 void test_cq_init_pulse(void);
 void test_cq_free_pulse(void);
 void test_cq_play(void);

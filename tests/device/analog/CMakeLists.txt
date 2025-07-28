@@ -21,6 +21,7 @@ add_test(
 # ------------------------ waveforms ------------------------------
 add_executable(test_waveforms
   test_waveforms.c
+  test_waveforms_runner.c
 )
 
 target_link_libraries(test_waveforms

@@ -12,10 +12,8 @@ int main(void) {
     RUN_TEST(test_cq_duration_to_samples);
     RUN_TEST(test_cq_enable_analog_qreg);
     RUN_TEST(test_cq_disable_analog_mode);
-    //RUN_TEST(test_cq_get_global_channel);
-    //RUN_TEST(test_cq_get_local_channel);
     RUN_TEST(test_cq_get_channel);
-    //RUN_TEST(test_cq_update_qreg_pos);
+    RUN_TEST(test_cq_retarget_channel);
     RUN_TEST(test_cq_init_pulse);
     RUN_TEST(test_cq_free_pulse);
     RUN_TEST(test_cq_play);

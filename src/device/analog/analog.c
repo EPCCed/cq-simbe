@@ -216,19 +216,6 @@ cq_status cq_enable_analog_mode(int mode) {
     return enable_analog_mode(mode_);
 }
 
-//cq_status cq_enable_analog_qreg(int qreg_id, int num_qubits) {
-//    HANDLE_CQ_ERROR(is_analog_device_init());
-//    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
-//    HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
-//    return enable_analog_qreg(qreg_id, num_qubits);
-//}
-
-//cq_status cq_disable_analog_qreg(int qreg_id) {
-//    HANDLE_CQ_ERROR(is_analog_device_init());
-//    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
-//    return disable_analog_qreg(qreg_id);
-//}
-
 cq_status cq_enable_analog_qreg(qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     if (!qr) return CQ_ERROR;
@@ -265,6 +252,11 @@ cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target) {
 	    return get_local_channel(ch, 1, target->offset, qreg_id);
 	}
         case GLOBAL:
+            if (target) {
+                printf("Error: Provided target but accessing channel "
+		       "in global mode. From: %s\n", __func__);
+		return CQ_ERROR;
+	    }
 	    return get_global_channel(ch, 0, qreg_id);
 	default:
 	    printf("Error: Unknown addressing type.\n");
@@ -301,18 +293,6 @@ cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id) {
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return get_local_channel(ch, type, target, qreg_id);
 }
-
-//cq_status cq_update_qreg_pos(const qpos *new_positions, int num_qubits, int qreg_id) {
-//    HANDLE_CQ_ERROR(is_analog_device_init());
-//    if (!new_positions) {
-//        printf("Error: Passed nullptr positions. From: %s\n", __func__);
-//        return CQ_ERROR;
-//    }
-//
-//    HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
-//    HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
-//    return update_qreg_pos(new_positions, num_qubits, qreg_id);
-//}
 
 cq_status cq_set_qubit_pos(const double *new_positions, qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
