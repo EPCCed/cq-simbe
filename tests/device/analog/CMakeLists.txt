@@ -3,6 +3,7 @@ find_library(MATHS_LIBRARY m REQUIRED)
 # ------------------------ analog ops -----------------------------
 add_executable(test_analog
   test_analog.c
+  test_analog_runner.c
 )
 
 target_link_libraries(test_analog

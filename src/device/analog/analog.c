@@ -247,19 +247,21 @@ cq_status cq_disable_analog_qreg(qubit *qr) {
     return disable_analog_qreg(qreg_id);
 }
 
-cq_status cq_get_channel(channel *ch, int type, qubit *qr) {
+cq_status cq_get_channel(channel *ch, int type, qubit *qr, int target) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_channel(ch));
     if (!qr) return CQ_ERROR;
     int qreg_id = qr->registry_index;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
+    HANDLE_CQ_ERROR(validate_qubits_idx(target));
 
     addressing mode = (addressing)type;
  
     switch (mode) {
         case LOCAL:
-	    return get_local_channel(ch, 1, 0, qreg_id);
+	    return get_local_channel(ch, 1, target, qreg_id);
         case GLOBAL:
+	    //printf("Selected global channel, target argument will be ignored.\n");
 	    return get_global_channel(ch, 0, qreg_id);
 	default:
 	    printf("Error: Unknown addressing type.\n");
@@ -297,7 +299,7 @@ cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id) {
 //    return update_qreg_pos(new_positions, num_qubits, qreg_id);
 //}
 
-cq_status cq_set_qubits_pos(const double *new_positions, qubit *qr) {
+cq_status cq_set_qubit_pos(const double *new_positions, qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     if (!new_positions) {
         printf("Error: Passed nullptr positions. From: %s\n", __func__);
@@ -308,14 +310,34 @@ cq_status cq_set_qubits_pos(const double *new_positions, qubit *qr) {
     int num_qubits = qr->N;
     HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
-    // TODO: This casting works but is dangerous... Just do the right thing...
-    return update_qreg_pos((qpos*)new_positions, num_qubits, qreg_id);
+
+    qpos new_positions_[__CQ_ANALOG_MAX_NUM_QUBITS__] = {0};
+
+    for (int i = 0; i < num_qubits; ++i) {
+        int start = 3 * i;	
+        new_positions_[i].x = new_positions[start];
+        new_positions_[i].y = new_positions[start + 1];
+        new_positions_[i].z = new_positions[start + 2];
+    }
+
+    return update_qreg_pos(new_positions_, num_qubits, qreg_id);
 }
 //================================ PULSE ======================================
 cq_status cq_init_pulse(pulse *pulse, double duration) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_pulse(pulse));
     return init_pulse(pulse, duration);
+}
+
+cq_status cq_free_pulse(pulse *pulse) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    HANDLE_CQ_ERROR(validate_pulse(pulse));
+
+    if (!pulse->freq) {
+        printf("Error: pulse was already freed. From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+    return free_pulse(pulse);
 }
 
 cq_status cq_play(channel *ch, pulse *pulse) {

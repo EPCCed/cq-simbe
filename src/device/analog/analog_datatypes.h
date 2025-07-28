@@ -47,7 +47,6 @@ typedef struct channel_params {
     int qreg_id;               // on which qreg the channel operates
 } channel_params;
 
-
 #define __CQ_ANALOG_MAX_NUM_QUBITS__ 59
 // NOTE: PAULI_STR_LEN == MAX_NUM_QUBITS
 #define __CQ_ANALOG_MAX_PAULI_STR_LEN__ __CQ_ANALOG_MAX_NUM_QUBITS__
@@ -69,12 +68,20 @@ typedef struct cq_hamiltonian {
 
 } cq_hamiltonian;
 
+typedef struct qpos {
+    double x;
+    double y;
+    double z;
+} qpos;
+
 #define __CQ_ANALOG_MAX_NUM_CHANNELS__ __CQ_ANALOG_MAX_NUM_QUBITS__ + 1
+//#define __CQ_ANALOG_MAX_QPOS_SIZE__ __CQ_ANALOG_MAX_NUM_QUBITS__ * 3
 typedef struct analog_qreg {
     int id;
     bool in_use;
     int num_qubits;
     qpos qubit_pos[__CQ_ANALOG_MAX_NUM_QUBITS__];
+    //double qubit_pos[__CQ_ANALOG_MAX_QPOS_SIZE__];
     term_range sys_terms_range;
 
     channel channels[__CQ_ANALOG_MAX_NUM_CHANNELS__];

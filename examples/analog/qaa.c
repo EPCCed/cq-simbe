@@ -28,7 +28,7 @@ cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, q
   HANDLE_CQ_ERROR(cq_enable_analog_qreg(qr));
   channel ch0 = {0};
   //HANDLE_CQ_ERROR(cq_get_global_channel(&ch0, 0, qreg_id));
-  HANDLE_CQ_ERROR(cq_get_channel(&ch0, 1, qr));
+  HANDLE_CQ_ERROR(cq_get_channel(&ch0, 1, qr, 0));
 
   pulse pulse = {0};
   double duration = 4000.0;
@@ -60,10 +60,11 @@ cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, q
   };
 
   //HANDLE_CQ_ERROR(cq_update_qreg_pos(positions, NQUBITS, qreg_id));
-  HANDLE_CQ_ERROR(cq_set_qubits_pos(positions, qr));
+  HANDLE_CQ_ERROR(cq_set_qubit_pos(positions, qr));
   HANDLE_CQ_ERROR(cq_play(&ch0, &pulse));
 
   measure_qureg(qr, NQUBITS, cr);
+  HANDLE_CQ_ERROR(cq_free_pulse(&pulse));
   HANDLE_CQ_ERROR(cq_disable_analog_qreg(qr));
   return CQ_SUCCESS;
 };

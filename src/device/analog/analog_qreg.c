@@ -38,6 +38,7 @@ cq_status init_qreg(analog_qreg *qreg, int qreg_id, int num_qubits, cq_hamiltoni
 }
 
 cq_status init_qubit_pos(qpos *qubit_pos, int num_qubits) {
+//cq_status init_qubit_pos(double *qubit_pos, int num_qubits) {
     assert(qubit_pos != NULL);
     assert(num_qubits > 0 && num_qubits <= __CQ_ANALOG_MAX_NUM_QUBITS__);
 
@@ -47,6 +48,10 @@ cq_status init_qubit_pos(qpos *qubit_pos, int num_qubits) {
         qubit_pos[i].y = 0.0;
         qubit_pos[i].z = 0.0;
     }
+
+//    for (ptrdiff_t i = 0; i < num_qubits; ++i) {
+//    	qubit_pos[3 * i] = i * min_dist;
+//    }
     return CQ_SUCCESS;
 }
 
@@ -86,6 +91,7 @@ cq_status reset_qreg(analog_qreg *qreg) {
 }
 
 cq_status update_qreg_pos(const qpos *positions, int num_qubits, int qreg_id) {
+//cq_status update_qreg_pos(const double *positions, int num_qubits, int qreg_id) {
     assert(positions != NULL);
     assert(num_qubits > 0 && num_qubits < __CQ_ANALOG_MAX_NUM_QUBITS__);
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
@@ -107,10 +113,17 @@ cq_status update_qreg_pos(const qpos *positions, int num_qubits, int qreg_id) {
         return CQ_ERROR;
     }
 
-    for (int i = 0; i < num_qubits; ++i) {
-        qreg->qubit_pos[i].x = positions[i].x;
-        qreg->qubit_pos[i].y = positions[i].y;
-        qreg->qubit_pos[i].z = positions[i].z;
+    // THIS IS FOR QPOS
+//    for (int i = 0; i < num_qubits; ++i) {
+//        qreg->qubit_pos[i].x = positions[i].x;
+//        qreg->qubit_pos[i].y = positions[i].y;
+//        qreg->qubit_pos[i].z = positions[i].z;
+//    }
+
+    // THIS IS FOR DOUBLES
+
+    for (int i = 0; i < 3 * num_qubits; ++i) {
+    	qreg->qubit_pos[i] = positions[i];
     }
 
     if(update_sys_terms(qreg, get_hamiltonian(qreg)) == CQ_ERROR) return CQ_ERROR;
