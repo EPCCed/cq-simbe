@@ -382,6 +382,7 @@ cq_status sech_wf(double *samples, double duration, double amp, double sigma) {
 
 cq_status sin_wf(double *samples, double duration, double amp,
                  double freq, double phase) {
+    // sin is rescaled to be in [0, 1] range (if amp == 1.0)
     assert(samples != NULL);
     if (validate_duration(duration,
                           get_device_min_pulse_duration(),
@@ -392,7 +393,7 @@ cq_status sin_wf(double *samples, double duration, double amp,
     if (validate_sampling(sample_rate, duration, num_samples) == CQ_ERROR) return CQ_ERROR;
 
     for (ptrdiff_t i = 0; i < num_samples; ++i) {
-        samples[i] = amp * sin(2 * M_PI * freq * (double)i/(double)num_samples + phase);
+        samples[i] = amp * (0.5 * (1.0 + sin(2 * M_PI * freq * (double)i/(double)num_samples + phase)));
     }
 
     return CQ_SUCCESS;
@@ -400,6 +401,7 @@ cq_status sin_wf(double *samples, double duration, double amp,
 
 cq_status cos_wf(double *samples, double duration, double amp,
                  double freq, double phase) {
+    // cos is rescaled to be in [0, 1] range (if amp == 1.0)
     assert(samples != NULL);
     if (validate_duration(duration,
                           get_device_min_pulse_duration(),
@@ -410,7 +412,7 @@ cq_status cos_wf(double *samples, double duration, double amp,
     if (validate_sampling(sample_rate, duration, num_samples) == CQ_ERROR) return CQ_ERROR;
 
     for (ptrdiff_t i = 0; i < num_samples; ++i) {
-        samples[i] = amp * cos(2 * M_PI * freq * (double)i/(double)num_samples + phase);
+        samples[i] = amp * (0.5 * (1.0 + cos(2 * M_PI * freq * (double)i/(double)num_samples + phase)));
     }
 
     return CQ_SUCCESS;

@@ -286,6 +286,10 @@ void test_cq_sin_wf(void) {
          -8.44327926e-01, -7.70513243e-01, -6.84547106e-01, -5.87785252e-01,
          -4.81753674e-01, -3.68124553e-01, -2.48689887e-01, -1.25333234e-01,
     };
+    for (ptrdiff_t i = 0; i < 100; ++i) {
+        expected[i] += 1.0;
+        expected[i] *= 0.5;
+    }
 
     double samples[100] = {0};
     double duration = 313.0;
@@ -346,6 +350,11 @@ void test_cq_cos_wf(void) {
       0.30901699,  0.42577929,  0.53582679,  0.63742399,  0.72896863,  0.80901699,
       0.87630668,  0.92977649,  0.96858316,  0.9921147
     };
+    for (ptrdiff_t i = 0; i < 100; ++i) {
+        expected[i] += 1.0;
+        expected[i] *= 0.5;
+    }
+
     double samples[100] = {0};
     double duration = 313.0;
     double amp = 1.0;
@@ -624,6 +633,11 @@ void test_cq_composite_wf(void) {
       5.35826795e-001,  6.37423990e-001,  7.28968627e-001,  8.09016994e-001,
       8.76306680e-001,  9.29776486e-001,  9.68583161e-001,  9.92114701e-001,
     };
+
+    for (ptrdiff_t i = 100; i < 300; ++i) {
+        expected[i] += 1.0;
+        expected[i] *= 0.5;
+    }
 
     double gaussian_wav[100] = {0};
     double sin_wav[100] = {0};
