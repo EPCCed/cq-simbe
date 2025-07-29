@@ -21,17 +21,9 @@ typedef struct term_range {
     ptrdiff_t end;
 } term_range;
 
-typedef enum channel_type {
-    RYDBERG_GLOBAL = 0,
-    RYDBERG_LOCAL = 1,
-    RAMAN_LOCAL = 2,
-    DMM_GLOBAL = 3,
-    MW_GLOBAL = 4
-} channel_type;
-
 typedef enum addressing {
-    LOCAL = 0,
-    GLOBAL = 1
+    GLOBAL = 0,
+    LOCAL = 1
 } addressing;
 
 typedef struct channel_params {

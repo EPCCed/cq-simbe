@@ -64,12 +64,14 @@ static cq_status validate_channel_type(int type, addressing target) {
         return CQ_ERROR;
     }
     if (target == GLOBAL) {
-        if (type == RYDBERG_LOCAL || type == RAMAN_LOCAL) {
+        //if (type == RYDBERG_LOCAL || type == RAMAN_LOCAL) {
+        if (type == LOCAL) {
             printf("Error: Expected channel addressing is GLOBAL but LOCAL was given.");
             return CQ_ERROR;
         }
     } else if(target == LOCAL) {
-        if (type == RYDBERG_GLOBAL || type == DMM_GLOBAL) {
+        //if (type == RYDBERG_GLOBAL || type == DMM_GLOBAL) {
+        if (type == GLOBAL) {
             printf("Error: Expected channel addressing is LOCAL but GLOBAL was given.");
             return CQ_ERROR;
         }

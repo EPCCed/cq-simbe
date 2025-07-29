@@ -49,8 +49,8 @@ cq_status setup_channel_params(analog_qreg *qreg) {
     assert(qreg != NULL);
 
     ptrdiff_t qreg_id = qreg->id;
-    setup_global_channel_params(&qreg->channel_params[RYDBERG_GLOBAL], qreg_id);
-    setup_local_channel_params(&qreg->channel_params[RYDBERG_LOCAL], qreg_id);
+    setup_global_channel_params(&qreg->channel_params[GLOBAL], qreg_id);
+    setup_local_channel_params(&qreg->channel_params[LOCAL], qreg_id);
     return CQ_SUCCESS;
 }
 
@@ -111,11 +111,11 @@ void print_avail_channels(void) {
     );
 }
 
-static const char *get_channel_type_str(channel_type type) {
+static const char *get_channel_type_str(addressing type) {
     switch (type) {
-        case RYDBERG_LOCAL:
+        case LOCAL:
             return "LOCAL";
-        case RYDBERG_GLOBAL:
+        case GLOBAL:
             return "GLOBAL";
         default:
             return "Unknown";

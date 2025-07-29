@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define GLOBAL 0
+#define LOCAL 1
+
 cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, qkern_map * reg)
 {
   CQ_REGISTER_KERNEL(reg);
@@ -26,7 +29,7 @@ cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, q
   int qreg_id = 0;
   HANDLE_CQ_ERROR(cq_enable_analog_qreg(qr));
   channel ch0 = {0};
-  HANDLE_CQ_ERROR(cq_get_channel(&ch0, 1, qr, NULL));
+  HANDLE_CQ_ERROR(cq_get_channel(&ch0, GLOBAL, qr, NULL));
 
   pulse pulse = {0};
   double duration = 4000.0;
