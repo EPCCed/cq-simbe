@@ -496,8 +496,10 @@ cq_status cq_print_channel(channel *ch) {
     return CQ_SUCCESS;
 }
 
-cq_status cq_print_qpos(int qreg_id) {
+cq_status cq_print_qpos(qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
+    if (!qr) return CQ_ERROR;
+    int qreg_id = qr->registry_index;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     HANDLE_CQ_ERROR(print_qpos(qreg_id));
     return CQ_SUCCESS;
