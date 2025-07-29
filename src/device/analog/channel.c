@@ -8,6 +8,7 @@
 */
 
 #include "channel.h"
+#include "analog_device.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -19,8 +20,9 @@ static cq_status setup_local_channel_params(channel_params *params, ptrdiff_t qr
     params->min_amp = 0.0;
     params->min_retarget_dt = 220.0;
     params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
+    params->sample_rate = get_device_sample_rate();
+    params->min_pulse_duration = get_device_min_pulse_duration();
+    params->max_pulse_duration = get_device_max_pulse_duration();
     params->max_targets = 1;
     params->addressing = LOCAL;
     params->qreg_id = qreg_id;
@@ -36,8 +38,9 @@ static cq_status setup_global_channel_params(channel_params *params, ptrdiff_t q
     params->min_amp = 0.0;
     params->min_retarget_dt = 0.0;
     params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
+    params->sample_rate = get_device_sample_rate();
+    params->min_pulse_duration = get_device_min_pulse_duration();
+    params->max_pulse_duration = get_device_max_pulse_duration();
     params->max_targets = -1;
     params->addressing = GLOBAL;
     params->qreg_id = qreg_id;

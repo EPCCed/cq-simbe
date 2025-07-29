@@ -34,6 +34,7 @@ typedef struct channel_params {
     double retarget_delay;      // ns
     double sample_rate;         // GHz
     double min_pulse_duration;  // ns
+    double max_pulse_duration;  // ns
     int max_targets;            // -1 -> no max i.e. global
     addressing addressing;
     ptrdiff_t qreg_id;               // on which qreg the channel operates
