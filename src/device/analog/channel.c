@@ -11,7 +11,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-static cq_status setup_rydberg_local_params(channel_params *params, int qreg_id) {
+static cq_status setup_local_channel_params(channel_params *params, int qreg_id) {
     assert(params != NULL);
 
     params->max_freq = 62.83;
@@ -28,44 +28,10 @@ static cq_status setup_rydberg_local_params(channel_params *params, int qreg_id)
     return CQ_SUCCESS;
 }
 
-static cq_status setup_rydberg_global_params(channel_params *params, int qreg_id) {
+static cq_status setup_global_channel_params(channel_params *params, int qreg_id) {
     assert(params != NULL);
 
     params->max_freq = 15.71;
-    params->max_detuning = 125.7;
-    params->min_amp = 0.0;
-    params->min_retarget_dt = 0.0;
-    params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
-    params->max_targets = -1;
-    params->addressing = GLOBAL;
-    params->qreg_id = qreg_id;
-
-    return CQ_SUCCESS;
-}
-
-static cq_status setup_raman_local_params(channel_params *params, int qreg_id) {
-    assert(params != NULL);
-
-    params->max_freq = 62.83;
-    params->max_detuning = 125.7;
-    params->min_amp = 0.0;
-    params->min_retarget_dt = 220.0;
-    params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
-    params->max_targets = 1;
-    params->addressing = LOCAL;
-    params->qreg_id = qreg_id;
-
-    return CQ_SUCCESS;
-}
-
-static cq_status setup_dmm_global_params(channel_params *params, int qreg_id) {
-    assert(params != NULL);
-
-    params->max_freq = 0.0;
     params->max_detuning = 125.7;
     params->min_amp = 0.0;
     params->min_retarget_dt = 0.0;
@@ -83,10 +49,8 @@ cq_status setup_channel_params(analog_qreg *qreg) {
     assert(qreg != NULL);
 
     int qreg_id = qreg->id;
-    setup_rydberg_global_params(&qreg->channel_params[RYDBERG_GLOBAL], qreg_id);
-    setup_rydberg_local_params(&qreg->channel_params[RYDBERG_LOCAL], qreg_id);
-    setup_raman_local_params(&qreg->channel_params[RAMAN_LOCAL], qreg_id);
-    setup_dmm_global_params(&qreg->channel_params[DMM_GLOBAL], qreg_id);
+    setup_global_channel_params(&qreg->channel_params[RYDBERG_GLOBAL], qreg_id);
+    setup_local_channel_params(&qreg->channel_params[RYDBERG_LOCAL], qreg_id);
     return CQ_SUCCESS;
 }
 
@@ -114,7 +78,6 @@ cq_status retarget_channel(channel *ch, int new_target) {
     assert(new_target < __CQ_ANALOG_MAX_NUM_QUBITS__);
     assert(ch->params != NULL);
  
-    // TODO: enforce that only one qubit can be targetted
     ch->target = new_target;
     ch->time += ((channel_params *)ch->params)->retarget_delay;
     return CQ_SUCCESS;
