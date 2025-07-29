@@ -11,7 +11,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-static cq_status setup_local_channel_params(channel_params *params, int qreg_id) {
+static cq_status setup_local_channel_params(channel_params *params, ptrdiff_t qreg_id) {
     assert(params != NULL);
 
     params->max_freq = 62.83;
@@ -28,7 +28,7 @@ static cq_status setup_local_channel_params(channel_params *params, int qreg_id)
     return CQ_SUCCESS;
 }
 
-static cq_status setup_global_channel_params(channel_params *params, int qreg_id) {
+static cq_status setup_global_channel_params(channel_params *params, ptrdiff_t qreg_id) {
     assert(params != NULL);
 
     params->max_freq = 15.71;
@@ -48,7 +48,7 @@ static cq_status setup_global_channel_params(channel_params *params, int qreg_id
 cq_status setup_channel_params(analog_qreg *qreg) {
     assert(qreg != NULL);
 
-    int qreg_id = qreg->id;
+    ptrdiff_t qreg_id = qreg->id;
     setup_global_channel_params(&qreg->channel_params[RYDBERG_GLOBAL], qreg_id);
     setup_local_channel_params(&qreg->channel_params[RYDBERG_LOCAL], qreg_id);
     return CQ_SUCCESS;
@@ -72,7 +72,7 @@ cq_status copy_channel(channel *dest, const channel *src) {
     return CQ_SUCCESS;
 }
 
-cq_status retarget_channel(channel *ch, int new_target) {
+cq_status retarget_channel(channel *ch, ptrdiff_t new_target) {
     assert(ch != NULL);
     assert(new_target > -2);
     assert(new_target < __CQ_ANALOG_MAX_NUM_QUBITS__);
@@ -141,7 +141,7 @@ void print_channel(channel *ch) {
        "----- channel:      \n"
             "\tid: %d\n"
             "\ttype: %s\n"
-            "\ttarget: %d\n"
+            "\ttarget: %td\n"
             "\ttime: %f\n"
             "\tmax_freq = %f       \n"
             "\tmax_detuning = %f   \n"

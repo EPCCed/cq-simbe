@@ -22,10 +22,10 @@
 
 //============================ VALIDATION =====================================
 
-static cq_status validate_num_qubits(int num_qubits) {
+static cq_status validate_num_qubits(ptrdiff_t num_qubits) {
     if (num_qubits <= 0 || num_qubits > __CQ_ANALOG_MAX_NUM_QUBITS__) {
         printf("Error: Specified number of qubits out-of-bounds. "
-               "Should be in [1, %d] range, given %d.",
+               "Should be in [1, %d] range, given %ld.",
                __CQ_ANALOG_MAX_NUM_QUBITS__,
                num_qubits);
         return CQ_ERROR;
@@ -33,10 +33,10 @@ static cq_status validate_num_qubits(int num_qubits) {
     return CQ_SUCCESS;
 }
 
-static cq_status validate_qubits_idx(int qidx) {
+static cq_status validate_qubits_idx(ptrdiff_t qidx) {
     if (qidx < 0 || qidx >= __CQ_ANALOG_MAX_NUM_QUBITS__) {
         printf("Error: Specified qubit idx out-of-bounds. "
-               "Should be in [0, %d] range, given %d.",
+               "Should be in [0, %d] range, given %ld.",
                __CQ_ANALOG_MAX_NUM_QUBITS__ - 1,
                qidx);
         return CQ_ERROR;
@@ -44,11 +44,11 @@ static cq_status validate_qubits_idx(int qidx) {
     return CQ_SUCCESS;
 }
 
-static cq_status validate_qreg_id(int qreg_id) {
+static cq_status validate_qreg_id(ptrdiff_t qreg_id) {
     if (qreg_id < 0 ||
         qreg_id >= __CQ_ANALOG_MAX_NUM_QUREGS__) {
         printf("Error: Attempting to access qreg with "
-               "out-of-bounds index: %d. "
+               "out-of-bounds index: %ld. "
                "Should be in [0, %d] range.",
                qreg_id,
                __CQ_ANALOG_MAX_NUM_QUREGS__ - 1);
@@ -130,7 +130,7 @@ static cq_status validate_samples(double *samples) {
     return CQ_SUCCESS;
 }
 
-static cq_status validate_num_samples(int num_samples) {
+static cq_status validate_num_samples(ptrdiff_t num_samples) {
     if (num_samples < 1) {
         printf("Error: Specified num_samples < 1.");
         return CQ_ERROR;
@@ -154,7 +154,7 @@ static cq_status validate_result(int *result) {
     return CQ_SUCCESS;
 }
 
-static cq_status validate_num_shots(int shots) {
+static cq_status validate_num_shots(ptrdiff_t shots) {
     if (shots < 1) {
         printf("Error: Number of shots is < 1.");
         return CQ_ERROR;
@@ -219,8 +219,8 @@ cq_status cq_enable_analog_mode(int mode) {
 cq_status cq_enable_analog_qreg(qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     if (!qr) return CQ_ERROR;
-    int qreg_id = qr->registry_index;
-    int num_qubits = qr->N;
+    ptrdiff_t qreg_id = qr->registry_index;
+    ptrdiff_t num_qubits = qr->N;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
     return enable_analog_qreg(qreg_id, num_qubits);
@@ -229,7 +229,7 @@ cq_status cq_enable_analog_qreg(qubit *qr) {
 cq_status cq_disable_analog_qreg(qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     if (!qr) return CQ_ERROR;
-    int qreg_id = qr->registry_index;
+    ptrdiff_t qreg_id = qr->registry_index;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return disable_analog_qreg(qreg_id);
 }
@@ -238,7 +238,7 @@ cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_channel(ch));
     if (!qr) return CQ_ERROR;
-    int qreg_id = qr->registry_index;
+    ptrdiff_t qreg_id = qr->registry_index;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
 
     addressing mode = (addressing)type;
@@ -273,7 +273,7 @@ cq_status cq_retarget_channel(channel *ch, qubit *new_target) {
     	printf("Error: New target is nullptr. From %s\n", __func__);
 	return CQ_ERROR;
     }
-    int new_target_ = new_target->offset;
+    ptrdiff_t new_target_ = new_target->offset;
     return retarget_channel(ch, new_target_);
 }
 
@@ -301,15 +301,15 @@ cq_status cq_set_qubit_pos(const double *new_positions, qubit *qr) {
         return CQ_ERROR;
     }
     if (!qr) return CQ_ERROR;
-    int qreg_id = qr->registry_index;
-    int num_qubits = qr->N;
+    ptrdiff_t qreg_id = qr->registry_index;
+    ptrdiff_t num_qubits = qr->N;
     HANDLE_CQ_ERROR(validate_num_qubits(num_qubits));
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
 
     qpos new_positions_[__CQ_ANALOG_MAX_NUM_QUBITS__] = {0};
 
-    for (int i = 0; i < num_qubits; ++i) {
-        int start = 3 * i;	
+    for (ptrdiff_t i = 0; i < num_qubits; ++i) {
+        ptrdiff_t start = 3 * i;	
         new_positions_[i].x = new_positions[start];
         new_positions_[i].y = new_positions[start + 1];
         new_positions_[i].z = new_positions[start + 2];
@@ -499,7 +499,7 @@ cq_status cq_print_channel(channel *ch) {
 cq_status cq_print_qpos(qubit *qr) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     if (!qr) return CQ_ERROR;
-    int qreg_id = qr->registry_index;
+    ptrdiff_t qreg_id = qr->registry_index;
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     HANDLE_CQ_ERROR(print_qpos(qreg_id));
     return CQ_SUCCESS;
@@ -515,4 +515,66 @@ double cq_samples_to_duration(ptrdiff_t num_samples) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     if (num_samples < 0) return 0.0;
     return samples_to_duration(num_samples);
+}
+
+cq_status cq_set_device_sample_rate(double rate) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    if (rate < 0.0) {
+        printf("Error: Provided sample rate is negative. From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+    set_device_sample_rate(rate);
+    return CQ_SUCCESS;
+}
+
+cq_status cq_set_device_min_pulse_duration(double duration) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    if (duration < 0.0) {
+        printf("Error: Provided duration is negative. From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+    set_device_min_pulse_duration(duration);
+    return CQ_SUCCESS;
+}
+
+cq_status cq_set_device_max_pulse_duration(double duration) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    if (duration < 0.0) {
+        printf("Error: Provided duration is negative. From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+    set_device_max_pulse_duration(duration);
+    return CQ_SUCCESS;
+}
+
+cq_status cq_set_device_interaction_coeff(double coeff) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    set_device_interaction_coeff(coeff);
+    return CQ_SUCCESS;
+}
+
+cq_status cq_set_device_min_qubit_dist(double distance) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    if (distance < 0.0) {
+        printf("Error: Provided distance is negative. From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+    set_device_min_qubit_dist(distance);
+    return CQ_SUCCESS;
+}
+
+cq_status cq_set_device_max_num_shots(int shots) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    if (shots < 1) {
+        printf("Error: Provided number of shots is < 1. From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+    set_device_max_num_shots(shots);
+    return CQ_SUCCESS;
+}
+
+cq_status cq_set_device_coupling_func(double(*coupler)(double *q0, double *q1)) {
+    HANDLE_CQ_ERROR(is_analog_device_init());
+    set_device_coupling_func(coupler);
+    return CQ_SUCCESS;
 }

@@ -134,7 +134,7 @@ cq_status play(channel *ch, pulse *pulse) {
     channel_params *params = (channel_params *)ch->params;
     assert(params != NULL);
 
-    int qreg_id = params->qreg_id;
+    ptrdiff_t qreg_id = params->qreg_id;
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
 
     analog_qreg *qreg = get_qreg(qreg_id);
@@ -171,7 +171,7 @@ cq_status capture(channel *ch, pulse *pulse, int *result, int shots) {
 
     channel_params *params = (channel_params *)ch->params;
     assert(params != NULL);
-    int qreg_id = params->qreg_id;
+    ptrdiff_t qreg_id = params->qreg_id;
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
     analog_qreg *qreg = get_qreg(qreg_id);
     assert(qreg != NULL);

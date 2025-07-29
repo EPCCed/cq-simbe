@@ -21,7 +21,7 @@ typedef enum device_mode {
 typedef struct channel {
     int id;
     int type;
-    int target;
+    ptrdiff_t target;
     double time;
     void* params;
 } channel;
@@ -77,7 +77,17 @@ cq_status cq_print_analog_device(void);
 cq_status cq_print_avail_channels(void);
 cq_status cq_print_channel(channel *ch);
 cq_status cq_print_qpos(qubit *qr);
+
 ptrdiff_t cq_duration_to_samples(double duration);
 double cq_samples_to_duration(ptrdiff_t num_samples);
 
+cq_status cq_set_device_sample_rate(double rate);
+cq_status cq_set_device_min_pulse_duration(double duration);
+cq_status cq_set_device_max_pulse_duration(double duration);
+cq_status cq_set_device_interaction_coeff(double coeff);
+cq_status cq_set_device_min_qubit_dist(double distance);
+cq_status cq_set_device_max_num_shots(int shots);
+cq_status cq_set_device_coupling_func(double(*coupler)(double *q0, double *q1));
+
 #endif
+

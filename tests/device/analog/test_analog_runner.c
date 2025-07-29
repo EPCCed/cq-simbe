@@ -20,6 +20,13 @@ int main(void) {
     RUN_TEST(test_cq_capture);
     RUN_TEST(test_cq_delay);
     RUN_TEST(test_cq_barrier);
+    RUN_TEST(test_cq_set_device_sample_rate);
+    RUN_TEST(test_cq_set_device_min_pulse_duration);
+    RUN_TEST(test_cq_set_device_max_pulse_duration);
+    RUN_TEST(test_cq_set_device_interaction_coeff);
+    RUN_TEST(test_cq_set_device_min_qubit_dist);
+    RUN_TEST(test_cq_set_device_max_num_shots);
+    RUN_TEST(test_cq_set_device_coupling_func);
 
     cq_finalise(0);
 

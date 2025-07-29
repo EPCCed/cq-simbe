@@ -329,3 +329,59 @@ void test_cq_barrier(void) {
     int neg_num_qubits = -1;
     TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_barrier(channels, neg_num_qubits));
 }
+
+void test_cq_set_device_sample_rate(void) {
+    double negative_rate = -12412.10;
+    TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_set_device_sample_rate(negative_rate));
+
+    double rate = 0.25;
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_sample_rate(rate));
+}
+
+void test_cq_set_device_min_pulse_duration(void) {
+    double negative_duration = -12412.10;
+    TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_set_device_min_pulse_duration(negative_duration));
+
+    double duration = 123.0;
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_min_pulse_duration(duration));
+}
+
+void test_cq_set_device_max_pulse_duration(void) {
+    double negative_duration = -12412.10;
+    TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_set_device_max_pulse_duration(negative_duration));
+
+    double duration = 400.0;
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_max_pulse_duration(duration));
+}
+
+void test_cq_set_device_interaction_coeff(void) {
+    double coeff = 21515.0;
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_interaction_coeff(coeff));
+    coeff = -12312.4124;
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_interaction_coeff(coeff));
+}
+
+void test_cq_set_device_min_qubit_dist(void) {
+    double dist = 0.2;
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_min_qubit_dist(dist));
+    dist = -12312.4124;
+    TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_set_device_min_qubit_dist(dist));
+}
+
+void test_cq_set_device_max_num_shots(void) {
+    int shots = 123123;
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_max_num_shots(shots));
+
+    shots = -734;
+    TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_set_device_max_num_shots(shots));
+}
+
+static double dummy_coupler(double *q0, double *q1) {
+    return 42.0;
+};
+
+void test_cq_set_device_coupling_func(void) {
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_coupling_func(NULL));
+
+    TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_set_device_coupling_func(&dummy_coupler));
+}

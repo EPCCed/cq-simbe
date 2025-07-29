@@ -17,7 +17,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-cq_status init_qreg(analog_qreg *qreg, int qreg_id, int num_qubits, cq_hamiltonian *hamiltonian) {
+cq_status init_qreg(analog_qreg *qreg, ptrdiff_t qreg_id, ptrdiff_t num_qubits, cq_hamiltonian *hamiltonian) {
     assert(qreg != NULL);
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
     assert(num_qubits > 0 && num_qubits <= __CQ_ANALOG_MAX_NUM_QUBITS__);
@@ -37,12 +37,12 @@ cq_status init_qreg(analog_qreg *qreg, int qreg_id, int num_qubits, cq_hamiltoni
     return CQ_SUCCESS;
 }
 
-cq_status init_qubit_pos(qpos *qubit_pos, int num_qubits) {
+cq_status init_qubit_pos(qpos *qubit_pos, ptrdiff_t num_qubits) {
     assert(qubit_pos != NULL);
     assert(num_qubits > 0 && num_qubits <= __CQ_ANALOG_MAX_NUM_QUBITS__);
 
     double min_dist = get_device_min_qubit_dist() + 0.00001;
-    for (int i = 0; i < num_qubits; ++i) {
+    for (ptrdiff_t i = 0; i < num_qubits; ++i) {
         qubit_pos[i].x = i * min_dist;
         qubit_pos[i].y = 0.0;
         qubit_pos[i].z = 0.0;
@@ -86,7 +86,7 @@ cq_status reset_qreg(analog_qreg *qreg) {
     return CQ_SUCCESS;
 }
 
-cq_status update_qreg_pos(const qpos *positions, int num_qubits, int qreg_id) {
+cq_status update_qreg_pos(const qpos *positions, ptrdiff_t num_qubits, ptrdiff_t qreg_id) {
     assert(positions != NULL);
     assert(num_qubits > 0 && num_qubits < __CQ_ANALOG_MAX_NUM_QUBITS__);
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
@@ -95,20 +95,20 @@ cq_status update_qreg_pos(const qpos *positions, int num_qubits, int qreg_id) {
     assert(qreg != NULL);
 
     if (!qreg->in_use) {
-        printf("Error: The qreg with index: %d was not initialised "
+        printf("Error: The qreg with index: %td was not initialised "
                "in analog mode. From: %s\n",
                qreg->id, __func__);
         return CQ_ERROR;
     }
 
     if (num_qubits > qreg->num_qubits) {
-        printf("Error: The passed num_qubits (%d) is larger than the size "
-               "of register (%d). From: %s\n",
+        printf("Error: The passed num_qubits (%td) is larger than the size "
+               "of register (%td). From: %s\n",
                num_qubits, qreg->num_qubits, __func__);
         return CQ_ERROR;
     }
 
-    for (int i = 0; i < num_qubits; ++i) {
+    for (ptrdiff_t i = 0; i < num_qubits; ++i) {
         qreg->qubit_pos[i].x = positions[i].x;
         qreg->qubit_pos[i].y = positions[i].y;
         qreg->qubit_pos[i].z = positions[i].z;
@@ -121,22 +121,22 @@ cq_status update_qreg_pos(const qpos *positions, int num_qubits, int qreg_id) {
 }
 
 
-cq_status print_qpos(int qreg_id) {
+cq_status print_qpos(ptrdiff_t qreg_id) {
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
 
     analog_qreg *qreg = get_qreg(qreg_id);
     assert(qreg != NULL);
 
     if (!qreg->in_use) {
-        printf("Error: The qreg with index: %d was not initialised "
+        printf("Error: The qreg with index: %td was not initialised "
                "in analog mode. From: %s\n",
                qreg->id, __func__);
         return CQ_ERROR;
     }
 
-    printf("Qubit positions in qreg %d:\n", qreg_id);
-    for (int i = 0; i < qreg->num_qubits; ++i) {
-        printf("q%d: %f %f %f\n", i,
+    printf("Qubit positions in qreg %td:\n", qreg_id);
+    for (ptrdiff_t i = 0; i < qreg->num_qubits; ++i) {
+        printf("q%td: %f %f %f\n", i,
             qreg->qubit_pos[i].x,
             qreg->qubit_pos[i].y,
             qreg->qubit_pos[i].z

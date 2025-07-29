@@ -21,7 +21,7 @@ cq_status add_xy_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonia
 cq_status add_driving_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian);
 
 // static and move to .c?
-cq_status add_driving_local_term(int target, cq_hamiltonian *hamiltonian);
+cq_status add_driving_local_term(ptrdiff_t target, cq_hamiltonian *hamiltonian);
 cq_status add_driving_global_term(analog_qreg *qreg, cq_hamiltonian *hamiltonian);
 
 cq_status update_sys_terms(const analog_qreg *qreg, cq_hamiltonian *hamiltonian);
