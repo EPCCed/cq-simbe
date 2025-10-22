@@ -18,3 +18,5 @@ add_test(
   NAME test_qft
   COMMAND ./test_qft
 )
+
+add_subdirectory(vqe)
