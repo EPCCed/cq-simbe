@@ -8,17 +8,39 @@ project(CQ-SIMBE
 
 # User configure options
 
-option(BUILD_SHARED_LIBS "Build shared library. Turned ON by default." ON)
+option(
+  BUILD_SHARED_LIBS
+  "Build shared library. Turned ON by default." 
+  ON
+)
 message(STATUS "BUILD_SHARED_LIBS turned ${BUILD_SHARED_LIBS}.")
 
-option(ENABLE_TESTING "Build tests using unity testing framework. Turned ON by default." ON)
+option(
+  ENABLE_TESTING
+  "Build tests using unity testing framework. Turned ON by default."
+  ON
+)
 message(STATUS "ENABLE_TESTING turned ${ENABLE_TESTING}.")
 
-option(BUILD_EXAMPLES "Build example applications. Turned OFF by default." OFF)
+option(
+  BUILD_EXAMPLES
+  "Build example applications. Turned OFF by default."
+  OFF
+)
 message(STATUS "BUILD_EXAMPLES turned ${BUILD_EXAMPLES}.")
+
+option(
+  FORCE_BUILD_VQE 
+  "Debug option to force build to fail if NLopt isn't found." 
+  OFF
+)
+
+# Dependencies
 
 find_package(Threads REQUIRED)
 find_package(QuEST 4.0 REQUIRED)
+
+# CQ-SimBE Library
 
 add_library(cq-simbe)
 add_library(CQ-SIMBE::cq-simbe ALIAS cq-simbe)
