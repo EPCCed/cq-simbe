@@ -22,8 +22,8 @@ typedef struct term_range {
 } term_range;
 
 typedef enum addressing {
-    GLOBAL = 0,
-    LOCAL = 1
+    CQ_ADDR_GLOBAL = 0,
+    CQ_ADDR_LOCAL = 1
 } addressing;
 
 typedef struct channel_params {

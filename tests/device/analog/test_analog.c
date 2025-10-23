@@ -7,8 +7,8 @@
 
 #include <stdbool.h>
 
-#define GLOBAL 0
-#define LOCAL 1
+#define CQ_ADDR_GLOBAL 0
+#define CQ_ADDR_LOCAL 1
 
 qubit *qr = NULL;
 void setUp(void) {
@@ -89,24 +89,24 @@ void test_cq_get_channel(void) {
 		  
     // Getting channel on uninitialised qreg.
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(&ch0, LOCAL, qr, &qr[0]));
+		    cq_get_channel(&ch0, CQ_ADDR_LOCAL, qr, &qr[0]));
 
     cq_enable_analog_qreg(qr);
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-		    cq_get_channel(&ch0, LOCAL, qr, &qr[0]));
+		    cq_get_channel(&ch0, CQ_ADDR_LOCAL, qr, &qr[0]));
 
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
-		    cq_get_channel(&ch0, GLOBAL, qr, NULL));
+		    cq_get_channel(&ch0, CQ_ADDR_GLOBAL, qr, NULL));
 
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_print_channel(&ch0));
 
     // NULL channel
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(NULL, LOCAL, qr, &qr[0]));
+		    cq_get_channel(NULL, CQ_ADDR_LOCAL, qr, &qr[0]));
     
     // NULL qr
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(&ch0, LOCAL, NULL, &qr[0]));
+		    cq_get_channel(&ch0, CQ_ADDR_LOCAL, NULL, &qr[0]));
 
     // Bad type
     int negative_type = -1;
@@ -117,20 +117,20 @@ void test_cq_get_channel(void) {
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
 		    cq_get_channel(&ch0, too_big_type, qr, &qr[0]));
 
-    // Providing target but accessing GLOBAL channel.
+    // Providing target but accessing CQ_ADDR_GLOBAL channel.
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(&ch0, GLOBAL, qr, &qr[0]));
+		    cq_get_channel(&ch0, CQ_ADDR_GLOBAL, qr, &qr[0]));
 
     // Bad target
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
-		    cq_get_channel(&ch0, LOCAL, qr, NULL));
+		    cq_get_channel(&ch0, CQ_ADDR_LOCAL, qr, NULL));
 
 }
 
 void test_cq_retarget_channel(channel *ch, int new_target) {
     channel ch0 = {0};
 
-    cq_get_channel(&ch0, LOCAL, qr, &qr[0]);
+    cq_get_channel(&ch0, CQ_ADDR_LOCAL, qr, &qr[0]);
 
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
         cq_retarget_channel(NULL, &qr[1]));
@@ -188,7 +188,7 @@ void test_cq_play(void) {
     cq_disable_analog_qreg(qr);
     cq_enable_analog_qreg(qr);
 
-    cq_get_channel(&ch, LOCAL, qr, &qr[0]);
+    cq_get_channel(&ch, CQ_ADDR_LOCAL, qr, &qr[0]);
 
     // uninitialised pulse fails to play
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
@@ -236,12 +236,12 @@ void test_cq_capture(void) {
     double duration = 100.0;
     double epsilon = 0.0000001;
 
-    // Only LOCAL channel can capture
-    cq_get_channel(&ch, GLOBAL, qr, &qr[0]);
+    // Only CQ_ADDR_LOCAL channel can capture
+    cq_get_channel(&ch, CQ_ADDR_GLOBAL, qr, &qr[0]);
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
                           cq_capture(&ch, &p, results, num_shots));
 
-    cq_get_channel(&ch, LOCAL, qr, &qr[0]);
+    cq_get_channel(&ch, CQ_ADDR_LOCAL, qr, &qr[0]);
 
     // uninitialised pulse fails to capture
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
@@ -285,7 +285,7 @@ void test_cq_delay(void) {
     // uninitialised channel fails to delay
     TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_delay(&ch, dt));
  
-    cq_get_channel(&ch, GLOBAL, qr, NULL);
+    cq_get_channel(&ch, CQ_ADDR_GLOBAL, qr, NULL);
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_delay(&ch, dt));
     TEST_ASSERT(ch.time - dt < epsilon);
 
@@ -316,7 +316,7 @@ void test_cq_barrier(void) {
     TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_barrier(channels, num_qubits));
 
     for (ptrdiff_t i = 0; i < num_qubits; ++i) {
-    	cq_get_channel(channels[i], LOCAL, qr, &qr[i]);
+    	cq_get_channel(channels[i], CQ_ADDR_LOCAL, qr, &qr[i]);
     }
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_barrier(channels, num_qubits));
     TEST_ASSERT(channels[0]->time - channels[1]->time < epsilon &&

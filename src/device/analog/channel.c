@@ -24,7 +24,7 @@ static cq_status setup_local_channel_params(channel_params *params, ptrdiff_t qr
     params->min_pulse_duration = get_device_min_pulse_duration();
     params->max_pulse_duration = get_device_max_pulse_duration();
     params->max_targets = 1;
-    params->addressing = LOCAL;
+    params->addressing = CQ_ADDR_LOCAL;
     params->qreg_id = qreg_id;
 
     return CQ_SUCCESS;
@@ -42,7 +42,7 @@ static cq_status setup_global_channel_params(channel_params *params, ptrdiff_t q
     params->min_pulse_duration = get_device_min_pulse_duration();
     params->max_pulse_duration = get_device_max_pulse_duration();
     params->max_targets = -1;
-    params->addressing = GLOBAL;
+    params->addressing = CQ_ADDR_GLOBAL;
     params->qreg_id = qreg_id;
 
     return CQ_SUCCESS;
@@ -52,8 +52,8 @@ cq_status setup_channel_params(analog_qreg *qreg) {
     assert(qreg != NULL);
 
     ptrdiff_t qreg_id = qreg->id;
-    setup_global_channel_params(&qreg->channel_params[GLOBAL], qreg_id);
-    setup_local_channel_params(&qreg->channel_params[LOCAL], qreg_id);
+    setup_global_channel_params(&qreg->channel_params[CQ_ADDR_GLOBAL], qreg_id);
+    setup_local_channel_params(&qreg->channel_params[CQ_ADDR_LOCAL], qreg_id);
     return CQ_SUCCESS;
 }
 
@@ -89,7 +89,7 @@ cq_status retarget_channel(channel *ch, ptrdiff_t new_target) {
 void print_avail_channels(void) {
     printf("==============================================================\n"
            "Available Channels:\n"
-           "----- GLOBAL:     \n"
+           "----- CQ_ADDR_GLOBAL:     \n"
             "\tmax_freq = 15.71       \n"
             "\tmax_detuning = 125.7   \n"
             "\tmin_amp = 0.0          \n"
@@ -98,9 +98,9 @@ void print_avail_channels(void) {
             "\tsample_rate = 0.25     \n"
             "\tmin_pulse_duration = 16\n"
             "\tmax_targets = -1       \n"
-            "\taddressing = GLOBAL    \n\n"
+            "\taddressing = CQ_ADDR_GLOBAL    \n\n"
 
-           "----- LOCAL:      \n"
+           "----- CQ_ADDR_LOCAL:      \n"
             "\tmax_freq = 62.83       \n"
             "\tmax_detuning = 125.7   \n"
             "\tmin_amp = 0.0          \n"
@@ -109,17 +109,17 @@ void print_avail_channels(void) {
             "\tsample_rate = 0.25     \n"
             "\tmin_pulse_duration = 16\n"
             "\tmax_targets = 1       \n"
-            "\taddressing = LOCAL    \n"
+            "\taddressing = CQ_ADDR_LOCAL    \n"
             "==============================================================\n"
     );
 }
 
 static const char *get_channel_type_str(addressing type) {
     switch (type) {
-        case LOCAL:
-            return "LOCAL";
-        case GLOBAL:
-            return "GLOBAL";
+        case CQ_ADDR_LOCAL:
+            return "CQ_ADDR_LOCAL";
+        case CQ_ADDR_GLOBAL:
+            return "CQ_ADDR_GLOBAL";
         default:
             return "Unknown";
     }
@@ -127,10 +127,10 @@ static const char *get_channel_type_str(addressing type) {
 
 static const char *get_addressing_str(addressing addressing) {
     switch (addressing) {
-        case LOCAL:
-            return "LOCAL";
-        case GLOBAL:
-            return "GLOBAL";
+        case CQ_ADDR_LOCAL:
+            return "CQ_ADDR_LOCAL";
+        case CQ_ADDR_GLOBAL:
+            return "CQ_ADDR_GLOBAL";
         default:
             return "Unknown";
     }

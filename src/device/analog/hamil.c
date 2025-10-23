@@ -160,17 +160,17 @@ cq_status add_driving_global_term(analog_qreg *qreg, cq_hamiltonian *hamiltonian
 
     channel global_ch = {0};
     global_ch.id = (int)(qreg->num_channels);
-    global_ch.type = GLOBAL;
+    global_ch.type = CQ_ADDR_GLOBAL;
     global_ch.target = -1;
-    global_ch.params = (void *)&qreg->channel_params[GLOBAL];
+    global_ch.params = (void *)&qreg->channel_params[CQ_ADDR_GLOBAL];
 
     qreg->channels_ranges[global_ch.id].start = hamiltonian->num_terms;
     for (ptrdiff_t i = 0; i < qreg->num_qubits; ++i) {
         channel local_ch = {0};
         local_ch.id = (int)(qreg->num_channels + 1);
-        local_ch.type = LOCAL;
+        local_ch.type = CQ_ADDR_LOCAL;
         local_ch.target = i;
-        local_ch.params = (void *)&qreg->channel_params[LOCAL];
+        local_ch.params = (void *)&qreg->channel_params[CQ_ADDR_LOCAL];
 
         qreg->channels_ranges[local_ch.id].start = hamiltonian->num_terms;
         add_driving_local_term(i, hamiltonian);

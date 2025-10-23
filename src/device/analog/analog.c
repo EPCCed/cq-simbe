@@ -63,16 +63,16 @@ static cq_status validate_channel_type(int type, addressing target) {
                "(should be in [0, 4] range, given %d).", type);
         return CQ_ERROR;
     }
-    if (target == GLOBAL) {
-        //if (type == RYDBERG_LOCAL || type == RAMAN_LOCAL) {
-        if (type == LOCAL) {
-            printf("Error: Expected channel addressing is GLOBAL but LOCAL was given.");
+    if (target == CQ_ADDR_GLOBAL) {
+        //if (type == RYDBERG_CQ_ADDR_LOCAL || type == RAMAN_CQ_ADDR_LOCAL) {
+        if (type == CQ_ADDR_LOCAL) {
+            printf("Error: Expected channel addressing is CQ_ADDR_GLOBAL but CQ_ADDR_LOCAL was given.");
             return CQ_ERROR;
         }
-    } else if(target == LOCAL) {
-        //if (type == RYDBERG_GLOBAL || type == DMM_GLOBAL) {
-        if (type == GLOBAL) {
-            printf("Error: Expected channel addressing is LOCAL but GLOBAL was given.");
+    } else if(target == CQ_ADDR_LOCAL) {
+        //if (type == RYDBERG_CQ_ADDR_GLOBAL || type == DMM_CQ_ADDR_GLOBAL) {
+        if (type == CQ_ADDR_GLOBAL) {
+            printf("Error: Expected channel addressing is CQ_ADDR_LOCAL but CQ_ADDR_GLOBAL was given.");
             return CQ_ERROR;
         }
     }
@@ -246,14 +246,14 @@ cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target) {
     addressing mode = (addressing)type;
  
     switch (mode) {
-        case LOCAL: {
+        case CQ_ADDR_LOCAL: {
 	    if (!target) {
                 printf("Error: Target qubit is nullptr. From: %s\n", __func__);
 		return CQ_ERROR;
 	    }
 	    return get_local_channel(ch, 1, target->offset, qreg_id);
 	}
-        case GLOBAL:
+        case CQ_ADDR_GLOBAL:
             if (target) {
                 printf("Error: Provided target but accessing channel "
 		       "in global mode. From: %s\n", __func__);
@@ -270,7 +270,7 @@ cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target) {
 cq_status cq_retarget_channel(channel *ch, qubit *new_target) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_channel(ch));
-    HANDLE_CQ_ERROR(validate_channel_type(ch->type, LOCAL));
+    HANDLE_CQ_ERROR(validate_channel_type(ch->type, CQ_ADDR_LOCAL));
     if (!new_target) {
     	printf("Error: New target is nullptr. From %s\n", __func__);
 	return CQ_ERROR;
@@ -282,7 +282,7 @@ cq_status cq_retarget_channel(channel *ch, qubit *new_target) {
 cq_status cq_get_global_channel(channel *ch, int type, int qreg_id) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_channel(ch));
-    HANDLE_CQ_ERROR(validate_channel_type(type, GLOBAL));
+    HANDLE_CQ_ERROR(validate_channel_type(type, CQ_ADDR_GLOBAL));
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return get_global_channel(ch, type, qreg_id);
 }
@@ -290,7 +290,7 @@ cq_status cq_get_global_channel(channel *ch, int type, int qreg_id) {
 cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_channel(ch));
-    HANDLE_CQ_ERROR(validate_channel_type(type, LOCAL));
+    HANDLE_CQ_ERROR(validate_channel_type(type, CQ_ADDR_LOCAL));
     HANDLE_CQ_ERROR(validate_qubits_idx(target));
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
     return get_local_channel(ch, type, target, qreg_id);
@@ -349,7 +349,7 @@ cq_status cq_capture(channel *ch, pulse *pulse, int *result, int shots) {
     HANDLE_CQ_ERROR(is_analog_device_init());
     HANDLE_CQ_ERROR(validate_channel(ch));
     // can capture only with channels that have valid target
-    HANDLE_CQ_ERROR(validate_channel_type(ch->type, LOCAL));
+    HANDLE_CQ_ERROR(validate_channel_type(ch->type, CQ_ADDR_LOCAL));
     HANDLE_CQ_ERROR(validate_channel_params(ch));
     HANDLE_CQ_ERROR(validate_pulse(pulse));
     HANDLE_CQ_ERROR(validate_result(result));

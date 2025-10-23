@@ -111,7 +111,7 @@ cq_status disable_analog_qreg(ptrdiff_t qreg_id) {
 cq_status get_global_channel(channel *ch, int type, ptrdiff_t qreg_id) {
     assert(ch != NULL);
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
-    //if (validate_channel_type(type, LOCAL) == CQ_ERROR) return CQ_ERROR;
+    //if (validate_channel_type(type, CQ_ADDR_LOCAL) == CQ_ERROR) return CQ_ERROR;
 
     if (!device.is_initialized) {
         printf("Error: Attempting to run analog operation without "
@@ -138,7 +138,7 @@ cq_status get_local_channel(channel *ch, int type, ptrdiff_t target, ptrdiff_t q
     assert(ch != NULL);
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
     assert(target > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUBITS__);
-    //if (validate_channel_type(type, LOCAL) == CQ_ERROR) return CQ_ERROR;
+    //if (validate_channel_type(type, CQ_ADDR_LOCAL) == CQ_ERROR) return CQ_ERROR;
     if (!device.is_initialized) {
         printf("Error: Attempting to run analog operation without "
                "analog mode on. From: %s\n", __func__);
