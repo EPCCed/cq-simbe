@@ -26,7 +26,7 @@ static cq_status get_pauli_strings(cq_hamiltonian *hamiltonian, PauliStr *pauli_
     assert(pauli_strings != NULL);
     assert(hamiltonian->num_terms < __CQ_ANALOG_MAX_NUM_HAM_TERMS__);
 
-    for (int i = 0; i < hamiltonian->num_terms; ++i) {
+    for (ptrdiff_t i = 0; i < hamiltonian->num_terms; ++i) {
         const PauliStr quest_pauli_str = getPauliStr(
             hamiltonian->terms[i].paulis,
             hamiltonian->terms[i].indices,
@@ -63,7 +63,7 @@ cq_status simulate_pulse(channel *ch, pulse *pulse, analog_qreg *qreg, cq_hamilt
     assert(qreg != NULL);
     assert(hamiltonian != NULL);
 
-    int qreg_id = qreg->id;
+    ptrdiff_t qreg_id = qreg->id;
 
     if (quest_hamiltonians[qreg_id].numTerms == 0) {
         init_quest_hamiltonian(hamiltonian, &quest_hamiltonians[qreg_id]);
@@ -117,7 +117,7 @@ int simulate_capture(channel *ch, analog_qreg *qreg) {
             ch->target);
 }
 
-void sync_simulator(cq_hamiltonian *hamiltonian, int qreg_id) {
+void sync_simulator(cq_hamiltonian *hamiltonian, ptrdiff_t qreg_id) {
     assert(hamiltonian != NULL);
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
 
@@ -131,12 +131,12 @@ void sync_simulator(cq_hamiltonian *hamiltonian, int qreg_id) {
     }
 }
 
-void print_statevec(int qreg_id) {
+void print_statevec(ptrdiff_t qreg_id) {
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
     Qureg quest_qureg = qregistry.registers[qreg_id];
     #define printbits_n(x,n) for (int j=n;j;j--,putchar('0'|(x>>j)&1))
 
-    for (int i = 0; i < quest_qureg.numAmps; ++i) {
+    for (ptrdiff_t i = 0; i < quest_qureg.numAmps; ++i) {
         double prob = creal(quest_qureg.cpuAmps[i]) * creal(quest_qureg.cpuAmps[i]) +
                         cimag(quest_qureg.cpuAmps[i]) * cimag(quest_qureg.cpuAmps[i]);
 
@@ -147,18 +147,18 @@ void print_statevec(int qreg_id) {
     #undef printbits_n
 }
 
-void init_simulator_qreg(int qreg_id, int num_qubits) {
+void init_simulator_qreg(ptrdiff_t qreg_id, ptrdiff_t num_qubits) {
     if (!isQuESTEnvInit()) {
         initQuESTEnv();
     }
 
     if (qregistry.available[qreg_id]) {
         qregistry.available[qreg_id] = true;
-        qregistry.registers[qreg_id] = createQureg(num_qubits);
+        qregistry.registers[qreg_id] = createQureg((int)num_qubits);
     }
 }
 
-void reset_simulator_qreg(int qreg_id) {
+void reset_simulator_qreg(ptrdiff_t qreg_id) {
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
     initZeroState(qregistry.registers[qreg_id]);
     //qregistry.available[qreg_id] = false;

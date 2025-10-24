@@ -13,6 +13,7 @@
 #include "analog_datatypes.h"
 
 cq_status init_pulse(pulse *pulse, double duration);
+cq_status free_pulse(pulse *pulse);
 cq_status play(channel *ch, pulse *pulse);
 cq_status capture(channel *ch, pulse *pulse, int *result, int shots);
 cq_status delay(channel *ch, double dt);

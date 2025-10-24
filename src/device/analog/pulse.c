@@ -15,6 +15,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static cq_status can_channel_play_pulse(channel *ch, pulse *pulse) {
 
@@ -79,12 +80,48 @@ cq_status init_pulse(pulse *pulse, double duration) {
 
     pulse->num_samples = num_samples;
 
+    pulse->freq = malloc(num_samples * sizeof(double));
+    if (!pulse->freq) {
+        printf("Error: Failed to allocate freq array in pulse. "
+		"From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+
+    pulse->phase = malloc(num_samples * sizeof(double));
+    if (!pulse->phase) {
+        printf("Error: Failed to allocate phase array in pulse. "
+		"From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+ 
+    pulse->detuning = malloc(num_samples * sizeof(double));
+    if (!pulse->detuning) {
+        printf("Error: Failed to allocate detuning array in pulse. "
+		"From: %s\n", __func__);
+	return CQ_ERROR;
+    }
+ 
     for (ptrdiff_t i = 0; i < num_samples; ++i) {
         pulse->freq[i] = 0.0;
         pulse->phase[i] = 0.0;
         pulse->detuning[i] = 0.0;
     }
 
+    return CQ_SUCCESS;
+}
+
+cq_status free_pulse(pulse *pulse) {
+    assert(pulse != NULL);
+    assert(pulse->freq != NULL);
+    assert(pulse->phase != NULL);
+    assert(pulse->detuning != NULL);
+
+    free(pulse->freq);
+    free(pulse->phase);
+    free(pulse->detuning);
+    pulse->freq = NULL;
+    pulse->phase = NULL;
+    pulse->detuning = NULL;
     return CQ_SUCCESS;
 }
 
@@ -97,7 +134,7 @@ cq_status play(channel *ch, pulse *pulse) {
     channel_params *params = (channel_params *)ch->params;
     assert(params != NULL);
 
-    int qreg_id = params->qreg_id;
+    ptrdiff_t qreg_id = params->qreg_id;
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
 
     analog_qreg *qreg = get_qreg(qreg_id);
@@ -134,7 +171,7 @@ cq_status capture(channel *ch, pulse *pulse, int *result, int shots) {
 
     channel_params *params = (channel_params *)ch->params;
     assert(params != NULL);
-    int qreg_id = params->qreg_id;
+    ptrdiff_t qreg_id = params->qreg_id;
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
     analog_qreg *qreg = get_qreg(qreg_id);
     assert(qreg != NULL);

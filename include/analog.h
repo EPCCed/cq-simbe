@@ -14,61 +14,49 @@
 #include <stddef.h>
 
 typedef enum device_mode {
-    RYDBERG,
+    ISING,
     XY
 } device_mode;
-
-typedef struct qpos {
-    double x;
-    double y;
-    double z;
-} qpos;
 
 typedef struct channel {
     int id;
     int type;
-    int target;
+    ptrdiff_t target;
     double time;
     void* params;
 } channel;
 
 #define __CQ_ANALOG_MAX_NUM_SAMPLES__ 4096
 typedef struct pulse {
-    double freq[__CQ_ANALOG_MAX_NUM_SAMPLES__];
-    double phase[__CQ_ANALOG_MAX_NUM_SAMPLES__];
-    double detuning[__CQ_ANALOG_MAX_NUM_SAMPLES__];
+    double *freq;
+    double *phase;
+    double *detuning;
+
     double duration;
     ptrdiff_t num_samples;
 } pulse;
 
-cq_status cq_print_analog_device(void);
-cq_status cq_print_avail_channels(void);
-cq_status cq_print_channel(channel *ch);
-cq_status cq_print_qpos(int qreg_id);
-// TODO: cq_status cq_retarget_channel(channel *ch, int new_target);
-ptrdiff_t cq_duration_to_samples(double duration);
-double cq_samples_to_duration(ptrdiff_t num_samples);
+cq_status cq_enable_analog_mode(int mode);
+cq_status cq_enable_analog_qreg(qubit *qr);
+cq_status cq_disable_analog_qreg(qubit *qr);
 
-cq_status cq_enable_analog_mode(device_mode mode);
-cq_status cq_enable_analog_qreg(int qreg_id, int num_qubits);
-cq_status cq_disable_analog_qreg(int qreg_id);
-cq_status cq_get_global_channel(channel *ch, int type, int qreg_id);
-cq_status cq_get_local_channel(channel *ch, int type, int target, int qreg_id);
-
-cq_status cq_update_qreg_pos(const qpos *new_positions, int num_qubits, int qreg_id);
+cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target);
+cq_status cq_retarget_channel(channel *ch, qubit *new_target);
+cq_status cq_set_qubit_pos(const double *new_positions, qubit *qr);
 
 cq_status cq_init_pulse(pulse *pulse, double duration);
+cq_status cq_free_pulse(pulse *pulse);
+
 cq_status cq_play(channel *ch, pulse *pulse);
 cq_status cq_capture(channel *ch, pulse *pulse, int *result, int shots);
 cq_status cq_delay(channel *ch, double dt);
 cq_status cq_barrier(channel **ch, int num_channels);
 
+// =============================== Waveforms ==================================
 cq_status cq_gaussian_wf(double *samples, double duration, double amp, double sigma);
-
 // TODO: consider removing as it has limited applicability
 cq_status cq_gaussian_sqr_wf(double *samples, double duration, double amp,
                           double sigma, double width);
-
 cq_status cq_interpolated_wf(double *samples, double duration,
                           double *points, int num_points);
 cq_status cq_sech_wf(double *samples, double duration, double amp, double sigma);
@@ -84,4 +72,22 @@ cq_status cq_composite_wf(double *samples, double **waveforms,
                        ptrdiff_t *num_samples, int num_waveforms,
                        ptrdiff_t *total_num_samples);
 
+// =============================== Helpers ====================================
+cq_status cq_print_analog_device(void);
+cq_status cq_print_avail_channels(void);
+cq_status cq_print_channel(channel *ch);
+cq_status cq_print_qpos(qubit *qr);
+
+ptrdiff_t cq_duration_to_samples(double duration);
+double cq_samples_to_duration(ptrdiff_t num_samples);
+
+cq_status cq_set_device_sample_rate(double rate);
+cq_status cq_set_device_min_pulse_duration(double duration);
+cq_status cq_set_device_max_pulse_duration(double duration);
+cq_status cq_set_device_interaction_coeff(double coeff);
+cq_status cq_set_device_min_qubit_dist(double distance);
+cq_status cq_set_device_max_num_shots(int shots);
+cq_status cq_set_device_coupling_func(double(*coupler)(double *q0, double *q1));
+
 #endif
+

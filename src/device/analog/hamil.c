@@ -10,23 +10,23 @@
 #include "hamil.h"
 
 #include "analog_device.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
 term_modifier term_modifiers[TERM_MODIFIER_COUNT] = {
-    &rabi_freq_cos_modifier,
-    &rabi_freq_sin_modifier,
+    &freq_cos_modifier,
+    &freq_sin_modifier,
     &detuning_modifier
 };
 
 static cq_status add_pauli_term(
     cq_hamiltonian *hamiltonian, char pauli,
-    int target, int var_idx, double sign) {
+    ptrdiff_t target, int var_idx, double sign) {
 
     assert(hamiltonian != NULL);
-    //assert(hamiltonian->num_terms < __CQ_ANALOG_MAX_NUM_HAM_TERMS__);
     assert(pauli == 'I' || pauli == 'X' || pauli == 'Y' || pauli == 'Z' );
     assert(target > -1 && target < __CQ_ANALOG_MAX_NUM_QUBITS__);
     assert(var_idx > -1 && var_idx < TERM_MODIFIER_COUNT);
@@ -39,7 +39,7 @@ static cq_status add_pauli_term(
 
     ptrdiff_t i = hamiltonian->num_terms;
     hamiltonian->terms[i].paulis[0] = pauli;
-    hamiltonian->terms[i].indices[0] = target;
+    hamiltonian->terms[i].indices[0] = (int)target;
     hamiltonian->terms[i].num_paulis = 1;
     hamiltonian->terms[i].var_idx = var_idx;
     hamiltonian->terms[i].sign = sign;
@@ -63,19 +63,17 @@ static double qubit_dist(const qpos *a, const qpos *b) {
     return sqrt(dist);
 }
 
-
-
 static cq_status ising_interaction(const qpos *q0, const qpos *q1, double *result) {
     assert(q0 != NULL);
     assert(q1 != NULL);
 
-    double C = get_device_ising_coeff();
+    double C = get_device_interaction_coeff();
     double dist6 = qubit_dist(q0, q1);
-    if (dist6 < get_device_min_atom_dist()) {
+    if (dist6 < get_device_min_qubit_dist()) {
         printf("Error: The distance between atoms is too small. "
                "Minimal distance between atoms is %f, given %f\n"
                "Setting interaction strength to 0.0!",
-               get_device_min_atom_dist(), dist6);
+               get_device_min_qubit_dist(), dist6);
         *result = 0.0;
         return CQ_ERROR;
     }
@@ -88,13 +86,13 @@ static cq_status xy_interaction(const qpos *q0, const qpos *q1, double *result) 
     assert(q0 != NULL);
     assert(q1 != NULL);
 
-    double C3 = get_device_xy_coeff();
+    double C3 = get_device_interaction_coeff();
     double dist3 = qubit_dist(q0, q1);
-    if (dist3 < get_device_min_atom_dist()) {
+    if (dist3 < get_device_min_qubit_dist()) {
         printf("Error: The distance between atoms is too small. "
                "Minimal distance between atoms is %f, given %f\n"
                "Returning interaction strength = 0.0!",
-               get_device_min_atom_dist(), dist3);
+               get_device_min_qubit_dist(), dist3);
         *result = 0.0;
         return CQ_ERROR;
     }
@@ -107,8 +105,16 @@ static cq_status interaction(const qpos *q0, const qpos *q1, double *result) {
     assert(q0 != NULL);
     assert(q1 != NULL);
 
+    coupling_func coupler = get_device_coupling_func();
+    if (coupler) {
+        double q0_[3] = {q0->x, q0->y, q0->z};
+        double q1_[3] = {q1->x, q1->y, q1->z};
+        *result = coupler(q0_, q1_);
+	return CQ_SUCCESS;
+    }
+
     switch(get_device_operating_mode()) {
-        case RYDBERG:
+        case ISING:
             return ising_interaction(q0, q1, result);
         case XY:
             return xy_interaction(q0, q1, result);
@@ -117,7 +123,7 @@ static cq_status interaction(const qpos *q0, const qpos *q1, double *result) {
     }
 }
 
-cq_status add_rydberg_local_term(int target, cq_hamiltonian *hamiltonian) {
+cq_status add_driving_local_term(ptrdiff_t target, cq_hamiltonian *hamiltonian) {
     assert(target > -1 && target < __CQ_ANALOG_MAX_NUM_QUBITS__);
     assert(hamiltonian != NULL);
 
@@ -125,12 +131,12 @@ cq_status add_rydberg_local_term(int target, cq_hamiltonian *hamiltonian) {
     // Adding (w(t)cos(p(t))X + w(t)sin(p(t))Y - d(t)(1 - Z)) / 2
     if (add_pauli_term(hamiltonian,
                         'X', target,
-                        TERM_MODIFIER_RABI_COS,
+                        TERM_MODIFIER_FREQ_COS,
                         sign) != CQ_SUCCESS) return CQ_ERROR;
 
     if (add_pauli_term(hamiltonian,
                         'Y', target,
-                        TERM_MODIFIER_RABI_SIN,
+                        TERM_MODIFIER_FREQ_SIN,
                         sign) != CQ_SUCCESS) return CQ_ERROR;
 
     if (add_pauli_term(hamiltonian,
@@ -146,7 +152,7 @@ cq_status add_rydberg_local_term(int target, cq_hamiltonian *hamiltonian) {
     return CQ_SUCCESS;
 }
 
-cq_status add_rydberg_global_term(analog_qreg *qreg, cq_hamiltonian *hamiltonian) {
+cq_status add_driving_global_term(analog_qreg *qreg, cq_hamiltonian *hamiltonian) {
     assert(qreg != NULL);
     assert(qreg->in_use);
     assert(qreg->num_qubits < __CQ_ANALOG_MAX_NUM_CHANNELS__);
@@ -154,20 +160,20 @@ cq_status add_rydberg_global_term(analog_qreg *qreg, cq_hamiltonian *hamiltonian
 
     channel global_ch = {0};
     global_ch.id = (int)(qreg->num_channels);
-    global_ch.type = RYDBERG_GLOBAL;
+    global_ch.type = CQ_ADDR_GLOBAL;
     global_ch.target = -1;
-    global_ch.params = (void *)&qreg->channel_params[RYDBERG_GLOBAL];
+    global_ch.params = (void *)&qreg->channel_params[CQ_ADDR_GLOBAL];
 
     qreg->channels_ranges[global_ch.id].start = hamiltonian->num_terms;
-    for (int i = 0; i < qreg->num_qubits; ++i) {
+    for (ptrdiff_t i = 0; i < qreg->num_qubits; ++i) {
         channel local_ch = {0};
         local_ch.id = (int)(qreg->num_channels + 1);
-        local_ch.type = RYDBERG_LOCAL;
+        local_ch.type = CQ_ADDR_LOCAL;
         local_ch.target = i;
-        local_ch.params = (void *)&qreg->channel_params[RYDBERG_LOCAL];
+        local_ch.params = (void *)&qreg->channel_params[CQ_ADDR_LOCAL];
 
         qreg->channels_ranges[local_ch.id].start = hamiltonian->num_terms;
-        add_rydberg_local_term(i, hamiltonian);
+        add_driving_local_term(i, hamiltonian);
         qreg->channels_ranges[local_ch.id].end = hamiltonian->num_terms;
 
         qreg->channels[local_ch.id] = local_ch;
@@ -180,53 +186,13 @@ cq_status add_rydberg_global_term(analog_qreg *qreg, cq_hamiltonian *hamiltonian
     return CQ_SUCCESS;
 }
 
-cq_status add_raman_local_term(int target, cq_hamiltonian *hamiltonian) {
-    // for raman, interaction is the same as for rydberg
-    // okay - it actually doesn't matter
-    // from my perspecitve raman and rydberg are the same - i dont care about
-    // the actual atom states
-    assert(target > -1 && target < __CQ_ANALOG_MAX_NUM_QUBITS__);
-    assert(hamiltonian != NULL);
-
-    double sign = 1.0;
-    // Adding (w(t)cos(p(t))X + w(t)sin(p(t))Y - d(t)(1 - Z)) / 2
-    if (add_pauli_term(hamiltonian,
-                        'X', target,
-                        TERM_MODIFIER_RABI_COS,
-                        sign) != CQ_SUCCESS) return CQ_ERROR;
-
-    if (add_pauli_term(hamiltonian,
-                        'Y', target,
-                        TERM_MODIFIER_RABI_SIN,
-                        sign) != CQ_SUCCESS) return CQ_ERROR;
-
-    if (add_pauli_term(hamiltonian,
-                        'I', target,
-                        TERM_MODIFIER_DETUNING,
-                        -sign) != CQ_SUCCESS) return CQ_ERROR;
-
-    if (add_pauli_term(hamiltonian,
-                       'Z', target,
-                       TERM_MODIFIER_DETUNING,
-                       sign) != CQ_SUCCESS) return CQ_ERROR;
-
-    return CQ_SUCCESS;
-}
-
 cq_status add_driving_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) {
     assert(qreg != NULL);
     assert(qreg->in_use);
     assert(qreg->num_qubits < __CQ_ANALOG_MAX_NUM_CHANNELS__);
     assert(hamiltonian != NULL);
 
-    // actually in NA the driving hamiltonian is the same
-    // for rydberg, raman and even microwave channels (e.g. Pasqal)
-    // The only difference is in the physical qubit basis --
-    // however from the pov of simulation this does not matter
-    add_rydberg_global_term(qreg, hamiltonian);
-
-    // TODO: possibly driving for SC system (e.g. DWave)
-
+    add_driving_global_term(qreg, hamiltonian);
     return CQ_SUCCESS;
 }
 
@@ -243,7 +209,7 @@ static void print_hamil(cq_hamiltonian *hamiltonian) {
 
 static cq_status add_two_pauli_term(
     cq_hamiltonian *hamiltonian, char pauli_i, char pauli_j,
-    int i, int j, double interaction_str) {
+    ptrdiff_t i, ptrdiff_t j, double interaction_str) {
 
     assert(hamiltonian != NULL);
     assert(hamiltonian->num_terms < __CQ_ANALOG_MAX_NUM_HAM_TERMS__);
@@ -254,15 +220,14 @@ static cq_status add_two_pauli_term(
 
     ptrdiff_t term_idx = hamiltonian->num_terms;
     hamiltonian->terms[term_idx].paulis[0] = pauli_i;
-    hamiltonian->terms[term_idx].indices[0] = i;
+    hamiltonian->terms[term_idx].indices[0] = (int)i;
     hamiltonian->terms[term_idx].paulis[1] = pauli_j;
-    hamiltonian->terms[term_idx].indices[1] = j;
+    hamiltonian->terms[term_idx].indices[1] = (int)j;
     hamiltonian->terms[term_idx].num_paulis = 2;
     hamiltonian->real[term_idx] = interaction_str;
     hamiltonian->imag[term_idx] = 0.0;
     hamiltonian->num_terms++;
 
-    //assert(hamiltonian->num_terms < __CQ_ANALOG_MAX_NUM_HAM_TERMS__);
     if (hamiltonian->num_terms >= __CQ_ANALOG_MAX_NUM_HAM_TERMS__) {
         printf("Error: Too many terms in the hamiltonian.\n");
         return CQ_ERROR;
@@ -270,8 +235,6 @@ static cq_status add_two_pauli_term(
 
     return CQ_SUCCESS;
 }
-
-
 
 cq_status add_xy_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) {
     assert(qreg != NULL);
@@ -289,14 +252,12 @@ cq_status add_xy_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonia
     // 2(XiXj + YiYj)
 
     qreg->sys_terms_range.start = hamiltonian->num_terms;
-    for (int i = 0; i < qreg->num_qubits; ++i) {
-        for (int j = i + 1; j < qreg->num_qubits; ++j) {
-            //double interaction_str = xy_interaction(&qreg->qubit_pos[i],
-            //                                     &qreg->qubit_pos[j]);
+    for (ptrdiff_t i = 0; i < qreg->num_qubits; ++i) {
+        for (ptrdiff_t j = i + 1; j < qreg->num_qubits; ++j) {
             double interaction_str = 0.0;
-            if(xy_interaction(&qreg->qubit_pos[i],
+	    HANDLE_CQ_ERROR(xy_interaction(&qreg->qubit_pos[i],
                                  &qreg->qubit_pos[j],
-                                 &interaction_str) == CQ_ERROR) return CQ_ERROR;
+                                 &interaction_str));
 
             interaction_str *= 2.0;
             add_two_pauli_term(hamiltonian, 'X', 'X', i, j, interaction_str);
@@ -315,8 +276,8 @@ cq_status add_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) 
     device_mode mode = get_device_operating_mode();
 
     switch (mode) {
-        case RYDBERG:
-            add_rydberg_interaction_terms(qreg, hamiltonian);
+        case ISING:
+            add_ising_interaction_terms(qreg, hamiltonian);
             break;
         case XY:
             add_xy_interaction_terms(qreg, hamiltonian);
@@ -329,9 +290,7 @@ cq_status add_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) 
     return CQ_SUCCESS;
 }
 
-
-
-cq_status add_rydberg_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) {
+cq_status add_ising_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) {
     assert(qreg != NULL);
     assert(qreg->in_use);
     assert(hamiltonian != NULL);
@@ -340,16 +299,12 @@ cq_status add_rydberg_interaction_terms(analog_qreg *qreg, cq_hamiltonian *hamil
     // so we get 11 - 1Z - Z1 + ZZ
 
     qreg->sys_terms_range.start = hamiltonian->num_terms;
-    for (int i = 0; i < qreg->num_qubits; ++i) {
-        for (int j = i + 1; j < qreg->num_qubits; ++j) {
-            //double interaction_str = ising_interaction(&qreg->qubit_pos[i],
-            //                                     &qreg->qubit_pos[j]);
+    for (ptrdiff_t i = 0; i < qreg->num_qubits; ++i) {
+        for (ptrdiff_t j = i + 1; j < qreg->num_qubits; ++j) {
             double interaction_str = 0.0;
-            if(ising_interaction(&qreg->qubit_pos[i],
+            HANDLE_CQ_ERROR(ising_interaction(&qreg->qubit_pos[i],
                                  &qreg->qubit_pos[j],
-                                 &interaction_str) == CQ_ERROR) return CQ_ERROR;
-
-
+                                 &interaction_str));
 
             add_two_pauli_term(hamiltonian, 'I', 'I', i, j, interaction_str);
             add_two_pauli_term(hamiltonian, 'I', 'Z', i, j, -interaction_str);
@@ -372,15 +327,10 @@ cq_status update_sys_terms(const analog_qreg *qreg, cq_hamiltonian *hamiltonian)
     ptrdiff_t coeff_idx = qreg->sys_terms_range.start;
     for (ptrdiff_t i = 0; i < qreg->num_qubits; ++i) {
         for (ptrdiff_t j = i + 1; j < qreg->num_qubits; ++j) {
-            //const double interaction_str = interaction(
-            //            &qreg->qubit_pos[i],
-            //            &qreg->qubit_pos[j]);
-
             double interaction_str = 0.0;
-            if(interaction(&qreg->qubit_pos[i],
+	    HANDLE_CQ_ERROR(interaction(&qreg->qubit_pos[i],
                            &qreg->qubit_pos[j],
-                           &interaction_str) == CQ_ERROR) return CQ_ERROR;
-
+                           &interaction_str));
 
             hamiltonian->real[coeff_idx] = interaction_str;
             hamiltonian->real[coeff_idx + 1] = -interaction_str;
@@ -416,23 +366,23 @@ cq_status reset_hamiltonian(cq_hamiltonian *hamiltonian) {
         hamiltonian->real[i] = 0.0;
         hamiltonian->imag[i] = 0.0;
         hamiltonian->terms[i].num_paulis = 0;
-        hamiltonian->terms[i].var_idx = TERM_MODIFIER_RABI_COS;
+        hamiltonian->terms[i].var_idx = TERM_MODIFIER_FREQ_COS;
         hamiltonian->terms[i].sign = 1.0;
     }
     hamiltonian->num_terms = 0;
     return CQ_SUCCESS;
 }
 
-#define RABI_SCALING_FACTOR 0.5
+#define FREQ_SCALING_FACTOR 0.5
 #define DETUNING_SCALING_FACTOR 0.5
 
-double rabi_freq_cos_modifier(double freq, double phase, double detuning) {
-    return RABI_SCALING_FACTOR * freq * cos(phase);
+double freq_cos_modifier(double freq, double phase, double detuning) {
+    return FREQ_SCALING_FACTOR * freq * cos(phase);
 }
 
-double rabi_freq_sin_modifier(double freq, double phase, double detuning) {
+double freq_sin_modifier(double freq, double phase, double detuning) {
 
-    return RABI_SCALING_FACTOR * freq * sin(phase);
+    return FREQ_SCALING_FACTOR * freq * sin(phase);
 }
 
 double detuning_modifier(double freq, double phase, double detuning) {
@@ -440,4 +390,4 @@ double detuning_modifier(double freq, double phase, double detuning) {
 }
 
 #undef DETUNING_SCALING_FACTOR
-#undef RABI_SCALING_FACTOR
+#undef FREQ_SCALING_FACTOR

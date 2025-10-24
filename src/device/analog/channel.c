@@ -8,10 +8,11 @@
 */
 
 #include "channel.h"
+#include "analog_device.h"
 #include <assert.h>
 #include <stdio.h>
 
-static cq_status setup_rydberg_local_params(channel_params *params, int qreg_id) {
+static cq_status setup_local_channel_params(channel_params *params, ptrdiff_t qreg_id) {
     assert(params != NULL);
 
     params->max_freq = 62.83;
@@ -19,16 +20,17 @@ static cq_status setup_rydberg_local_params(channel_params *params, int qreg_id)
     params->min_amp = 0.0;
     params->min_retarget_dt = 220.0;
     params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
+    params->sample_rate = get_device_sample_rate();
+    params->min_pulse_duration = get_device_min_pulse_duration();
+    params->max_pulse_duration = get_device_max_pulse_duration();
     params->max_targets = 1;
-    params->addressing = LOCAL;
+    params->addressing = CQ_ADDR_LOCAL;
     params->qreg_id = qreg_id;
 
     return CQ_SUCCESS;
 }
 
-static cq_status setup_rydberg_global_params(channel_params *params, int qreg_id) {
+static cq_status setup_global_channel_params(channel_params *params, ptrdiff_t qreg_id) {
     assert(params != NULL);
 
     params->max_freq = 15.71;
@@ -36,44 +38,11 @@ static cq_status setup_rydberg_global_params(channel_params *params, int qreg_id
     params->min_amp = 0.0;
     params->min_retarget_dt = 0.0;
     params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
+    params->sample_rate = get_device_sample_rate();
+    params->min_pulse_duration = get_device_min_pulse_duration();
+    params->max_pulse_duration = get_device_max_pulse_duration();
     params->max_targets = -1;
-    params->addressing = GLOBAL;
-    params->qreg_id = qreg_id;
-
-    return CQ_SUCCESS;
-}
-
-static cq_status setup_raman_local_params(channel_params *params, int qreg_id) {
-    assert(params != NULL);
-
-    params->max_freq = 62.83;
-    params->max_detuning = 125.7;
-    params->min_amp = 0.0;
-    params->min_retarget_dt = 220.0;
-    params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
-    params->max_targets = 1;
-    params->addressing = LOCAL;
-    params->qreg_id = qreg_id;
-
-    return CQ_SUCCESS;
-}
-
-static cq_status setup_dmm_global_params(channel_params *params, int qreg_id) {
-    assert(params != NULL);
-
-    params->max_freq = 0.0;
-    params->max_detuning = 125.7;
-    params->min_amp = 0.0;
-    params->min_retarget_dt = 0.0;
-    params->retarget_delay = 0.0;
-    params->sample_rate = 0.25;
-    params->min_pulse_duration = 16;
-    params->max_targets = -1;
-    params->addressing = GLOBAL;
+    params->addressing = CQ_ADDR_GLOBAL;
     params->qreg_id = qreg_id;
 
     return CQ_SUCCESS;
@@ -82,11 +51,9 @@ static cq_status setup_dmm_global_params(channel_params *params, int qreg_id) {
 cq_status setup_channel_params(analog_qreg *qreg) {
     assert(qreg != NULL);
 
-    int qreg_id = qreg->id;
-    setup_rydberg_global_params(&qreg->channel_params[RYDBERG_GLOBAL], qreg_id);
-    setup_rydberg_local_params(&qreg->channel_params[RYDBERG_LOCAL], qreg_id);
-    setup_raman_local_params(&qreg->channel_params[RAMAN_LOCAL], qreg_id);
-    setup_dmm_global_params(&qreg->channel_params[DMM_GLOBAL], qreg_id);
+    ptrdiff_t qreg_id = qreg->id;
+    setup_global_channel_params(&qreg->channel_params[CQ_ADDR_GLOBAL], qreg_id);
+    setup_local_channel_params(&qreg->channel_params[CQ_ADDR_LOCAL], qreg_id);
     return CQ_SUCCESS;
 }
 
@@ -108,10 +75,21 @@ cq_status copy_channel(channel *dest, const channel *src) {
     return CQ_SUCCESS;
 }
 
+cq_status retarget_channel(channel *ch, ptrdiff_t new_target) {
+    assert(ch != NULL);
+    assert(new_target > -2);
+    assert(new_target < __CQ_ANALOG_MAX_NUM_QUBITS__);
+    assert(ch->params != NULL);
+ 
+    ch->target = new_target;
+    ch->time += ((channel_params *)ch->params)->retarget_delay;
+    return CQ_SUCCESS;
+}
+
 void print_avail_channels(void) {
     printf("==============================================================\n"
            "Available Channels:\n"
-           "----- RYDBERG_GLOBAL:     \n"
+           "----- CQ_ADDR_GLOBAL:     \n"
             "\tmax_freq = 15.71       \n"
             "\tmax_detuning = 125.7   \n"
             "\tmin_amp = 0.0          \n"
@@ -120,9 +98,9 @@ void print_avail_channels(void) {
             "\tsample_rate = 0.25     \n"
             "\tmin_pulse_duration = 16\n"
             "\tmax_targets = -1       \n"
-            "\taddressing = GLOBAL    \n\n"
+            "\taddressing = CQ_ADDR_GLOBAL    \n\n"
 
-           "----- RYDBERG_LOCAL:      \n"
+           "----- CQ_ADDR_LOCAL:      \n"
             "\tmax_freq = 62.83       \n"
             "\tmax_detuning = 125.7   \n"
             "\tmin_amp = 0.0          \n"
@@ -131,17 +109,17 @@ void print_avail_channels(void) {
             "\tsample_rate = 0.25     \n"
             "\tmin_pulse_duration = 16\n"
             "\tmax_targets = 1       \n"
-            "\taddressing = LOCAL    \n"
+            "\taddressing = CQ_ADDR_LOCAL    \n"
             "==============================================================\n"
     );
 }
 
-static const char *get_channel_type_str(channel_type type) {
+static const char *get_channel_type_str(addressing type) {
     switch (type) {
-        case RYDBERG_LOCAL:
-            return "RYDBERG_LOCAL";
-        case RYDBERG_GLOBAL:
-            return "RYDBERG_GLOBAL";
+        case CQ_ADDR_LOCAL:
+            return "CQ_ADDR_LOCAL";
+        case CQ_ADDR_GLOBAL:
+            return "CQ_ADDR_GLOBAL";
         default:
             return "Unknown";
     }
@@ -149,10 +127,10 @@ static const char *get_channel_type_str(channel_type type) {
 
 static const char *get_addressing_str(addressing addressing) {
     switch (addressing) {
-        case LOCAL:
-            return "LOCAL";
-        case GLOBAL:
-            return "GLOBAL";
+        case CQ_ADDR_LOCAL:
+            return "CQ_ADDR_LOCAL";
+        case CQ_ADDR_GLOBAL:
+            return "CQ_ADDR_GLOBAL";
         default:
             return "Unknown";
     }
@@ -166,7 +144,7 @@ void print_channel(channel *ch) {
        "----- channel:      \n"
             "\tid: %d\n"
             "\ttype: %s\n"
-            "\ttarget: %d\n"
+            "\ttarget: %td\n"
             "\ttime: %f\n"
             "\tmax_freq = %f       \n"
             "\tmax_detuning = %f   \n"

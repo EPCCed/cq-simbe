@@ -18,15 +18,18 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define CQ_ADDR_GLOBAL 0
+#define CQ_ADDR_LOCAL 1
+
 cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, qkern_map * reg)
 {
   CQ_REGISTER_KERNEL(reg);
   set_qureg(qr, 0, NQUBITS);
 
   int qreg_id = 0;
-  HANDLE_CQ_ERROR(cq_enable_analog_qreg(qreg_id, NQUBITS));
+  HANDLE_CQ_ERROR(cq_enable_analog_qreg(qr));
   channel ch0 = {0};
-  HANDLE_CQ_ERROR(cq_get_global_channel(&ch0, 0, qreg_id));
+  HANDLE_CQ_ERROR(cq_get_channel(&ch0, CQ_ADDR_GLOBAL, qr, NULL));
 
   pulse pulse = {0};
   double duration = 4000.0;
@@ -42,22 +45,22 @@ cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, q
 
   HANDLE_CQ_ERROR(cq_interpolated_wf(pulse.detuning, duration, data_points, num_points));
 
-  qpos positions[5] = {
-       { 5.53855359,  1.7891413 , 0.0},
-       { 5.48899179, -6.27296412, 0.0},
-       {-1.43242244, -2.26122822, 0.0},
-       { 1.62594084, 10.99193777, 0.0},
-       {15.4687696 ,  2.96846731, 0.0}};
+  double positions[15] = {
+        5.53855359,  1.7891413 , 0.0,
+        5.48899179, -6.27296412, 0.0,
+       -1.43242244, -2.26122822, 0.0,
+        1.62594084, 10.99193777, 0.0,
+       15.4687696 ,  2.96846731, 0.0
+  };
 
-  HANDLE_CQ_ERROR(cq_update_qreg_pos(positions, NQUBITS, qreg_id));
+  HANDLE_CQ_ERROR(cq_set_qubit_pos(positions, qr));
   HANDLE_CQ_ERROR(cq_play(&ch0, &pulse));
 
   measure_qureg(qr, NQUBITS, cr);
-  HANDLE_CQ_ERROR(cq_disable_analog_qreg(qreg_id));
+  HANDLE_CQ_ERROR(cq_free_pulse(&pulse));
+  HANDLE_CQ_ERROR(cq_disable_analog_qreg(qr));
   return CQ_SUCCESS;
 };
-
-#undef HANDLE_CQ_ERROR
 
 int main (void)
 {
@@ -69,7 +72,7 @@ int main (void)
 
   cq_init(0);
 
-  cq_enable_analog_mode(RYDBERG);
+  cq_enable_analog_mode(ISING);
   qubit * qr = NULL;
   alloc_qureg(&qr, NQUBITS);
 

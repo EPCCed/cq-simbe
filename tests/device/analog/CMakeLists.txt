@@ -3,6 +3,7 @@ find_library(MATHS_LIBRARY m REQUIRED)
 # ------------------------ analog ops -----------------------------
 add_executable(test_analog
   test_analog.c
+  test_analog_runner.c
 )
 
 target_link_libraries(test_analog
@@ -20,6 +21,7 @@ add_test(
 # ------------------------ waveforms ------------------------------
 add_executable(test_waveforms
   test_waveforms.c
+  test_waveforms_runner.c
 )
 
 target_link_libraries(test_waveforms
