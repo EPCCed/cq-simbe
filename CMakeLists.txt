@@ -18,14 +18,14 @@ message(STATUS "BUILD_SHARED_LIBS turned ${BUILD_SHARED_LIBS}.")
 option(
   ENABLE_TESTING
   "Build tests using unity testing framework. Turned ON by default."
-  ON
+  OFF
 )
 message(STATUS "ENABLE_TESTING turned ${ENABLE_TESTING}.")
 
 option(
   BUILD_EXAMPLES
   "Build example applications. Turned OFF by default."
-  OFF
+  ON
 )
 message(STATUS "BUILD_EXAMPLES turned ${BUILD_EXAMPLES}.")
 
@@ -33,6 +33,12 @@ option(
   FORCE_BUILD_VQE 
   "Debug option to force build to fail if NLopt isn't found." 
   OFF
+)
+
+option(
+  BUILD_FORTRAN_INTERFACE
+  "Build with Fortran interface. Turned OFF by default."
+  ON
 )
 
 # Dependencies
@@ -58,6 +64,21 @@ target_include_directories(cq-simbe
 
 target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
 
+if (BUILD_FORTRAN_INTERFACE)
+  enable_language(Fortran)
+  add_library(cq-fort)
+  add_library(CQ-FORT::cq-fort ALIAS cq-fort)
+  #set(FVERSION "-std=f2018")
+  set(FVERSION "-std=f2008")
+  set(CMAKE_Fortran_FLAGS "-ffixed-line-length-none -cpp ${CMAKE_Fortran_FLAGS} ${FVERSION}")
+  target_include_directories(cq-fort
+      PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/build>
+  
+  )
+  target_link_libraries(cq-fort PRIVATE CQ-SIMBE::cq-simbe)
+endif()
+
 add_subdirectory(src)
 
 if (ENABLE_TESTING)
@@ -71,3 +92,5 @@ endif()
 if (BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
+
+
