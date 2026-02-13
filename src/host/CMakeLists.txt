@@ -9,5 +9,6 @@ if(BUILD_FORTRAN_INTERFACE)
   target_sources(cq-fort
     PRIVATE
     host_int.f90
+    fort.f90
   )
 endif()

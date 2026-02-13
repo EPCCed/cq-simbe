@@ -66,15 +66,15 @@ target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
 
 if (BUILD_FORTRAN_INTERFACE)
   enable_language(Fortran)
-  add_library(cq-fort)
+  add_library(cq-fort ${PROJECT_SOURCE_DIR}/include/cq.f90)
   add_library(CQ-FORT::cq-fort ALIAS cq-fort)
   #set(FVERSION "-std=f2018")
   set(FVERSION "-std=f2008")
   set(CMAKE_Fortran_FLAGS "-ffixed-line-length-none -cpp ${CMAKE_Fortran_FLAGS} ${FVERSION}")
   target_include_directories(cq-fort
       PUBLIC
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/build>
-  
   )
   target_link_libraries(cq-fort PRIVATE CQ-SIMBE::cq-simbe)
 endif()

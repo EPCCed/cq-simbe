@@ -5,11 +5,16 @@ use iso_fortran_env, only: compiler_version
 use, intrinsic :: iso_c_binding
 implicit none
 
-type, bind(c) :: qubit
+type, bind(c) :: qubit_old
         integer(c_size_t) :: registry_index
         integer(c_size_t) :: offset
         integer(c_size_t) :: N
-end  type qubit
+end type qubit_old
+!
+!type :: qubit_ptr
+!  !! Wrapper type for implementing an array of pointers to qubit objects
+!  type(qubit), pointer :: target
+!end type qubit_ptr
 
 interface
   function cq_init(VERBOSITY) bind(C)
@@ -29,7 +34,7 @@ interface
   !cq_status alloc_qureg(qubit ** qrp, size_t N);
   function alloc_qureg(qrp, N) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr
-    import :: qubit
+    !import :: qubit
     implicit none
     type(c_ptr), intent(inout) :: qrp ! passes struct?
     integer(c_size_t), value :: N
@@ -38,8 +43,8 @@ interface
 
   !cq_status free_qureg(qubit ** qrp);
   function free_qureg(qrp) bind(C)
-    use, intrinsic :: iso_c_binding, only: c_int
-    import ::qubit, c_ptr
+    use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+    !import ::qubit, c_ptr
     implicit none
     type(c_ptr), intent(inout) :: qrp ! passes struct?
     integer(c_int) :: free_qureg
@@ -53,6 +58,7 @@ interface
      integer(c_int), value :: INIT_VAL
      integer(c_int) :: cr(0:LENGTH)
   end subroutine init_creg
+
   !cq_status register_qkern(qkern kernel)
   function register_qkern(kernel) bind(C)
      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
@@ -65,7 +71,7 @@ interface
   ! cstate * const crp, const size_t NMEASURE, const size_t NSHOTS)
   function sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) bind(C)
      use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr
-     import :: qubit
+     !import :: qubit
      implicit none
      type(c_ptr), value :: kernel
      type(c_ptr), value :: qrp
@@ -95,47 +101,12 @@ interface
       integer(c_int) :: zero_init_full_qft
   end function
 
-    !cq_status plus_init_full_qft(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg)
+  !cq_status plus_init_full_qft(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg)
   function plus_init_full_qft() bind(C)
       use, intrinsic :: iso_c_binding, only: c_int
       implicit none
       integer(c_int) :: plus_init_full_qft
   end function
-
-  function insert_to_qkern_map(func_name, reg) bind(C)
-    use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr
-    implicit none
-    character(kind=c_char), intent(in) :: func_name(*)
-    type(c_ptr), value :: reg
-    integer(c_int) :: insert_to_qkern_map
-  end function
-
-  function set_qureg(qr, STATE_IDX, NQUBITS) bind(C)
-    use, intrinsic :: iso_c_binding, only: c_size_t, c_ptr, c_int
-    type(c_ptr), value :: qr
-    integer(c_size_t), value :: STATE_IDX
-    integer(c_size_t), value :: NQUBITS
-    integer(c_int) :: set_qureg
-  end function
-
-  !cq_status hadamard(qubit * qh)
-  function hadamard(qh) bind(C)
-      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      import :: qubit
-      implicit none
-      type(c_ptr), value :: qh
-      integer(c_int) :: hadamard
-  end function hadamard
-
-  function measure_qureg(qr, NQUBITS, cr) bind(C)
-      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t
-      import :: qubit
-      implicit none
-      type(c_ptr), value :: qr
-      integer(c_size_t), value :: NQUBITS
-      integer(c_int) :: cr(NQUBITS)
-      integer(c_int) :: measure_qureg
-  end function measure_qureg
 
 
 end interface
