@@ -7,6 +7,7 @@ integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status
 integer(kind=8) :: NQUBITS, NSHOTS, NMEASURE
 type(qubit) :: qrc
 integer, allocatable, target :: cr(:)
+type(qkern) :: kernel
 
 NQUBITS = 10
 NSHOTS = 10
@@ -28,11 +29,13 @@ CALL cq_init_creg(NMEASURE * NSHOTS, -1, cr)
 
 write(*,'(A)') 'after init_creg'
 
-reg_status = cq_register_qkern(c_funloc(plus_state))
+kernel%target = c_funloc(plus_state)
+
+reg_status = cq_register_qkern(kernel)
 
 write(*,'(A,I4)') 'after register_qkern: ', reg_status
 
-qrun_status = cq_sm_qrun(c_funloc(plus_state), qrc, NQUBITS, cr, NMEASURE, NSHOTS)
+qrun_status = cq_sm_qrun(kernel, qrc, NQUBITS, cr, NMEASURE, NSHOTS)
 
 write(*,'(A,I4)') 'after sm_qrun: ', qrun_status
 

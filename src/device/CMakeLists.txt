@@ -10,8 +10,5 @@ target_sources(cq-simbe
 add_subdirectory(analog)
 
 if(BUILD_FORTRAN_INTERFACE)
-  target_sources(cq-fort
-    PRIVATE
-    device_int.f90
-  )
+add_subdirectory(fortran)
 endif()
