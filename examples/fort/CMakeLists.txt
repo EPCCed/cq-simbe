@@ -8,11 +8,11 @@ target_link_libraries(qft-lib
   ${MATHS_LIBRARY}
 )
 
-add_executable(fort-qft
-  qft.f90
+add_executable(zero-qft
+  zero_qft.f90
 )
 
-target_link_libraries(fort-qft
+target_link_libraries(zero-qft
   PRIVATE
   CQ-SIMBE::cq-simbe
   cq-fort
@@ -20,16 +20,29 @@ target_link_libraries(fort-qft
   ${MATHS_LIBRARY}
 )
 
-add_executable(test-fort
-  tests.f90
+add_executable(plus-qft
+  plus_qft.f90
 )
 
-target_link_libraries(test-fort
+target_link_libraries(plus-qft
   PRIVATE
   CQ-SIMBE::cq-simbe
   cq-fort
   qft-lib
   ${MATHS_LIBRARY}
 )
+
+#
+#add_executable(test-fort
+#  tests.f90
+#)
+#
+#target_link_libraries(test-fort
+#  PRIVATE
+#  CQ-SIMBE::cq-simbe
+#  cq-fort
+#  qft-lib
+#  ${MATHS_LIBRARY}
+#)
 
 

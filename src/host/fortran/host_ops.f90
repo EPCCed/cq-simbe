@@ -8,13 +8,13 @@ contains
 
 ! ------------------------------ HOST OPERATIONS ------------------------------
 
-  module procedure fcq_init !(VERBOSITY) result(status)
-    status = cq_init(VERBOSITY)
-  end procedure fcq_init
+  module procedure cq_init !(VERBOSITY) result(status)
+    status = fortran_cq_init(VERBOSITY)
+  end procedure cq_init
 
-  module procedure fcq_finalise !(VERBOSITY) result(status)
-    status = cq_finalise(VERBOSITY)
-  end procedure fcq_finalise
+  module procedure cq_finalise !(VERBOSITY) result(status)
+    status = fortran_cq_finalise(VERBOSITY)
+  end procedure cq_finalise
 
   module procedure cq_alloc_qureg !(qrp, N) result(status)
     status = alloc_qureg(qrp%this, N)

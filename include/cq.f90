@@ -31,17 +31,17 @@ end type qkern
 ! ------------------------------ HOST OPERATIONS ------------------------------
 
 interface
-  module function fcq_init(VERBOSITY) result(status)
+  module function cq_init(VERBOSITY) result(status)
     implicit none
     integer, value :: VERBOSITY
     integer :: status
-  end function fcq_init
+  end function cq_init
 
-  module function fcq_finalise(VERBOSITY) result(status)
+  module function cq_finalise(VERBOSITY) result(status)
     implicit none
     integer, value :: VERBOSITY
     integer :: status
-  end function fcq_finalise
+  end function cq_finalise
 
   module function cq_alloc_qureg(qrp, N) result(status)
     implicit none
@@ -65,14 +65,12 @@ interface
 
   module function cq_register_qkern(kernel) result(status)
      implicit none
-     !type(c_ptr), value :: kernel
      type(qkern), value :: kernel
      integer(c_int) :: status 
   end function cq_register_qkern
 
   module function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
      implicit none
-     !type(c_ptr), value :: kernel
      type(qkern), value :: kernel
      integer(kind=8), value :: NQUBITS
      type(qubit), value :: qrp

@@ -12,19 +12,19 @@ type, bind(c) :: qubit_size_old
 end type qubit_size_old
 
 interface
-  function cq_init(VERBOSITY) bind(C)
+  function fortran_cq_init(VERBOSITY) bind(C, name="cq_init")
     use, intrinsic :: iso_c_binding, only: c_int
     implicit none
     integer(c_int), value :: VERBOSITY ! passes integer
-    integer(c_int) :: cq_init
-  end function cq_init
+    integer(c_int) :: fortran_cq_init
+  end function fortran_cq_init
 
-  function cq_finalise(VERBOSITY) bind(C)
+  function fortran_cq_finalise(VERBOSITY) bind(C, name="cq_finalise")
     use, intrinsic :: iso_c_binding, only: c_int
     implicit none
     integer(c_int), value :: VERBOSITY ! passes integer
-    integer(c_int) :: cq_finalise
-  end function cq_finalise
+    integer(c_int) :: fortran_cq_finalise
+  end function fortran_cq_finalise
 
   !cq_status alloc_qureg(qubit ** qrp, size_t N);
   function alloc_qureg(qrp, N) bind(C)
