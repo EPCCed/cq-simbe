@@ -62,6 +62,17 @@ contains
     status = measure_qureg(qr%this, NQUBITS, cr)
   end procedure cq_measure_qureg
 
+  module procedure cq_hadamard !(qh) result(status)
+    type(c_ptr) :: curr_ptr
+    integer(c_intptr_t) :: offset
+    type(c_ptr) :: new_ptr
+    type(qubit_size) :: tmp
+    curr_ptr = qh%this
+    offset = transfer(curr_ptr, offset) + (c_sizeof(tmp) * qubit_idx)
+    new_ptr = transfer(offset, new_ptr)
+    status = hadamard(new_ptr)
+  end procedure cq_hadamard
+
 
 end submodule host_ops
 

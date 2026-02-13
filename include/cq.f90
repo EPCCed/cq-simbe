@@ -76,7 +76,8 @@ interface
      implicit none
      type(c_ptr), value :: kernel
      integer(kind=8), value :: NQUBITS
-     type(qubit) :: qrp
+     !type(qubit) :: qrp(0:NQUBITS)
+     type(qubit), value :: qrp
      integer(kind=8), value :: NMEASURE
      integer(kind=8), value :: NSHOTS
      integer :: crp(0, NSHOTS*NMEASURE)
@@ -127,7 +128,8 @@ interface
   module function cq_set_qureg(qr, STATE_IDX, NQUBITS) result(status)
     implicit none
     integer(kind=8), value :: NQUBITS
-    type(qubit) :: qr(NQUBITS)
+    !type(qubit) :: qr(NQUBITS)
+    type(qubit), value :: qr
     integer(kind=8), value :: STATE_IDX
     integer :: status
   end function cq_set_qureg
@@ -135,11 +137,19 @@ interface
   module function cq_measure_qureg(qr, NQUBITS, cr) result(status)
       implicit none
       integer(kind=8) :: NQUBITS
-      type(qubit) :: qr(NQUBITS)
+      !type(qubit) :: qr(NQUBITS)
+      type(qubit), value :: qr
       integer :: cr(NQUBITS)
       integer :: status
   end function cq_measure_qureg
 
+  !module function cq_hadamard(qh) result(status)
+  module function cq_hadamard(qh, qubit_idx) result(status)
+    implicit none
+    type(qubit), value :: qh
+    integer :: qubit_idx
+    integer :: status
+  end function cq_hadamard
 end interface
 
 end module
