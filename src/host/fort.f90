@@ -5,6 +5,9 @@ use c_device_interface
 implicit none
 
 contains
+
+! ------------------------------ HOST OPERATIONS ------------------------------
+
   module procedure fcq_init !(VERBOSITY) result(status)
     status = cq_init(VERBOSITY)
   end procedure fcq_init
@@ -33,26 +36,11 @@ contains
     status = sm_qrun(kernel, qrp%this, NQUBITS, crp, NMEASURE, NSHOTS)
   end procedure
 
+! ----------------------------- DEVICE OPERATIONS -----------------------------
 
-!  module procedure foo !(NQUBITS, qr, cr, reg) bind(C)
-!    integer :: i
-!    integer(kind=8) :: STATE_IDX
-!  
-!    STATE_IDX = 0
-!    status = 1
-!    !CQ_REGISTER_FORT_KERNEL(reg)
-!    !status = insert_to_qkern_map("foo", reg)
-!    !status = set_qureg(c_loc(qr), STATE_IDX, NQUBITS)
-!    do i = 1, NQUBITS
-!    !    status = hadamard(c_loc(qr(i)))
-!      status = i
-!    end do
-!    !status = measure_qureg(c_loc(qr), NQUBITS, cr)
-!  end procedure
-
-  module procedure fcq_register_kernel !(func_name, reg) result(status)
+  module procedure cq_register_fort_kernel !(func_name, reg) result(status)
     status = insert_to_qkern_map(func_name, reg%map)
-  end procedure fcq_register_kernel
+  end procedure cq_register_fort_kernel
 
   module procedure cq_set_qureg !(qr, STATE_IDX, NQUBITS) result(status)
     status = set_qureg(qr%this, STATE_IDX, NQUBITS)
@@ -62,7 +50,9 @@ contains
     status = measure_qureg(qr%this, NQUBITS, cr)
   end procedure cq_measure_qureg
 
-  module procedure cq_hadamard !(qh) result(status)
+! --------------------------------- QASM GATES --------------------------------
+
+  module procedure cq_hadamard !(qh, qubit_idx) result(status)
     type(c_ptr) :: curr_ptr
     integer(c_intptr_t) :: offset
     type(c_ptr) :: new_ptr
@@ -72,7 +62,6 @@ contains
     new_ptr = transfer(offset, new_ptr)
     status = hadamard(new_ptr)
   end procedure cq_hadamard
-
 
 end submodule host_ops
 

@@ -2,8 +2,6 @@ module c_device_interface
 use iso_fortran_env, only: compiler_version
 use c_host_interface
 
-! TODO: Is there a reason why we import qubit type? do we need it or is c_ptr enough
-
 ! ----- interface to the C function -----
 use, intrinsic :: iso_c_binding
 implicit none
@@ -17,47 +15,59 @@ interface
     integer(c_int) :: insert_to_qkern_map
   end function
 
-  function cq_register_kernel(func_name, reg) bind(C)
-    use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr
-    implicit none
-    character(kind=c_char), intent(in) :: func_name(*)
-    type(c_ptr), value :: reg
-    integer(c_int) :: cq_register_kernel
-  end function
-
   function set_qureg(qr, STATE_IDX, NQUBITS) bind(C)
     use, intrinsic :: iso_c_binding, only: c_size_t, c_ptr, c_int
-    !import :: qubit
     type(c_ptr), value :: qr
     integer(c_size_t), value :: NQUBITS
-    !type(qubit) :: qr(NQUBITS)
     integer(c_size_t), value :: STATE_IDX
     integer(c_int) :: set_qureg
   end function
 
   function measure_qureg(qr, NQUBITS, cr) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t
-      !import :: qubit
       implicit none
       type(c_ptr), value :: qr
       integer(c_size_t), value :: NQUBITS
-      !type(qubit) :: qr(NQUBITS)
       integer(c_int) :: cr(NQUBITS)
       integer(c_int) :: measure_qureg
   end function measure_qureg
 
 ! -------------------------------- QASM Gates --------------------------------
-!cq_status unitary(qubit * qh, const double THETA, const double PHI, 
-!  const double LAMBDA);
 
-!cq_status gphase(qubit * qh, const double THETA);
-!
-!cq_status phase(qubit * qh, const double THETA);
+  !cq_status unitary(qubit * qh, const double THETA, const double PHI, 
+  !  const double LAMBDA);
+  function unitary(qh, THETA, PHI, LAMBDA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: qh
+      real(c_double) :: THETA
+      real(c_double) :: PHI
+      real(c_double) :: LAMBDA
+      integer(c_int) :: unitary
+  end function unitary
+
+  !cq_status gphase(qubit * qh, const double THETA);
+  function gphase(qh, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: qh
+      real(c_double) :: THETA
+      integer(c_int) :: gphase
+  end function gphase
+
+  !cq_status phase(qubit * qh, const double THETA);
+  function phase(qh) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: qh
+      real(c_double) :: THETA
+      integer(c_int) :: phase
+  end function phase
+
 
   !cq_status paulix(qubit * qh);
   function paulix(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: paulix
@@ -66,7 +76,6 @@ interface
   !cq_status pauliy(qubit * qh);
   function pauliy(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: pauliy
@@ -76,7 +85,6 @@ interface
   !cq_status pauliz(qubit * qh);
   function pauliz(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: pauliz
@@ -85,9 +93,7 @@ interface
   !cq_status hadamard(qubit * qh);
   function hadamard(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !import :: qubit
       implicit none
-      !type(qubit) :: qh
       type(c_ptr), value :: qh
       integer(c_int) :: hadamard
   end function hadamard
@@ -95,7 +101,6 @@ interface
   !cq_status sqrtz(qubit * qh);
   function sqrtz(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: sqrtz
@@ -104,7 +109,6 @@ interface
   !cq_status sqrtzhc(qubit * qh);
   function sqrtzhc(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: sqrtzhc
@@ -114,7 +118,6 @@ interface
   !cq_status sqrts(qubit * qh);
   function sqrts(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: sqrts
@@ -124,7 +127,6 @@ interface
   !cq_status sqrtshc(qubit * qh);
   function sqrtshc(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: sqrtshc
@@ -134,44 +136,157 @@ interface
   !cq_status sqrtx(qubit * qh);
   function sqrtx(qh) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-      !!import :: qubit
       implicit none
       type(c_ptr), value :: qh
       integer(c_int) :: sqrtx
   end function sqrtx
 
-!cq_status rotx(qubit * qh, const double THETA);
-!
-!cq_status roty(qubit * qh, const double THETA);
-!
-!cq_status rotz(qubit * qh, const double THETA);
-!
-!cq_status cpaulix(qubit * ctrl, qubit * target);
-!
-!cq_status cpauliy(qubit * ctrl, qubit * target);
-!
-!cq_status cpauliz(qubit * ctrl, qubit * target);
-!
-!cq_status cphase(qubit * ctrl, qubit * target, const double THETA);
-!
-!cq_status crotx(qubit * ctrl, qubit *  target, const double THETA);
-!
-!cq_status croty(qubit * ctrl, qubit *  target, const double THETA);
-!
-!cq_status crotz(qubit * ctrl, qubit *  target, const double THETA);
-!
-!cq_status chadamard(qubit * ctrl, qubit * target);
-!
-!cq_status cunitary(qubit * ctrl, qubit * target, const double THETA, 
-!  const double PHI, const double LAMBDA);
-!
-!cq_status swap(qubit * a, qubit * b);
-!
-!cq_status ccpaulix(qubit * ctrl_a, qubit * ctrl_b, qubit * target);
-!
-!cq_status cswap(qubit * ctrl, qubit * a, qubit * b);
+  !cq_status rotx(qubit * qh, const double THETA);
+  function rotx(qh, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: qh
+      real(c_double) :: THETA
+      integer(c_int) :: rotx
+  end function rotx
+
+  !cq_status roty(qubit * qh, const double THETA);
+  function roty(qh, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: qh
+      real(c_double) :: THETA
+      integer(c_int) :: roty
+  end function roty
+ 
+  !cq_status rotz(qubit * qh, const double THETA);
+  function rotz(qh, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: qh
+      real(c_double) :: THETA
+      integer(c_int) :: rotz
+  end function rotz
+
+  !cq_status cpaulix(qubit * ctrl, qubit * target);
+  function cpaulix(ctrl, qtarget) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      integer(c_int) :: cpaulix
+  end function cpaulix
+
+  !cq_status cpauliy(qubit * ctrl, qubit * target);
+  function cpauliy(ctrl, qtarget) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      integer(c_int) :: cpauliy
+  end function cpauliy
 
 
+  !cq_status cpauliz(qubit * ctrl, qubit * target);
+  function cpauliz(ctrl, qtarget) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      integer(c_int) :: cpauliz
+  end function cpauliz
+
+  !cq_status cphase(qubit * ctrl, qubit * target, const double THETA);
+  function cphase(ctrl, qtarget, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      real(c_double), value :: THETA
+      integer(c_int) :: cphase
+  end function cphase
+
+  !cq_status crotx(qubit * ctrl, qubit *  target, const double THETA);
+  function crotx(ctrl, qtarget, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      real(c_double), value :: THETA
+      integer(c_int) :: crotx
+  end function crotx
+
+  !cq_status croty(qubit * ctrl, qubit *  target, const double THETA);
+  function croty(ctrl, qtarget, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      real(c_double), value :: THETA
+      integer(c_int) :: croty
+  end function croty
+
+  !cq_status crotz(qubit * ctrl, qubit *  target, const double THETA);
+  function crotz(ctrl, qtarget, THETA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      real(c_double), value :: THETA
+      integer(c_int) :: crotz
+  end function crotz
+
+  !cq_status chadamard(qubit * ctrl, qubit * target);
+  function chadamard(ctrl, qtarget) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      integer(c_int) :: chadamard
+  end function chadamard
+
+
+  !cq_status cunitary(qubit * ctrl, qubit * target, const double THETA, 
+  !  const double PHI, const double LAMBDA);
+  function cunitary(ctrl, qtarget, THETA, PHI, LAMBDA) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: qtarget
+      real(c_double), value :: THETA
+      real(c_double), value :: PHI
+      real(c_double), value :: LAMBDA
+      integer(c_int) :: cunitary
+  end function cunitary
+
+  !cq_status swap(qubit * a, qubit * b);
+  function swap(a, b) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: a
+      type(c_ptr), value :: b
+      integer(c_int) :: swap
+  end function swap
+
+  !cq_status ccpaulix(qubit * ctrl_a, qubit * ctrl_b, qubit * target);
+  function ccpaulix(ctrl_a, ctrl_b, qtarget) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: ctrl_a
+      type(c_ptr), value :: ctrl_b
+      type(c_ptr), value :: qtarget
+      integer(c_int) :: ccpaulix
+  end function ccpaulix
+
+  !cq_status cswap(qubit * ctrl, qubit * a, qubit * b);
+  function cswap(ctrl, a, b) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: ctrl
+      type(c_ptr), value :: a
+      type(c_ptr), value :: b
+      integer(c_int) :: cswap
+  end function cswap
 
 end interface
 

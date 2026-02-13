@@ -142,7 +142,7 @@ CONTAINS
     use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t
     implicit none
     integer(c_size_t), value :: NQUBITS
-    type(qubit_size), target :: qr(NQUBITS)
+    type(qubit_size_old), target :: qr(NQUBITS)
     !type(c_ptr), value :: qr
     !type(c_ptr), value :: cr
     integer(c_int) :: cr(NQUBITS)

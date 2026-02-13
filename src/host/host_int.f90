@@ -5,16 +5,11 @@ use iso_fortran_env, only: compiler_version
 use, intrinsic :: iso_c_binding
 implicit none
 
-type, bind(c) :: qubit_size
+type, bind(c) :: qubit_size_old
         integer(c_size_t) :: registry_index
         integer(c_size_t) :: offset
         integer(c_size_t) :: N
-end type qubit_size
-!
-!type :: qubit_ptr
-!  !! Wrapper type for implementing an array of pointers to qubit objects
-!  type(qubit), pointer :: target
-!end type qubit_ptr
+end type qubit_size_old
 
 interface
   function cq_init(VERBOSITY) bind(C)

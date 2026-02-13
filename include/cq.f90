@@ -5,10 +5,13 @@ implicit none
 
 type, bind(C) :: qubit
         type(c_ptr) :: this = c_null_ptr
-!        integer(c_size_t) :: registry_index
-!        integer(c_size_t) :: offset
-!        integer(c_size_t) :: N
 end type qubit
+
+type, bind(c) :: qubit_size
+        integer(c_size_t) :: registry_index
+        integer(c_size_t) :: offset
+        integer(c_size_t) :: N
+end type qubit_size
 
 type :: qubit_ptr
   ! Wrapper type for implementing an array of pointers to qubit objects
@@ -19,15 +22,8 @@ type, bind(C) :: qkern_map
     type(c_ptr) :: map
 end type qkern_map
 
-!!type :: qkern
-!!  type(c_ptr) :: kernel
-!!end type
-!!
-!!type :: qkern_ptr
-!!  procedure(qkern), pointer :: kernel = null()
-!!end type
+! ------------------------------ HOST OPERATIONS ------------------------------
 
-! ------------------------ HOST OPERATIONS -------------------------
 interface
   module function fcq_init(VERBOSITY) result(status)
     implicit none
@@ -43,7 +39,6 @@ interface
 
   module function cq_alloc_qureg(qrp, N) result(status)
     implicit none
-    !type(qubit_ptr), intent(inout) :: qrp
     type(qubit), intent(inout) :: qrp
     integer(kind=8), value :: N
     integer :: status
@@ -51,7 +46,6 @@ interface
 
   module function cq_free_qureg(qrp) result(status)
     implicit none
-    !type(qubit_ptr), intent(inout) :: qrp
     type(qubit), intent(inout) :: qrp
     integer :: status
   end function cq_free_qureg
@@ -65,9 +59,6 @@ interface
 
   module function cq_register_qkern(kernel) result(status) bind(C)
      implicit none
-     !type(qkern_ptr) :: kernel
-     !type(c_funptr) :: kernel
-     !procedure(qkern), pointer :: kernel
      type(c_ptr), value :: kernel
      integer(c_int) :: status 
   end function cq_register_qkern
@@ -76,7 +67,6 @@ interface
      implicit none
      type(c_ptr), value :: kernel
      integer(kind=8), value :: NQUBITS
-     !type(qubit) :: qrp(0:NQUBITS)
      type(qubit), value :: qrp
      integer(kind=8), value :: NMEASURE
      integer(kind=8), value :: NSHOTS
@@ -84,51 +74,22 @@ interface
      integer :: status
    end function
 
-
-
-!  module function qkern(NQUBITS, qr, cr, reg) result(status) bind(C)
-!    integer(c_int) :: NQUBITS
-!    type(c_ptr) :: qr(NQUBITS)
-!    integer(c_size_t) :: cr(NQUBITS)
-!    type(c_ptr) :: reg
-!    integer(c_int) :: status
-!  end function qkern
-
-!  module function qkern(NQUBITS, qr, cr, reg) result(status)
-!    integer(kind=8) :: NQUBITS
-!    type(qubit) :: qr(NQUBITS)
-!    integer :: cr(NQUBITS)
-!    type(qkern_map) :: reg
-!    integer :: status
-!  end function qkern
-
-!   module function foo(NQUBITS, qr, cr, reg) bind(C) result(status)
-!    implicit none
-!    integer(kind=8) :: NQUBITS
-!    type(qubit) :: qr(NQUBITS)
-!    integer :: cr(NQUBITS)
-!    !type(c_ptr), value :: reg
-!    type(qkern_map) :: reg
-!    integer :: status
-!   end function
-
 end interface
 
 
-! ------------------------ DEVICE OPERATIONS -------------------------
+! ----------------------------- DEVICE OPERATIONS -----------------------------
 
 interface
-  module function fcq_register_kernel(func_name, reg) result(status)
+  module function cq_register_fort_kernel(func_name, reg) result(status)
     implicit none
     character(*), intent(in) :: func_name(*)
     type(qkern_map), value :: reg
     integer :: status
-  end function fcq_register_kernel
+  end function cq_register_fort_kernel
 
   module function cq_set_qureg(qr, STATE_IDX, NQUBITS) result(status)
     implicit none
     integer(kind=8), value :: NQUBITS
-    !type(qubit) :: qr(NQUBITS)
     type(qubit), value :: qr
     integer(kind=8), value :: STATE_IDX
     integer :: status
@@ -137,13 +98,15 @@ interface
   module function cq_measure_qureg(qr, NQUBITS, cr) result(status)
       implicit none
       integer(kind=8) :: NQUBITS
-      !type(qubit) :: qr(NQUBITS)
       type(qubit), value :: qr
       integer :: cr(NQUBITS)
       integer :: status
   end function cq_measure_qureg
+end interface
 
-  !module function cq_hadamard(qh) result(status)
+! --------------------------------- QASM GATES --------------------------------
+
+interface
   module function cq_hadamard(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh

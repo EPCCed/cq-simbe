@@ -6,7 +6,6 @@ implicit none
 integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status
 integer(kind=8) :: NQUBITS, NSHOTS, NMEASURE
 type(qubit) :: qrc
-!type(qubit), allocatable, target :: qrc(:)
 integer, allocatable, target :: cr(:)
 
 NQUBITS = 10
@@ -29,11 +28,11 @@ CALL cq_init_creg(NMEASURE * NSHOTS, -1, cr)
 
 write(*,'(A)') 'after init_creg'
 
-reg_status = cq_register_qkern(c_funloc(foo))
+reg_status = cq_register_qkern(c_funloc(plus_state))
 
 write(*,'(A,I4)') 'after register_qkern: ', reg_status
 
-qrun_status = cq_sm_qrun(c_funloc(foo), qrc, NQUBITS, cr, NMEASURE, NSHOTS)
+qrun_status = cq_sm_qrun(c_funloc(plus_state), qrc, NQUBITS, cr, NMEASURE, NSHOTS)
 
 write(*,'(A,I4)') 'after sm_qrun: ', qrun_status
 
@@ -52,24 +51,22 @@ write(*,'(A,I4)') 'cq_finalise returned: ',freturn
 write(*,'(A)') 'after finalise'
 
 contains
-  function foo(NQUBITS, qr, cr, reg) bind(C) result(status)
-    use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t
+  function plus_state(NQUBITS, qr, cr, reg) bind(C) result(status)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer :: cr(NQUBITS)
     type(qkern_map), value :: reg
     integer :: i, status
-    integer(kind=8) :: STATE_IDX
-
-    STATE_IDX = 0
-    status = 1
-    status = fcq_register_kernel("foo", reg)
+    integer(kind=8) :: STATE_IDX = 0
+    status = cq_register_fort_kernel("plus_state", reg)
     status = cq_set_qureg(qr, STATE_IDX, NQUBITS)
+
     do i = 0, NQUBITS-1
       status = cq_hadamard(qr, i)
     end do
+
     status = cq_measure_qureg(qr, NQUBITS, cr)
-  end function foo
+  end function plus_state
 
 end program
