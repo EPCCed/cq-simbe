@@ -117,7 +117,7 @@ interface
   module function cq_unitary(qh, qubit_idx, THETA, PHI, LAMBDA) result(status)
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     real(c_double) :: THETA
     real(c_double) :: PHI
     real(c_double) :: LAMBDA
@@ -127,7 +127,7 @@ interface
   module function cq_gphase(qh, qubit_idx, THETA) result(status)
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     real(c_double) :: THETA
     integer :: status
   end function cq_gphase
@@ -135,70 +135,70 @@ interface
   module function cq_paulix(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_paulix
 
   module function cq_pauliy(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_pauliy
 
   module function cq_pauliz(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_pauliz
 
   module function cq_hadamard(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_hadamard
 
   module function cq_sqrtz(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_sqrtz
 
   module function cq_sqrtzhc(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_sqrtzhc
 
   module function cq_sqrts(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_sqrts
 
   module function cq_sqrtshc(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_sqrtshc
 
   module function cq_sqrtx(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     integer :: status
   end function cq_sqrtx
 
   module function cq_rotx(qh, qubit_idx, THETA) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     real(c_double) :: THETA
     integer :: status
   end function cq_rotx
@@ -206,7 +206,7 @@ interface
   module function cq_roty(qh, qubit_idx, THETA) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     real(c_double) :: THETA
     integer :: status
   end function cq_roty
@@ -214,7 +214,7 @@ interface
   module function cq_rotz(qh, qubit_idx, THETA) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer :: qubit_idx
+    integer(kind=8) :: qubit_idx
     real(c_double) :: THETA
     integer :: status
   end function cq_rotz
@@ -222,32 +222,32 @@ interface
   module function cq_cpaulix(qr, ctrl, qtarget) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     integer :: status
   end function cq_cpaulix
 
   module function cq_cpauliy(qr, ctrl, qtarget) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     integer :: status
   end function cq_cpauliy
 
   module function cq_cpauliz(qr, ctrl, qtarget) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     integer :: status
   end function cq_cpauliz
 
   module function cq_cphase(qr, ctrl, qtarget, THETA) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     real(c_double) :: THETA
     integer :: status
   end function cq_cphase
@@ -255,8 +255,8 @@ interface
   module function cq_crotx(qr, ctrl, qtarget, THETA) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     real(c_double) :: THETA
     integer :: status
   end function cq_crotx
@@ -264,8 +264,8 @@ interface
   module function cq_croty(qr, ctrl, qtarget, THETA) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     real(c_double) :: THETA
     integer :: status
 
@@ -274,8 +274,8 @@ interface
   module function cq_crotz(qr, ctrl, qtarget, THETA) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     real(c_double) :: THETA
     integer :: status
   end function cq_crotz
@@ -283,16 +283,16 @@ interface
   module function cq_chadamard(qr, ctrl, qtarget) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     integer :: status
   end function cq_chadamard
 
   module function cq_cunitary(qr, ctrl, qtarget, THETA, PHI, LAMBDA) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: qtarget
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: qtarget
     real(c_double) :: THETA
     real(c_double) :: PHI
     real(c_double) :: LAMBDA
@@ -302,26 +302,26 @@ interface
   module function cq_swap(qr, a, b) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: a
-    integer :: b
+    integer(kind=8) :: a
+    integer(kind=8) :: b
     integer :: status
   end function cq_swap
 
   module function cq_ccpaulix(qr, ctrl_a, ctrl_b, qtarget) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl_a
-    integer :: ctrl_b
-    integer :: qtarget
+    integer(kind=8) :: ctrl_a
+    integer(kind=8) :: ctrl_b
+    integer(kind=8) :: qtarget
     integer :: status
   end function cq_ccpaulix
 
   module function cq_cswap(qr, ctrl, a, b) result(status) 
     implicit none
     type(qubit), value :: qr
-    integer :: ctrl
-    integer :: a
-    integer :: b
+    integer(kind=8) :: ctrl
+    integer(kind=8) :: a
+    integer(kind=8) :: b
     integer :: status
   end function cq_cswap
 

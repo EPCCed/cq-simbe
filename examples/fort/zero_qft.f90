@@ -59,7 +59,7 @@ contains
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer :: i, j
+    integer(kind=8) :: i, j
     integer :: status
     real(8), parameter :: PI = 3.1415926535897932384626433832795028841971694
     real(8) :: angle
@@ -84,7 +84,8 @@ contains
     type(qubit), value :: qr
     integer :: cr(NQUBITS)
     type(qkern_map), value :: reg
-    integer :: i, status
+    integer(kind=8) :: i
+    integer :: status
     integer(kind=8) :: STATE_IDX = 0
     status = cq_register_fort_kernel("plus_state_qft", reg)
     status = cq_set_qureg(qr, STATE_IDX, NQUBITS)

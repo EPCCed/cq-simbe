@@ -8,7 +8,7 @@ contains
   function get_qubit_at(qh, qubit_idx) result(new_ptr)
     implicit none
     type(qubit) :: qh
-    integer :: qubit_idx
+    integer(c_intptr_t) :: qubit_idx
     type(c_ptr) :: curr_ptr
     integer(c_intptr_t) :: offset
     type(c_ptr) :: new_ptr
