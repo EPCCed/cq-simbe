@@ -24,10 +24,6 @@ type, bind(C) :: qkern_map
   type(c_ptr) :: map
 end type qkern_map
 
-type :: qkern_t
-  type(c_ptr) :: target = c_null_ptr
-end type qkern_t
-
 ! ------------------------------ HOST OPERATIONS ------------------------------
 abstract interface
   function qkern(NQUBITS, qr, cr, reg) result(status) bind(C)
@@ -35,7 +31,7 @@ abstract interface
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer :: cr(NQUBITS)
+    integer(kind=2) :: cr(0:NQUBITS)
     type(qkern_map), value :: reg
     integer :: status
   end function qkern
@@ -71,35 +67,8 @@ interface
     implicit none
     integer(8) :: LENGTH
     integer :: INIT_VAL
-    integer :: cr(0:LENGTH)
+    integer(c_short) :: cr(0:LENGTH)
   end subroutine cq_init_creg
-
-!  function cq_register_qkern(kernel) result(status)
-!    use, intrinsic :: iso_c_binding, only: c_int
-!    implicit none
-!    !type(qkern), value :: kernel
-!    procedure(qkern) :: kernel
-!    integer(c_int) :: status 
-!  end function cq_register_qkern
-
-
- ! module function cq_register_qkern(kernel) result(status)
- !   implicit none
- !   !type(qkern), value :: kernel
- !   procedure(qkern) :: kernel
- !   integer(c_int) :: status 
- ! end function cq_register_qkern
-
- ! module function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
- !    implicit none
- !    type(qkern_t), value :: kernel
- !    integer(kind=8), value :: NQUBITS
- !    type(qubit), value :: qrp
- !    integer(kind=8), value :: NMEASURE
- !    integer(kind=8), value :: NSHOTS
- !    integer :: crp(0, NSHOTS*NMEASURE)
- !    integer :: status
- !  end function
 
 end interface
 
@@ -126,7 +95,8 @@ interface
       implicit none
       integer(kind=8) :: NQUBITS
       type(qubit), value :: qr
-      integer :: cr(NQUBITS)
+      integer(kind=2) :: cr(0:NQUBITS)
+      !integer, target :: cr
       integer :: status
   end function cq_measure_qureg
 end interface
@@ -148,7 +118,7 @@ interface
   module function cq_gphase(qh, qubit_idx, THETA) result(status)
     implicit none
     type(qubit), value :: qh
-    integer(kind=8) :: qubit_idx
+    integer(kind=8), value :: qubit_idx
     real(c_double) :: THETA
     integer :: status
   end function cq_gphase
@@ -156,7 +126,7 @@ interface
   module function cq_paulix(qh, qubit_idx) result(status) 
     implicit none
     type(qubit), value :: qh
-    integer(kind=8) :: qubit_idx
+    integer(c_size_t), value :: qubit_idx
     integer :: status
   end function cq_paulix
 
@@ -300,7 +270,7 @@ interface
     real(c_double) :: THETA
     integer :: status
   end function cq_crotz
-
+  
   module function cq_chadamard(qr, ctrl, qtarget) result(status) 
     implicit none
     type(qubit), value :: qr
@@ -349,6 +319,7 @@ interface
 end interface
 
 contains
+  ! -------------------- Kernel-calling function definitions ------------------
   function cq_register_qkern(kernel) result(status)
     use, intrinsic :: iso_c_binding, only: c_int
     use c_host_interface
@@ -361,17 +332,14 @@ contains
   function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
     use c_host_interface
     implicit none
-    !type(qkern_t), value :: kernel
     procedure(qkern) :: kernel
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
     integer(kind=8), value :: NSHOTS
-    integer :: crp(0, NSHOTS*NMEASURE)
+    integer(c_short) :: crp(0:NSHOTS*NMEASURE)
     integer :: status
     status = sm_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS)
    end function
-
-
 
 end module

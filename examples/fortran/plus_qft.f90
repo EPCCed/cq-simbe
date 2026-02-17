@@ -1,41 +1,11 @@
-!module alt
-!  use, intrinsic :: iso_c_binding
-!  implicit none
-
-!contains
-!  subroutine foo() bind(C)
-!    print *, "This is foo kern"
-!  end subroutine foo
-!end module alt
-
-
-program myfortran
+program plus_qft
 use cq
-use c_host_interface
-!use alt
 implicit none
-
-!interface
-!    subroutine alt_register(kernel) bind(C, name="register_qkern")
-!      use, intrinsic :: iso_c_binding
-!      implicit none
-!      type(c_funptr), intent(in), value :: kernel
-!    end subroutine alt_register
-!end interface
-!
-!abstract interface
-!  subroutine alt_qkern() bind(C)
-!    implicit none
-!  end subroutine alt_qkern
-!end interface
-!
-!call register(foo)
 
 integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status
 integer(kind=8) :: NQUBITS, NSHOTS, NMEASURE
 type(qubit) :: qrc
-integer, allocatable, target :: cr(:)
-type(qkern_t) :: kernel
+integer(kind=2), allocatable, target :: cr(:)
 
 NQUBITS = 10
 NSHOTS = 10
@@ -51,13 +21,11 @@ alloc_status = cq_alloc_qureg(qrc, NQUBITS)
 
 write(*,'(A,I4)') 'alloc_qureg returned: ', alloc_status
 
-allocate(cr(NMEASURE * NSHOTS * 4))
+allocate(cr(NMEASURE * NSHOTS))
 
 CALL cq_init_creg(NMEASURE * NSHOTS, -1, cr)
 
 write(*,'(A)') 'after init_creg'
-
-kernel%target = c_funloc(plus_state_qft)
 
 reg_status = cq_register_qkern(plus_state_qft)
 
@@ -95,7 +63,7 @@ contains
     do i = 0, NQUBITS - 1
       status = cq_hadamard(qr, i)
       do j = i + 1, NQUBITS - 1 
-        angle = PI / (2 ** j)
+        angle = PI / (2.0 ** j)
         status = cq_cphase(qr, j, i, angle)
       end do
     end do
@@ -110,7 +78,7 @@ contains
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer :: cr(NQUBITS)
+    integer(kind=2) :: cr(0:NQUBITS)
     type(qkern_map), value :: reg
     integer(kind=8) :: i
     integer :: status
@@ -123,12 +91,32 @@ contains
     end do
 
     call qft(NQUBITS, qr)
-
     status = cq_measure_qureg(qr, NQUBITS, cr)
   end function plus_state_qft
 
-!  subroutine register(funptr)
-!    procedure(alt_qkern) :: funptr
-!    call alt_register(c_funloc(funptr))
-!  end subroutine register
+  subroutine report_results(cr, NMEASURE, NSHOTS)
+    implicit none
+    integer(kind=8), value :: NMEASURE
+    integer(kind=8), value :: NSHOTS
+    integer(kind=2) :: cr(0:NMEASURE * NSHOTS)
+    integer(kind=8) :: i, j
+
+!    integer(kind=8) :: k
+!    k = 0
+!    do i = 0, NSHOTS-1, 1
+!    do j = 0, NSHOTS-1, 1
+!      cr(k) = k
+!      k = k +1
+!    end do
+!    end do
+
+    write(*,'(A)') 'Reporting measurement outcomes:'
+    do i = 0, NSHOTS-1, 1
+        write(*,'(A, I4, A)') 'Shot ', i, ': ' 
+      do j = (i) * NMEASURE, (i+1) * NMEASURE - 2, 1
+        write(*, '(I4, A)', advance='no') cr(j), ' '
+      end do   
+      write(*,'(I4, A)') cr((i+1) * NMEASURE - 1), ' '
+    end do
+  end subroutine report_results
 end program

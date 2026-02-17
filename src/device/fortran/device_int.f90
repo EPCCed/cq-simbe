@@ -24,11 +24,12 @@ interface
   end function
 
   function measure_qureg(qr, NQUBITS, cr) bind(C)
-      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t, c_short
       implicit none
       type(c_ptr), value :: qr
       integer(c_size_t), value :: NQUBITS
-      integer(c_int) :: cr(NQUBITS)
+      !type(c_ptr), value :: cr
+      integer(c_short) :: cr(0:NQUBITS)
       integer(c_int) :: measure_qureg
   end function measure_qureg
 
@@ -40,9 +41,9 @@ interface
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
       implicit none
       type(c_ptr), value :: qh
-      real(c_double) :: THETA
-      real(c_double) :: PHI
-      real(c_double) :: LAMBDA
+      real(c_double), value :: THETA
+      real(c_double), value :: PHI
+      real(c_double), value :: LAMBDA
       integer(c_int) :: unitary
   end function unitary
 
@@ -51,7 +52,7 @@ interface
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
       implicit none
       type(c_ptr), value :: qh
-      real(c_double) :: THETA
+      real(c_double), value  :: THETA
       integer(c_int) :: gphase
   end function gphase
 

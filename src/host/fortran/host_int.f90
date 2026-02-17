@@ -47,11 +47,11 @@ interface
 
   !void init_creg(const size_t LENGTH, const cstate INIT_VAL, cstate * cr)
   subroutine init_creg(LENGTH, INIT_VAL, cr) bind(C)
-     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr
+     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
      implicit none
      integer(c_size_t), value :: LENGTH
      integer(c_int), value :: INIT_VAL
-     integer(c_int) :: cr(0:LENGTH)
+     integer(c_short) :: cr(0:LENGTH)
   end subroutine init_creg
 
   !cq_status register_qkern(qkern kernel)
@@ -66,7 +66,7 @@ interface
   !cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
   ! cstate * const crp, const size_t NMEASURE, const size_t NSHOTS)
   function sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) bind(C)
-     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr
+     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
      !import :: qubit
      implicit none
      type(c_ptr), value :: kernel
@@ -74,7 +74,7 @@ interface
      integer(c_size_t), value :: NQUBITS
      integer(c_size_t), value :: NMEASURE
      integer(c_size_t), value :: NSHOTS
-     integer(c_int) :: crp(0, NSHOTS*NMEASURE)
+     integer(c_short) :: crp(0, NSHOTS*NMEASURE)
      integer(c_int) :: sm_qrun
    end function
 

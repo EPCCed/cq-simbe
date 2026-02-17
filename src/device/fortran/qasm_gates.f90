@@ -7,13 +7,23 @@ contains
 
   function get_qubit_at(qh, qubit_idx) result(new_ptr)
     implicit none
-    type(qubit) :: qh
-    integer(c_intptr_t) :: qubit_idx
+    type(qubit), value :: qh
+    integer(c_intptr_t), value :: qubit_idx
     type(c_ptr) :: curr_ptr
     integer(c_intptr_t) :: offset
     type(c_ptr) :: new_ptr
     type(qubit_size) :: tmp
+
+    ! validate representation of c_intptr_t and c_ptr
+    integer(c_intptr_t) :: unused_i
+    type(c_ptr) :: unused_p
+    integer, parameter :: pointer_sized = &
+    merge(c_intptr_t, -1, storage_size(unused_i) == storage_size(unused_p))
+    integer(pointer_sized) :: ip
+    ! end
+
     curr_ptr = qh%this
+
     offset = transfer(curr_ptr, offset) + (c_sizeof(tmp) * qubit_idx)
     new_ptr = transfer(offset, new_ptr)
   end function get_qubit_at

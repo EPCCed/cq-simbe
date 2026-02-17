@@ -8,17 +8,17 @@ target_link_libraries(qft-lib
   ${MATHS_LIBRARY}
 )
 
-#add_executable(zero-qft
-#  zero_qft.f90
-#)
-#
-#target_link_libraries(zero-qft
-#  PRIVATE
-#  CQ-SIMBE::cq-simbe
-#  cq-fort
-#  qft-lib
-#  ${MATHS_LIBRARY}
-#)
+add_executable(zero-qft
+  zero_qft.f90
+)
+
+target_link_libraries(zero-qft
+  PRIVATE
+  CQ-SIMBE::cq-simbe
+  cq-fort
+  qft-lib
+  ${MATHS_LIBRARY}
+)
 
 add_executable(plus-qft
   plus_qft.f90
