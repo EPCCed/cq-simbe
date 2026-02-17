@@ -10,5 +10,5 @@ else()
 endif()
 
 if(BUILD_FORTRAN_INTERFACE)
-  add_subdirectory(fort)
+  add_subdirectory(fortran)
 endif()

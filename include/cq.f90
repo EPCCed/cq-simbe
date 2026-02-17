@@ -24,11 +24,22 @@ type, bind(C) :: qkern_map
   type(c_ptr) :: map
 end type qkern_map
 
-type :: qkern
+type :: qkern_t
   type(c_ptr) :: target = c_null_ptr
-end type qkern
+end type qkern_t
 
 ! ------------------------------ HOST OPERATIONS ------------------------------
+abstract interface
+  function qkern(NQUBITS, qr, cr, reg) result(status) bind(C)
+    import :: qubit, qkern_map
+    implicit none
+    integer(kind=8), value :: NQUBITS
+    type(qubit), value :: qr
+    integer :: cr(NQUBITS)
+    type(qkern_map), value :: reg
+    integer :: status
+  end function qkern
+end interface
 
 interface
   module function cq_init(VERBOSITY) result(status)
@@ -63,22 +74,32 @@ interface
     integer :: cr(0:LENGTH)
   end subroutine cq_init_creg
 
-  module function cq_register_qkern(kernel) result(status)
-     implicit none
-     type(qkern), value :: kernel
-     integer(c_int) :: status 
-  end function cq_register_qkern
+!  function cq_register_qkern(kernel) result(status)
+!    use, intrinsic :: iso_c_binding, only: c_int
+!    implicit none
+!    !type(qkern), value :: kernel
+!    procedure(qkern) :: kernel
+!    integer(c_int) :: status 
+!  end function cq_register_qkern
 
-  module function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
-     implicit none
-     type(qkern), value :: kernel
-     integer(kind=8), value :: NQUBITS
-     type(qubit), value :: qrp
-     integer(kind=8), value :: NMEASURE
-     integer(kind=8), value :: NSHOTS
-     integer :: crp(0, NSHOTS*NMEASURE)
-     integer :: status
-   end function
+
+ ! module function cq_register_qkern(kernel) result(status)
+ !   implicit none
+ !   !type(qkern), value :: kernel
+ !   procedure(qkern) :: kernel
+ !   integer(c_int) :: status 
+ ! end function cq_register_qkern
+
+ ! module function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+ !    implicit none
+ !    type(qkern_t), value :: kernel
+ !    integer(kind=8), value :: NQUBITS
+ !    type(qubit), value :: qrp
+ !    integer(kind=8), value :: NMEASURE
+ !    integer(kind=8), value :: NSHOTS
+ !    integer :: crp(0, NSHOTS*NMEASURE)
+ !    integer :: status
+ !  end function
 
 end interface
 
@@ -326,5 +347,31 @@ interface
   end function cq_cswap
 
 end interface
+
+contains
+  function cq_register_qkern(kernel) result(status)
+    use, intrinsic :: iso_c_binding, only: c_int
+    use c_host_interface
+    implicit none
+    procedure(qkern) :: kernel
+    integer(c_int) :: status 
+    status = register_qkern(c_funloc(kernel))
+  end function cq_register_qkern
+
+  function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+    use c_host_interface
+    implicit none
+    !type(qkern_t), value :: kernel
+    procedure(qkern) :: kernel
+    integer(kind=8), value :: NQUBITS
+    type(qubit), value :: qrp
+    integer(kind=8), value :: NMEASURE
+    integer(kind=8), value :: NSHOTS
+    integer :: crp(0, NSHOTS*NMEASURE)
+    integer :: status
+    status = sm_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS)
+   end function
+
+
 
 end module

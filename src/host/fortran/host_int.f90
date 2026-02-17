@@ -56,9 +56,10 @@ interface
 
   !cq_status register_qkern(qkern kernel)
   function register_qkern(kernel) bind(C)
-     use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+     use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_funptr
      implicit none
-     type(c_ptr), value :: kernel
+     !type(c_ptr), value :: kernel
+     type(c_funptr), intent(in), value :: kernel
      integer(c_int) :: register_qkern
   end function
 

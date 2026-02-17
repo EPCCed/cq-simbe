@@ -1,13 +1,41 @@
+!module alt
+!  use, intrinsic :: iso_c_binding
+!  implicit none
+
+!contains
+!  subroutine foo() bind(C)
+!    print *, "This is foo kern"
+!  end subroutine foo
+!end module alt
+
+
 program myfortran
 use cq
 use c_host_interface
+!use alt
 implicit none
+
+!interface
+!    subroutine alt_register(kernel) bind(C, name="register_qkern")
+!      use, intrinsic :: iso_c_binding
+!      implicit none
+!      type(c_funptr), intent(in), value :: kernel
+!    end subroutine alt_register
+!end interface
+!
+!abstract interface
+!  subroutine alt_qkern() bind(C)
+!    implicit none
+!  end subroutine alt_qkern
+!end interface
+!
+!call register(foo)
 
 integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status
 integer(kind=8) :: NQUBITS, NSHOTS, NMEASURE
 type(qubit) :: qrc
 integer, allocatable, target :: cr(:)
-type(qkern) :: kernel
+type(qkern_t) :: kernel
 
 NQUBITS = 10
 NSHOTS = 10
@@ -31,11 +59,11 @@ write(*,'(A)') 'after init_creg'
 
 kernel%target = c_funloc(plus_state_qft)
 
-reg_status = cq_register_qkern(kernel)
+reg_status = cq_register_qkern(plus_state_qft)
 
 write(*,'(A,I4)') 'after register_qkern: ', reg_status
 
-qrun_status = cq_sm_qrun(kernel, qrc, NQUBITS, cr, NMEASURE, NSHOTS)
+qrun_status = cq_sm_qrun(plus_state_qft, qrc, NQUBITS, cr, NMEASURE, NSHOTS)
 
 write(*,'(A,I4)') 'after sm_qrun: ', qrun_status
 
@@ -99,4 +127,8 @@ contains
     status = cq_measure_qureg(qr, NQUBITS, cr)
   end function plus_state_qft
 
+!  subroutine register(funptr)
+!    procedure(alt_qkern) :: funptr
+!    call alt_register(c_funloc(funptr))
+!  end subroutine register
 end program
