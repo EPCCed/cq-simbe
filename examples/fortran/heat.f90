@@ -2,14 +2,14 @@
 program heat_eq
 
 use cq
-use c_host_interface
+#include "cqf.h"
+use example_utils
 implicit none
 
 integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status
 integer(kind=8) :: NQUBITS, NSHOTS, NMEASURE
 type(qubit) :: qrc
-integer, allocatable, target :: cr(:)
-type(qkern) :: kernel
+integer(kind=2), allocatable, target :: cr(:)
 
 NQUBITS = 10
 NSHOTS = 10
@@ -25,19 +25,17 @@ alloc_status = cq_alloc_qureg(qrc, NQUBITS)
 
 write(*,'(A,I4)') 'alloc_qureg returned: ', alloc_status
 
-allocate(cr(NMEASURE * NSHOTS * 4))
+allocate(cr(NMEASURE * NSHOTS))
 
 CALL cq_init_creg(NMEASURE * NSHOTS, -1, cr)
 
 write(*,'(A)') 'after init_creg'
 
-kernel%target = c_funloc(V_heat)
-
-reg_status = cq_register_qkern(kernel)
+reg_status = cq_register_qkern(V_heat)
 
 write(*,'(A,I4)') 'after register_qkern: ', reg_status
 
-qrun_status = cq_sm_qrun(kernel, qrc, NQUBITS, cr, NMEASURE, NSHOTS)
+qrun_status = cq_sm_qrun(V_heat, qrc, NQUBITS, cr, NMEASURE, NSHOTS)
 
 write(*,'(A,I4)') 'after sm_qrun: ', qrun_status
 
@@ -106,7 +104,7 @@ contains
   end subroutine iqft 
 
 
-  subroutine W(qr, NQUBITS, tau, lambda)
+  function W(qr, NQUBITS, tau, lambda) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: NQUBITS
@@ -119,42 +117,39 @@ contains
       status = cq_cpaulix(qr, NQUBITS - 1, i)
     end do
 
-    write(*,'(A,I8)') 'called W on: ', NQUBITS
-    !status = cq_gphase(qr, NQUBITS - 1, lambda)
+    status = cq_gphase(qr, NQUBITS - 1, lambda)
     status = cq_hadamard(qr, NQUBITS - 1)
-    !if (NQUBITS == 2) then
-    !  status = cq_crotz(qr, NQUBITS - 2, NQUBITS - 1, -2.0 * tau)
-    !else 
-    !  status = cq_rotz(qr, NQUBITS - 1, -2.0 * tau)
-    !end if 
-    !status = cq_hadamard(qr, NQUBITS - 1)
-    !status = cq_gphase(qr, NQUBITS - 1, -lambda)
+    if (NQUBITS == 2) then
+      status = cq_crotz(qr, NQUBITS - 2, NQUBITS - 1, -2.0 * tau)
+    else 
+      status = cq_rotz(qr, NQUBITS - 1, -2.0 * tau)
+    end if 
+    status = cq_hadamard(qr, NQUBITS - 1)
+    status = cq_gphase(qr, NQUBITS - 1, -lambda)
 
-    !do i = 0, NQUBITS - 1
-    !  status = cq_cpaulix(qr, NQUBITS - 1, i)
-    !end do
+    do i = 0, NQUBITS - 1
+      status = cq_cpaulix(qr, NQUBITS - 1, i)
+    end do
 
-  end subroutine W
+  end function W
 
-  subroutine V(qr, NQUBITS, tau)
+  function V(qr, NQUBITS, tau) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: NQUBITS
     real(8), value :: tau
     integer(kind=8) :: i
-    real(8) :: lambda = 0.0
+    real(8) :: lambda = 0.2
     integer :: status
 
     do i = 1, NQUBITS
-      !call W(qr, i, tau, lambda) 
-      write(*,'(A,I8)') 'called W on: ', i
+      status = W(qr, i, tau, lambda) 
       status = cq_gphase(qr, i - 1, -2.0 * tau)
-      write(*,'(A,I4)') 'with status: ', status
     end do
     ! check it out
-  end subroutine V
+  end function V
 
-  subroutine V_til(qr, NSITES, tau)
+  function V_til(qr, NSITES, tau) result(status)
     implicit none
     type(qubit), value :: qr
     integer, value :: NSITES
@@ -164,37 +159,40 @@ contains
     integer :: status
  
     do i = 0, NSITES - 1
-      call V(qr, NQUBITS, tau)
+      status = V(qr, NQUBITS, tau)
     end do
 
-  end subroutine V_til
+  end function V_til
 
-  subroutine V_heat(NQUBITS, qr, cr, reg) bind(C) 
+  function V_heat(NQUBITS, qr, cr, reg) bind(C) result(status) 
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer :: cr(NQUBITS)
+    integer(kind=2) :: cr(0:NQUBITS)
     type(qkern_map), value :: reg
-    integer(kind=8) :: NREPS = 2
-    real(8) :: tau = 0.01
-    integer(kind=8) :: i
+    integer(kind=8) :: i, j
     integer :: status
     integer(kind=8) :: STATE_IDX = 0
+    integer(kind=8) :: NREPS = 2
+    real(8) :: tau = 0.01
     integer :: NSITES = 2
     integer :: NQUBIT_PER_SITE = 2
+    integer(kind=8) :: VPOWER
 
-    status = cq_register_fort_kernel("V_heat", reg)
+    CQ_REGISTER_KERNEL("V_heat", reg)
     status = cq_set_qureg(qr, STATE_IDX, NQUBITS)
-    !do i = 0, NREPS - 1
+    do i = 0, NREPS - 1
       call qft(NQUBITS - (NSITES * NQUBIT_PER_SITE), qr)
-      !status = cq_cpaulix(qr, i + (NSITES * NQUBIT_PER_SITE), i)
-      ! TODO: 2^i times V_til
-      ! ctrl V_til rather than cnot
-      call V_til(qr, NSITES, tau)
+      status = cq_cpaulix(qr, i + (NSITES * NQUBIT_PER_SITE), i)
+      VPOWER = 2 ** i
+      do j = 0, VPOWER - 1
+        status = V_til(qr, NSITES, tau)
+      end do
+
       call iqft(NQUBITS - (NSITES * NQUBIT_PER_SITE), qr)
-    !end do
+    end do
  
     status = cq_measure_qureg(qr, NQUBITS, cr)
-  end subroutine V_heat
+  end function V_heat
 
 end program

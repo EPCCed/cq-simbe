@@ -1,5 +1,7 @@
 program plus_qft
 use cq
+#include "cqf.h"
+use example_utils
 implicit none
 
 integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status
@@ -83,7 +85,7 @@ contains
     integer(kind=8) :: i
     integer :: status
     integer(kind=8) :: STATE_IDX = 0
-    status = cq_register_fort_kernel("plus_state_qft", reg)
+    CQ_REGISTER_KERNEL("plus_state_qft", reg)
     status = cq_set_qureg(qr, STATE_IDX, NQUBITS)
 
     do i = 0, NQUBITS-1
@@ -94,29 +96,4 @@ contains
     status = cq_measure_qureg(qr, NQUBITS, cr)
   end function plus_state_qft
 
-  subroutine report_results(cr, NMEASURE, NSHOTS)
-    implicit none
-    integer(kind=8), value :: NMEASURE
-    integer(kind=8), value :: NSHOTS
-    integer(kind=2) :: cr(0:NMEASURE * NSHOTS)
-    integer(kind=8) :: i, j
-
-!    integer(kind=8) :: k
-!    k = 0
-!    do i = 0, NSHOTS-1, 1
-!    do j = 0, NSHOTS-1, 1
-!      cr(k) = k
-!      k = k +1
-!    end do
-!    end do
-
-    write(*,'(A)') 'Reporting measurement outcomes:'
-    do i = 0, NSHOTS-1, 1
-        write(*,'(A, I4, A)') 'Shot ', i, ': ' 
-      do j = (i) * NMEASURE, (i+1) * NMEASURE - 2, 1
-        write(*, '(I4, A)', advance='no') cr(j), ' '
-      end do   
-      write(*,'(I4, A)') cr((i+1) * NMEASURE - 1), ' '
-    end do
-  end subroutine report_results
 end program

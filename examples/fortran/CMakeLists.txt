@@ -10,6 +10,7 @@ target_link_libraries(qft-lib
 
 add_executable(zero-qft
   zero_qft.f90
+  utils.f90
 )
 
 target_link_libraries(zero-qft
@@ -22,6 +23,7 @@ target_link_libraries(zero-qft
 
 add_executable(plus-qft
   plus_qft.f90
+  utils.f90
 )
 
 target_link_libraries(plus-qft
@@ -32,17 +34,18 @@ target_link_libraries(plus-qft
   ${MATHS_LIBRARY}
 )
 
-#add_executable(heat-eq
-#  heat.f90
-#)
-#
-#target_link_libraries(heat-eq
-#  PRIVATE
-#  CQ-SIMBE::cq-simbe
-#  cq-fort
-#  qft-lib
-#  ${MATHS_LIBRARY}
-#)
+add_executable(heat-eq
+  heat.f90
+  utils.f90
+)
+
+target_link_libraries(heat-eq
+  PRIVATE
+  CQ-SIMBE::cq-simbe
+  cq-fort
+  qft-lib
+  ${MATHS_LIBRARY}
+)
 
 
 #

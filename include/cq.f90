@@ -9,11 +9,11 @@ type, bind(C) :: qubit
   type(c_ptr) :: this = c_null_ptr
 end type qubit
 
-type, bind(c) :: qubit_size
+type, bind(C) :: qubit_t
   integer(c_size_t) :: registry_index
   integer(c_size_t) :: offset
   integer(c_size_t) :: N
-end type qubit_size
+end type qubit_t
 
 type :: qubit_ptr
   ! Wrapper type for implementing an array of pointers to qubit objects
@@ -74,6 +74,7 @@ end interface
 
 
 ! ----------------------------- DEVICE OPERATIONS -----------------------------
+
 
 interface
   module function cq_register_fort_kernel(func_name, reg) result(status)
