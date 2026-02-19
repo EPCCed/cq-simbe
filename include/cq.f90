@@ -24,6 +24,10 @@ type, bind(C) :: qkern_map
   type(c_ptr) :: map
 end type qkern_map
 
+type, bind(C) :: exec
+  type(c_ptr) :: this = c_null_ptr
+end type exec
+
 ! ------------------------------ HOST OPERATIONS ------------------------------
 abstract interface
   function qkern(NQUBITS, qr, cr, reg) result(status) bind(C)
@@ -50,6 +54,20 @@ interface
     integer :: status
   end function cq_finalise
 
+! Resource management
+
+  module function cq_alloc_qubit(qhp) result(status)
+    implicit none
+    type(qubit), intent(inout) :: qhp
+    integer :: status
+  end function cq_alloc_qubit
+
+  module function cq_free_qubit(qhp) result(status)
+    implicit none
+    type(qubit), intent(inout) :: qhp
+    integer :: status
+  end function cq_free_qubit
+
   module function cq_alloc_qureg(qrp, N) result(status)
     implicit none
     type(qubit), intent(inout) :: qrp
@@ -69,6 +87,26 @@ interface
     integer :: INIT_VAL
     integer(c_short) :: cr(0:LENGTH)
   end subroutine cq_init_creg
+
+! Synchronisation
+
+  module function cq_sync_qrun(ehp) result(status)
+    implicit none
+    type(exec), value :: ehp
+    integer :: status
+  end function
+
+  module function cq_wait_qrun(ehp) result(status)
+    implicit none
+    type(exec), value :: ehp
+    integer :: status
+  end function
+
+  module function cq_halt_qrun(ehp) result(status)
+    implicit none
+    type(exec), value :: ehp
+    integer :: status
+  end function
 
 end interface
 
@@ -398,6 +436,31 @@ contains
     status = register_qkern(c_funloc(kernel))
   end function cq_register_qkern
 
+  function cq_s_qrun(kernel, qrp, NQUBITS, crp, NMEASURE) result(status)
+    use c_host_interface
+    implicit none
+    procedure(qkern) :: kernel
+    integer(kind=8), value :: NQUBITS
+    type(qubit), value :: qrp
+    integer(kind=8), value :: NMEASURE
+    integer(c_short) :: crp(0:NMEASURE)
+    integer :: status
+    status = s_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE)
+  end function
+
+  function cq_a_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, ehp) result(status)
+    use c_host_interface
+    implicit none
+    procedure(qkern) :: kernel
+    integer(kind=8), value :: NQUBITS
+    type(qubit), value :: qrp
+    integer(kind=8), value :: NMEASURE
+    integer(c_short) :: crp(0:NMEASURE)
+    type(exec), value :: ehp
+    integer :: status
+    status = a_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, ehp%this)
+  end function
+
   function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
     use c_host_interface
     implicit none
@@ -410,5 +473,68 @@ contains
     integer :: status
     status = sm_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS)
    end function
+
+  function cq_am_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS, ehp) result(status)
+    use c_host_interface
+    implicit none
+    procedure(qkern) :: kernel
+    integer(kind=8), value :: NQUBITS
+    type(qubit), value :: qrp
+    integer(kind=8), value :: NMEASURE
+    integer(kind=8), value :: NSHOTS
+    integer(c_short) :: crp(0:NSHOTS*NMEASURE)
+    type(exec), value :: ehp
+    integer :: status
+    status = am_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS, ehp%this)
+  end function
+
+!! Not implemented in CQ
+!  function cq_sb_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, BE) result(status)
+!    use c_host_interface
+!    implicit none
+!    procedure(qkern) :: kernel
+!    integer(kind=8), value :: NQUBITS
+!    type(qubit), value :: qrp
+!    integer(kind=8), value :: NMEASURE
+!    integer(c_short) :: crp(0:NMEASURE)
+!    integer :: BE
+!    integer :: status
+!    status = sb_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, BE)
+!  end function
+!
+!  function cq_ab_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_smb_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_amb_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!  function cq_sp_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_ap_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_smp_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_amp_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_sbp_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_abp_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_smbp_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
+!
+!  function cq_ambp_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) result(status)
+!  end function
 
 end module

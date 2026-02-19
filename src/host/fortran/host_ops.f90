@@ -16,6 +16,14 @@ contains
     status = fortran_cq_finalise(VERBOSITY)
   end procedure cq_finalise
 
+  module procedure cq_alloc_qubit !(qhp) result(status)
+    status = alloc_qubit(qhp%this)
+  end procedure cq_alloc_qubit
+
+  module procedure cq_free_qubit !(qhp) result(status)
+    status = free_qubit(qhp%this)
+  end procedure cq_free_qubit
+
   module procedure cq_alloc_qureg !(qrp, N) result(status)
     status = alloc_qureg(qrp%this, N)
   end procedure cq_alloc_qureg
@@ -27,6 +35,18 @@ contains
   module procedure cq_init_creg !(LENGTH, INIT_VAL, cr) result(status)
     call init_creg(LENGTH, INIT_VAL, cr)
   end procedure cq_init_creg
+
+  module procedure cq_sync_qrun !(ehp) result(status)
+    status = sync_qrun(ehp%this)
+  end procedure cq_sync_qrun
+
+  module procedure cq_wait_qrun !(ehp) result(status)
+    status = wait_qrun(ehp%this)
+  end procedure cq_wait_qrun
+
+  module procedure cq_halt_qrun !(ehp) result(status)
+    status = halt_qrun(ehp%this)
+  end procedure cq_halt_qrun
 
 end submodule host_ops
 
