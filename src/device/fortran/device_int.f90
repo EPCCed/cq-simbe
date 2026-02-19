@@ -15,6 +15,13 @@ interface
     integer(c_int) :: insert_to_qkern_map
   end function
 
+  function set_qubit(qh, cs) bind(C)
+    use, intrinsic :: iso_c_binding, only: c_short, c_ptr, c_int
+    type(c_ptr), value :: qh
+    integer(c_short), value :: cs
+    integer(c_int) :: set_qubit
+  end function
+
   function set_qureg(qr, STATE_IDX, NQUBITS) bind(C)
     use, intrinsic :: iso_c_binding, only: c_size_t, c_ptr, c_int
     type(c_ptr), value :: qr
@@ -22,6 +29,57 @@ interface
     integer(c_size_t), value :: STATE_IDX
     integer(c_int) :: set_qureg
   end function
+
+  function set_qureg_cstate(qr, CR, N) bind(C)
+    use, intrinsic :: iso_c_binding, only: c_size_t, c_ptr, c_int, c_short
+    type(c_ptr), value :: qr
+    integer(c_size_t), value :: N
+    integer(c_short) :: CR(0:N)
+    integer(c_int) :: set_qureg_cstate
+  end function
+
+  function qabort(STATUS) bind(C)
+    use, intrinsic :: iso_c_binding, only: c_int
+    integer(c_int) :: STATUS
+    integer(c_int) :: qabort
+  end function qabort
+
+  function dmeasure_qubit(qbp, csp) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: qbp
+      type(c_ptr), value :: csp
+      integer(c_int) :: dmeasure_qubit
+  end function dmeasure_qubit
+
+  function dmeasure_qureg(qr, NQUBITS, cr) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_short, c_size_t
+      implicit none
+      integer(c_size_t), value :: NQUBITS
+      type(c_ptr), value :: qr
+      integer(c_short) :: cr(0:NQUBITS)
+      !integer, target :: cr
+      integer(c_int) :: dmeasure_qureg
+  end function dmeasure_qureg
+
+  function dmeasure(qr, NQUBITS, TARGETS, NTARGETS, cr) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t, c_short
+      implicit none
+      integer(c_size_t), value :: NQUBITS
+      integer(c_size_t), value :: NTARGETS
+      integer(c_short) :: cr(0:NTARGETS)
+      integer(c_size_t) :: TARGETS(0:NTARGETS)
+      type(c_ptr), value :: qr
+      integer(c_int) :: dmeasure
+  end function dmeasure
+
+  function measure_qubit(qbp, csp) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr
+      implicit none
+      type(c_ptr), value :: qbp
+      type(c_ptr), value :: csp
+      integer(c_int) :: measure_qubit
+  end function measure_qubit
 
   function measure_qureg(qr, NQUBITS, cr) bind(C)
       use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t, c_short
@@ -32,6 +90,17 @@ interface
       integer(c_short) :: cr(0:NQUBITS)
       integer(c_int) :: measure_qureg
   end function measure_qureg
+
+  function measure(qr, NQUBITS, TARGETS, NTARGETS, cr) bind(C)
+      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t, c_short
+      implicit none
+      integer(c_size_t), value :: NQUBITS
+      integer(c_size_t), value :: NTARGETS
+      integer(c_short) :: cr(0:NTARGETS)
+      integer(c_size_t) :: TARGETS(0:NTARGETS)
+      type(c_ptr), value :: qr
+      integer(c_int) :: measure
+  end function measure
 
 ! -------------------------------- QASM Gates --------------------------------
 

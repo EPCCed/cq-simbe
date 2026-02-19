@@ -84,6 +84,14 @@ interface
     integer :: status
   end function cq_register_fort_kernel
 
+! Resource management
+  module function cq_set_qubit(qh, cs) result(status)
+    implicit none
+    type(qubit), value :: qh
+    integer(kind=2), value :: cs
+    integer :: status
+  end function cq_set_qubit
+
   module function cq_set_qureg(qr, STATE_IDX, NQUBITS) result(status)
     implicit none
     integer(kind=8), value :: NQUBITS
@@ -91,6 +99,55 @@ interface
     integer(kind=8), value :: STATE_IDX
     integer :: status
   end function cq_set_qureg
+
+  module function cq_set_qureg_cstate(qr, CR, N) result(status)
+    implicit none
+    integer(kind=8), value :: N
+    type(qubit), value :: qr
+    integer(kind=2) :: CR(0:N)
+    integer :: status
+  end function cq_set_qureg_cstate
+
+! Control
+  module function cq_qabort(STATUS) result(result)
+    implicit none
+    integer, value :: STATUS
+    integer :: result
+  end function cq_qabort
+
+! Measurements
+  module function cq_dmeasure_qubit(qbp, csp) result(status)
+      implicit none
+      type(qubit), value :: qbp
+      integer(kind=2), target :: csp
+      integer :: status
+  end function cq_dmeasure_qubit
+
+  module function cq_dmeasure_qureg(qr, NQUBITS, cr) result(status)
+      implicit none
+      integer(kind=8) :: NQUBITS
+      type(qubit), value :: qr
+      integer(kind=2) :: cr(0:NQUBITS)
+      !integer, target :: cr
+      integer :: status
+  end function cq_dmeasure_qureg
+
+  module function cq_dmeasure(qr, NQUBITS, TARGETS, NTARGETS, cr) result(status)
+      implicit none
+      integer(kind=8) :: NQUBITS
+      integer(kind=8) :: NTARGETS
+      integer(kind=2) :: cr(0:NTARGETS)
+      integer(kind=8) :: TARGETS(0:NTARGETS)
+      type(qubit), value :: qr
+      integer :: status
+  end function cq_dmeasure
+
+  module function cq_measure_qubit(qbp, csp) result(status)
+      implicit none
+      type(qubit), value :: qbp
+      integer(kind=2), target :: csp
+      integer :: status
+  end function cq_measure_qubit
 
   module function cq_measure_qureg(qr, NQUBITS, cr) result(status)
       implicit none
@@ -100,6 +157,17 @@ interface
       !integer, target :: cr
       integer :: status
   end function cq_measure_qureg
+
+  module function cq_measure(qr, NQUBITS, TARGETS, NTARGETS, cr) result(status)
+      implicit none
+      integer(kind=8) :: NQUBITS
+      integer(kind=8) :: NTARGETS
+      integer(kind=2) :: cr(0:NTARGETS)
+      integer(kind=8) :: TARGETS(0:NTARGETS)
+      type(qubit), value :: qr
+      integer :: status
+  end function cq_measure
+
 end interface
 
 ! --------------------------------- QASM GATES --------------------------------
