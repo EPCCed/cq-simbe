@@ -133,8 +133,8 @@ void finalise_exec_handle(cq_exec * ehp) {
   return;
 }
 
-// fortran helper
-cq_status insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
+// fortran helpers -- just don't call them from C
+cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
   if (reg != NULL) {
     size_t strsz = sizeof(FNAME);
     if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {
@@ -146,4 +146,20 @@ cq_status insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
     }
   }
   return CQ_ERROR;
+}
+
+cq_status fort_create_exec_handle(cq_exec ** eh) {
+  cq_status status = CQ_ERROR;
+  if (*eh == NULL) {
+    *eh = (cq_exec *) malloc(sizeof(cq_exec));
+    // check malloc
+    if (*eh != NULL) status = CQ_SUCCESS;
+  }
+  return status;
+}
+
+cq_status fort_free_exec_handle(cq_exec ** eh) {
+  free(*eh);
+  *eh = NULL;
+  return CQ_SUCCESS;
 }

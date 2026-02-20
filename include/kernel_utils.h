@@ -54,7 +54,9 @@ void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NM
 
 void finalise_exec_handle(cq_exec * ehp);
 
-// fortran helper function
-cq_status insert_to_qkern_map(const char * FNAME, qkern_map * reg);
+// fortran helpers -- just don't call them from C
+cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg);
+cq_status fort_create_exec_handle(cq_exec ** eh);
+cq_status fort_free_exec_handle(cq_exec ** eh);
 
 #endif
