@@ -7,7 +7,6 @@ implicit none
 contains
 
 ! ------------------------------ HOST OPERATIONS ------------------------------
-
   module procedure cq_init !(VERBOSITY) result(status)
     status = fortran_cq_init(VERBOSITY)
   end procedure cq_init
@@ -47,6 +46,14 @@ contains
   module procedure cq_halt_qrun !(ehp) result(status)
     status = halt_qrun(ehp%this)
   end procedure cq_halt_qrun
+
+  module procedure cq_create_exec_handle !(ehp) result(status)
+    status = fort_create_exec_handle(ehp%this)
+  end procedure cq_create_exec_handle
+
+  module procedure cq_free_exec_handle !(ehp) result(status)
+    status = fort_free_exec_handle(ehp%this)
+  end procedure cq_free_exec_handle
 
 end submodule host_ops
 

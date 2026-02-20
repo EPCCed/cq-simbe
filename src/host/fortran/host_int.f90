@@ -153,6 +153,23 @@ interface
     integer(c_int) halt_qrun
   end function halt_qrun
 
+  !cq_status fort_create_exec_handle(cq_exec * eh);
+  function fort_create_exec_handle(eh) bind(C)
+    use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+    implicit none
+    type(c_ptr), intent(inout) :: eh
+    integer(c_int) :: fort_create_exec_handle
+  end function fort_create_exec_handle
+
+  !cq_status fort_free_exec_handle(cq_exec * eh);
+  function fort_free_exec_handle(eh) bind(C)
+    use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+    implicit none
+    type(c_ptr), intent(inout) :: eh
+    integer(c_int) :: fort_free_exec_handle
+  end function fort_free_exec_handle
+
+
 end interface
 ! ----------
 end  module c_host_interface
