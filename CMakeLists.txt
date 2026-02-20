@@ -18,7 +18,7 @@ message(STATUS "BUILD_SHARED_LIBS turned ${BUILD_SHARED_LIBS}.")
 option(
   ENABLE_TESTING
   "Build tests using unity testing framework. Turned ON by default."
-  OFF
+  ON
 )
 message(STATUS "ENABLE_TESTING turned ${ENABLE_TESTING}.")
 
