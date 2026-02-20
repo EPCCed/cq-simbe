@@ -1,4 +1,3 @@
-
 add_executable(test_fort_host_ops
   test_host_ops.f90
 )
