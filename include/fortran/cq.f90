@@ -24,9 +24,9 @@ type, bind(C) :: qkern_map
   type(c_ptr) :: map
 end type qkern_map
 
-type, bind(C) :: exec
+type, bind(C) :: cq_exec
   type(c_ptr) :: this = c_null_ptr
-end type exec
+end type cq_exec
 
 ! ------------------------------ HOST OPERATIONS ------------------------------
 abstract interface
@@ -92,21 +92,34 @@ interface
 
   module function cq_sync_qrun(ehp) result(status)
     implicit none
-    type(exec), value :: ehp
+    type(cq_exec), value :: ehp
     integer :: status
   end function
 
   module function cq_wait_qrun(ehp) result(status)
     implicit none
-    type(exec), value :: ehp
+    type(cq_exec), value :: ehp
     integer :: status
   end function
 
   module function cq_halt_qrun(ehp) result(status)
     implicit none
-    type(exec), value :: ehp
+    type(cq_exec), value :: ehp
     integer :: status
   end function
+
+! Executor management
+  module function cq_create_exec_handle(ehp) result(status)
+    implicit none
+    type(cq_exec), intent(inout) :: ehp
+    integer :: status
+  end function cq_create_exec_handle
+
+  module function cq_free_exec_handle(ehp) result(status)
+    implicit none
+    type(cq_exec), intent(inout) :: ehp
+    integer :: status
+  end function cq_free_exec_handle
 
 end interface
 
@@ -456,7 +469,7 @@ contains
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
     integer(c_short) :: crp(0:NMEASURE)
-    type(exec), value :: ehp
+    type(cq_exec), value :: ehp
     integer :: status
     status = a_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, ehp%this)
   end function
@@ -483,7 +496,7 @@ contains
     integer(kind=8), value :: NMEASURE
     integer(kind=8), value :: NSHOTS
     integer(c_short) :: crp(0:NSHOTS*NMEASURE)
-    type(exec), value :: ehp
+    type(cq_exec), value :: ehp
     integer :: status
     status = am_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS, ehp%this)
   end function
