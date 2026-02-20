@@ -7,7 +7,7 @@ use, intrinsic :: iso_c_binding
 implicit none
 
 interface
-  function insert_to_qkern_map(func_name, reg) bind(C)
+  function insert_to_qkern_map(func_name, reg) bind(C, name="fort_insert_to_qkern_map")
     use, intrinsic :: iso_c_binding, only: c_char, c_int, c_ptr
     implicit none
     character(kind=c_char), intent(in) :: func_name(*)
