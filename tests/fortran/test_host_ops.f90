@@ -2,31 +2,8 @@ program test_host_ops
 use cq
 #include "cqf.h"
 
-integer :: test_case_number
-integer, parameter :: ERROR = -1
-integer, parameter :: SUCCESS = 0
-integer, parameter :: WARNING = 1
-
-!integer(kind=8) :: NQUBITS
-!integer(kind=8) :: NMEASURE
-!integer(kind=8) :: NSHOTS
-!
-!type(qubit) :: qhp
-!type(qubit) :: qr
-!type(cq_exec) :: eh
-!integer(kind=2), allocatable, target :: cr(:)
-!integer(kind=2), allocatable, target :: cr_multi_shot(:)
-!
-!test_case_number = 0
-!
-!NQUBITS = 10
-!NMEASURE = 10
-!NSHOTS = 10
-!
-!
-!allocate(cr(NMEASURE))
-!allocate(cr_multi_shot(NMEASURE * NSHOTS))
-
+use test_utils
+implicit none
 
 call test_initialising_cq()
 call test_resource_management()
@@ -37,27 +14,6 @@ call test_async_qrun()
 call test_finalising_cq()
 
 contains
-  subroutine test_header(str)
-    implicit none
-    character(len=*),intent(in)  :: str
-    write(*, *) ''
-    write(*, *) '------------------------------------------------------------'
-    write(*, *) str
-    write(*, *) '------------------------------------------------------------'
-  end subroutine test_header
-
-  subroutine assert(condition)
-    implicit none
-    logical :: condition
-    test_case_number = test_case_number + 1
-    if (condition) then
-      write(*, *) 'Test case: ', test_case_number, ' succeded'
-    else 
-      write(*, *) 'Test case: ', test_case_number, ' failed'
-      stop "Aborting!"
-    end if
-  end subroutine assert
-
   function good_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
