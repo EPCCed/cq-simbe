@@ -40,7 +40,7 @@ interface
 
   function qabort(STATUS) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int
-    integer(c_int) :: STATUS
+    integer(c_int), value :: STATUS
     integer(c_int) :: qabort
   end function qabort
 

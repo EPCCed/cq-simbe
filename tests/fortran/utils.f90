@@ -3,6 +3,7 @@ implicit none
 integer, parameter :: ERROR = -1
 integer, parameter :: SUCCESS = 0
 integer, parameter :: WARNING = 1
+integer, parameter :: EARLY_SUCCESS = 2
 
 integer :: test_case_number
 

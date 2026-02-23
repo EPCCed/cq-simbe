@@ -15,19 +15,17 @@ add_test(
   COMMAND ./test_fort_host_ops
 )
 
-# TODO: Implement me!
-#
-#add_executable(test_fort_device_ops
-#  test_device_ops.f90
-#)
-#
-#target_link_libraries(test_fort_device_ops
-#  PRIVATE
-#  CQ-FORT::cq-fort
-#  fort-test-utils 
-#)
-#
-#add_test(
-#  NAME test_fort_device_ops
-#  COMMAND ./test_fort_device_ops
-#)
+add_executable(test_fort_device_ops
+  test_device_ops.f90
+)
+
+target_link_libraries(test_fort_device_ops
+  PRIVATE
+  CQ-FORT::cq-fort
+  fort-test-utils 
+)
+
+add_test(
+  NAME test_fort_device_ops
+  COMMAND ./test_fort_device_ops
+)
