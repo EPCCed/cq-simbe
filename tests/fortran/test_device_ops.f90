@@ -3,10 +3,9 @@ use cq
 #include "cqf.h"
 
 use test_utils
-
 implicit none
-integer :: status
 
+integer :: status
 status = cq_init(0)
 
 call test_registering_kernel()
@@ -103,6 +102,7 @@ contains
     integer(kind=8) :: i
     integer :: status
     CQ_REGISTER_KERNEL("device_measurement_kernel", reg)
+    status = cq_set_qureg(qr, STATE_IDX, NQUBITS)
     do i = 0, NQUBITS - 1, 2
       status = cq_paulix(qr, i)
     end do
@@ -139,6 +139,7 @@ contains
     integer(kind=8) :: i
     integer :: status
     CQ_REGISTER_KERNEL("host_measurement_kernel", reg)
+    status = cq_set_qureg(qr, STATE_IDX, NQUBITS)
     do i = 0, NQUBITS - 1, 2
       status = cq_paulix(qr, i)
     end do
