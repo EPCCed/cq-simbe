@@ -26,15 +26,3 @@ target_link_libraries(plus-qft
   fort-example-utils
   ${MATHS_LIBRARY}
 )
-
-add_executable(heat-eq
-  heat.f90
-)
-
-target_link_libraries(heat-eq
-  PRIVATE
-  CQ-SIMBE::cq-simbe
-  cq-fort
-  fort-example-utils
-  ${MATHS_LIBRARY}
-)
