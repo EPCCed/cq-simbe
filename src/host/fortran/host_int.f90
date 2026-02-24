@@ -39,9 +39,8 @@ interface
   !cq_status alloc_qureg(qubit ** qrp, size_t N);
   function alloc_qureg(qrp, N) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr
-    !import :: qubit
     implicit none
-    type(c_ptr), intent(inout) :: qrp ! passes struct?
+    type(c_ptr), intent(inout) :: qrp
     integer(c_size_t), value :: N
     integer(c_int) :: alloc_qureg
   end function alloc_qureg
@@ -49,9 +48,8 @@ interface
   !cq_status free_qureg(qubit ** qrp);
   function free_qureg(qrp) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_ptr
-    !import ::qubit, c_ptr
     implicit none
-    type(c_ptr), intent(inout) :: qrp ! passes struct?
+    type(c_ptr), intent(inout) :: qrp
     integer(c_int) :: free_qureg
   end function free_qureg
 
@@ -68,12 +66,12 @@ interface
   function register_qkern(kernel) bind(C)
      use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_funptr
      implicit none
-     !type(c_ptr), value :: kernel
      type(c_funptr), intent(in), value :: kernel
      integer(c_int) :: register_qkern
   end function
 
-  !cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp, const size_t NMEASURE);
+  !cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
+  !  const size_t NMEASURE);
   function s_qrun(kernel, qrp, NQUBITS, crp, NMEASURE) result(status) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
     implicit none
@@ -85,7 +83,8 @@ interface
     integer(c_int) :: status
   end function s_qrun
 
-  !cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp, const size_t NMEASURE, cq_exec * const ehp);
+  !cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
+  !  const size_t NMEASURE, cq_exec * const ehp);
   function a_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, ehp) result(status) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
     implicit none
@@ -102,7 +101,6 @@ interface
   ! cstate * const crp, const size_t NMEASURE, const size_t NSHOTS)
   function sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) bind(C)
      use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
-     !import :: qubit
      implicit none
      type(c_ptr), value :: kernel
      type(c_ptr), value :: qrp
@@ -153,19 +151,19 @@ interface
     integer(c_int) halt_qrun
   end function halt_qrun
 
-  !cq_status fort_create_exec_handle(cq_exec * eh);
-  function fort_create_exec_handle(eh) bind(C)
+  !cq_status fort_create_exec_handle(cq_exec ** ehp);
+  function fort_create_exec_handle(ehp) bind(C)
     use, intrinsic :: iso_c_binding, only: c_ptr, c_int
     implicit none
-    type(c_ptr), intent(inout) :: eh
+    type(c_ptr), intent(inout) :: ehp
     integer(c_int) :: fort_create_exec_handle
   end function fort_create_exec_handle
 
-  !cq_status fort_free_exec_handle(cq_exec * eh);
-  function fort_free_exec_handle(eh) bind(C)
+  !cq_status fort_free_exec_handle(cq_exec ** ehp);
+  function fort_free_exec_handle(ehp) bind(C)
     use, intrinsic :: iso_c_binding, only: c_ptr, c_int
     implicit none
-    type(c_ptr), intent(inout) :: eh
+    type(c_ptr), intent(inout) :: ehp
     integer(c_int) :: fort_free_exec_handle
   end function fort_free_exec_handle
 

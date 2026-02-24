@@ -106,7 +106,7 @@ contains
     do i = 0, NQUBITS - 1, 2
       status = cq_paulix(qr, i)
     end do
-    status = cq_dmeasure_qubit(qr, cr(0))
+    status = cq_dmeasure_qubit(qr, qubit_idx, cr(0))
     call assert(cr(0) == 1)
     status = cq_dmeasure_qureg(qr, NQUBITS, cr)
     do i = 0, NQUBITS - 1, 2
@@ -143,7 +143,7 @@ contains
     do i = 0, NQUBITS - 1, 2
       status = cq_paulix(qr, i)
     end do
-    status = cq_measure_qubit(qr, cr(0))
+    status = cq_measure_qubit(qr, qubit_idx, cr(0))
     call assert(cr(0) == 1)
     status = cq_measure_qureg(qr, NQUBITS, cr)
     do i = 0, NQUBITS - 1, 2

@@ -1,29 +1,10 @@
 submodule (cq) qasm_gates
 use c_device_interface
+use device_utils
 implicit none
 
 contains
 ! --------------------------------- QASM GATES --------------------------------
-
-  function get_qubit_at(qh, qubit_idx) result(new_ptr)
-    implicit none
-    type(qubit), value :: qh
-    integer(c_intptr_t), value :: qubit_idx
-    type(c_ptr) :: new_ptr
-    type(qubit_t) :: qubit_size
-
-    ! validate representation of c_intptr_t and c_ptr
-    integer(c_intptr_t) :: unused_i
-    type(c_ptr) :: unused_p
-    integer, parameter :: pointer_sized = &
-    merge(c_intptr_t, -1, storage_size(unused_i) == storage_size(unused_p))
-    integer(pointer_sized) :: ip
-    ! end
-    ip = transfer(qh%this, ip)
-    ip = ip + (c_sizeof(qubit_size) * qubit_idx)
-    new_ptr = transfer(ip, new_ptr)
-  end function get_qubit_at
-
   module procedure cq_unitary !(qh, qubit_idx, THETA, PHI, LAMBDA) result(status)
     status = unitary(get_qubit_at(qh, qubit_idx), THETA, PHI, LAMBDA)
   end procedure cq_unitary
@@ -31,6 +12,10 @@ contains
   module procedure cq_gphase !(qh, qubit_idx, THETA) result(status)
     status = gphase(get_qubit_at(qh, qubit_idx), THETA)
   end procedure cq_gphase
+
+  module procedure cq_phase !(qh, qubit_idx, THETA) result(status)
+    status = phase(get_qubit_at(qh, qubit_idx), THETA)
+  end procedure cq_phase
 
   module procedure cq_paulix !(qh, qubit_idx) result(status) 
     status = paulix(get_qubit_at(qh, qubit_idx))

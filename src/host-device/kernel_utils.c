@@ -148,18 +148,18 @@ cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
   return CQ_ERROR;
 }
 
-cq_status fort_create_exec_handle(cq_exec ** eh) {
+cq_status fort_create_exec_handle(cq_exec ** ehp) {
   cq_status status = CQ_ERROR;
-  if (*eh == NULL) {
-    *eh = (cq_exec *) malloc(sizeof(cq_exec));
+  if (*ehp == NULL) {
+    *ehp = (cq_exec *) malloc(sizeof(cq_exec));
     // check malloc
-    if (*eh != NULL) status = CQ_SUCCESS;
+    if (*ehp != NULL) status = CQ_SUCCESS;
   }
   return status;
 }
 
-cq_status fort_free_exec_handle(cq_exec ** eh) {
-  free(*eh);
-  *eh = NULL;
+cq_status fort_free_exec_handle(cq_exec ** ehp) {
+  free(*ehp);
+  *ehp = NULL;
   return CQ_SUCCESS;
 }

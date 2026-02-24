@@ -87,6 +87,9 @@ contains
 
     status = cq_gphase(qr, q, THETA)
     call assert(status == SUCCESS)
+
+    status = cq_phase(qr, q, THETA)
+    call assert(status == SUCCESS)
  
   end function
 

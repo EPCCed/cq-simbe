@@ -1,4 +1,5 @@
 submodule (cq) device_ops
+use device_utils
 use c_device_interface
 implicit none
 
@@ -9,8 +10,8 @@ contains
     status = insert_to_qkern_map(func_name, reg%map)
   end procedure cq_register_fort_kernel
 
-  module procedure cq_set_qubit !(qh, cs) result(status)
-    status = set_qubit(qh%this, cs)
+  module procedure cq_set_qubit !(qh, qidx, cs) result(status)
+    status = set_qubit(get_qubit_at(qh, qidx), cs)
   end procedure cq_set_qubit
 
   module procedure cq_set_qureg !(qr, STATE_IDX, NQUBITS) result(status)
@@ -25,8 +26,8 @@ contains
     result = qabort(STATUS)
   end procedure cq_qabort
 
-  module procedure cq_dmeasure_qubit !(qbp, csp) result(status)
-    status = dmeasure_qubit(qbp%this, c_loc(csp))
+  module procedure cq_dmeasure_qubit !(qbp, qidx, csp) result(status)
+    status = dmeasure_qubit(get_qubit_at(qbp, qidx), c_loc(csp))
   end procedure cq_dmeasure_qubit
 
   module procedure cq_dmeasure_qureg !(qr, NQUBITS, cr) result(status)
@@ -37,8 +38,8 @@ contains
     status = dmeasure(qr%this, NQUBITS, TARGETS, NTARGETS, cr)
   end procedure cq_dmeasure
 
-  module procedure cq_measure_qubit !(qbp, csp) result(status)
-    status = measure_qubit(qbp%this, c_loc(csp))
+  module procedure cq_measure_qubit !(qbp, qidx, csp) result(status)
+    status = measure_qubit(get_qubit_at(qbp, qidx), c_loc(csp))
   end procedure cq_measure_qubit
 
   module procedure cq_measure_qureg !(qr, NQUBITS, cr) result(status)
