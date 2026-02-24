@@ -25,7 +25,7 @@ message(STATUS "ENABLE_TESTING turned ${ENABLE_TESTING}.")
 option(
   BUILD_EXAMPLES
   "Build example applications. Turned OFF by default."
-  ON
+  OFF
 )
 message(STATUS "BUILD_EXAMPLES turned ${BUILD_EXAMPLES}.")
 
@@ -38,7 +38,7 @@ option(
 option(
   BUILD_FORTRAN_INTERFACE
   "Build with Fortran interface. Turned OFF by default."
-  ON
+  OFF
 )
 
 # Dependencies
