@@ -93,7 +93,7 @@ cq_status simulate_pulse(channel *ch, pulse *pulse, analog_qreg *qreg, cq_hamilt
 
         applyTrotterizedPauliStrSumGadget(qregistry.registers[qreg_id],
                                           quest_hamiltonians[qreg_id],
-                                          dt, 2, 4);
+                                          dt, 2, 4, false);
     }
 
     ptrdiff_t start = qreg->channels_ranges[ch->id].start;
