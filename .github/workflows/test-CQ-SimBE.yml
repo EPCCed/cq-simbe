@@ -22,10 +22,10 @@ jobs:
       - name: Checkout QuEST
         run: |
           cd ${{ env.DEPENDENCY_DIR }}
-          git clone https://github.com/QuEST-Kit/QuEST.git
+          git clone https://github.com/otbrown/QuEST.git
           cd QuEST
           git fetch
-          git checkout -b devel origin/devel
+          git checkout -b cq-simbe origin/cq-simbe
         
       - name: Checkout Unity
         run: |
@@ -92,7 +92,7 @@ jobs:
             -B ${DEPENDENCY_DIR}/QuEST/build
             -S ${DEPENDENCY_DIR}/QuEST
             -DCMAKE_BUILD_TYPE=Release
-            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}
+            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/quest
 
       - name: Configure Unity
         run:
