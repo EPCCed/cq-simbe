@@ -66,18 +66,20 @@ target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
 
 if (BUILD_FORTRAN_INTERFACE)
   enable_language(Fortran)
-  add_library(cq-fort ${PROJECT_SOURCE_DIR}/include/fortran/cq.f90)
-  add_library(CQ-FORT::cq-fort ALIAS cq-fort)
-  #set(FVERSION "-std=f2018")
-  set(FVERSION "-std=f2008")
-  set(CMAKE_Fortran_FLAGS "-ffixed-line-length-none -cpp ${CMAKE_Fortran_FLAGS} ${FVERSION}")
-  target_include_directories(cq-fort
-      PUBLIC
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/fortran>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/build>
+
+  set_target_properties(cq-simbe
+    PROPERTIES
+    Fortran_PREPROCESS ON
+    Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/include
   )
-  target_link_libraries(cq-fort PRIVATE CQ-SIMBE::cq-simbe)
+
+  target_include_directories(cq-simbe
+    PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/fortran>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/build/include>
+  )
+
+  target_sources(cq-simbe PRIVATE ${PROJECT_SOURCE_DIR}/include/fortran/cq.f90)
 endif()
 
 add_subdirectory(src)

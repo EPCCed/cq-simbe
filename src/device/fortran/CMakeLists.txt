@@ -1,5 +1,5 @@
 if(BUILD_FORTRAN_INTERFACE)
-  target_sources(cq-fort
+  target_sources(cq-simbe
     PRIVATE
     device_int.f90
     device_ops.f90
