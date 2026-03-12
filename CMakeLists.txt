@@ -67,6 +67,8 @@ target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
 if (BUILD_FORTRAN_INTERFACE)
   enable_language(Fortran)
 
+  # Fortran_PREPROCESS adds the C preprocessor flag when compiling fortran
+  # Fortran_MODULE_DIRECTORY sets where compiled module files are placed
   set_target_properties(cq-simbe
     PROPERTIES
     Fortran_PREPROCESS ON
@@ -79,6 +81,7 @@ if (BUILD_FORTRAN_INTERFACE)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/build/include>
   )
 
+  # add the cq module file
   target_sources(cq-simbe PRIVATE ${PROJECT_SOURCE_DIR}/include/fortran/cq.f90)
 endif()
 
