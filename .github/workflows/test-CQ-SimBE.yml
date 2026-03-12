@@ -200,6 +200,7 @@ jobs:
         -DENABLE_TESTING=On
         -DBUILD_EXAMPLES=On
         -DFORCE_BUILD_VQE=On
+        -DBUILD_FORTRAN_INTERFACE=On
         -DQuEST_DIR=${DEPENDENCY_INSTALL_DIR}/quest/lib/cmake/QuEST
         -Dunity_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/unity
         -DNLopt_DIR=${DEPENDENCY_INSTALL_DIR}/nlopt/lib/cmake/nlopt
