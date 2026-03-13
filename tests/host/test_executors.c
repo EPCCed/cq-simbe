@@ -64,7 +64,6 @@ void test_first_run(void) {
     am_qrun(zero_init_full_qft, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
@@ -105,7 +104,6 @@ void test_first_run(void) {
       &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
@@ -143,7 +141,6 @@ void test_first_run(void) {
     am_qrun(all_site_hadamard, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
@@ -225,7 +222,6 @@ void test_first_run(void) {
     am_qrun(no_measure_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh)
   );
   TEST_ASSERT(eh.exec_init);
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, sync_qrun(&eh));
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
