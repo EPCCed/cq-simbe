@@ -81,6 +81,11 @@ if (BUILD_FORTRAN_INTERFACE)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/build/include>
   )
 
+  target_compile_options(cq-simbe
+    PRIVATE
+    $<$<COMPILE_LANGUAGE:Fortran>:-Wimplicit-interface>
+  )
+
   # add the cq module file
   target_sources(cq-simbe PRIVATE ${PROJECT_SOURCE_DIR}/include/fortran/cq.f90)
 endif()
