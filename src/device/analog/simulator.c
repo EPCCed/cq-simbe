@@ -131,6 +131,7 @@ void sync_simulator(cq_hamiltonian *hamiltonian, ptrdiff_t qreg_id) {
     }
 }
 
+#ifndef NDEBUG
 void print_statevec(ptrdiff_t qreg_id) {
     assert(qreg_id > -1 && qreg_id < __CQ_ANALOG_MAX_NUM_QUREGS__);
     Qureg quest_qureg = qregistry.registers[qreg_id];
@@ -146,6 +147,7 @@ void print_statevec(ptrdiff_t qreg_id) {
 
     #undef printbits_n
 }
+#endif
 
 void init_simulator_qreg(ptrdiff_t qreg_id, ptrdiff_t num_qubits) {
     if (!isQuESTEnvInit()) {

@@ -196,6 +196,7 @@ cq_status add_driving_terms(analog_qreg *qreg, cq_hamiltonian *hamiltonian) {
     return CQ_SUCCESS;
 }
 
+#ifndef NDEBUG
 static void print_hamil(cq_hamiltonian *hamiltonian) {
     printf("hamiltonian with %ld terms:\n", hamiltonian->num_terms);
     for (ptrdiff_t i = 0; i < hamiltonian->num_terms; ++i) {
@@ -206,6 +207,7 @@ static void print_hamil(cq_hamiltonian *hamiltonian) {
         printf("\n");
     }
 }
+#endif
 
 static cq_status add_two_pauli_term(
     cq_hamiltonian *hamiltonian, char pauli_i, char pauli_j,
