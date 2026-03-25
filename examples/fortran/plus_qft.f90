@@ -76,11 +76,12 @@ contains
     end do
   end subroutine qft 
 
-  function plus_state_qft(NQUBITS, qr, cr, reg) bind(C) result(status)
+  function plus_state_qft(NQUBITS, qr, NMEASURE, cr, reg) bind(C) result(status)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: i
     integer :: status

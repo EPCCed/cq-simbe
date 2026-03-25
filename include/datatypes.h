@@ -47,11 +47,11 @@ struct qkern_map;
 struct pqkern_map;
 
 typedef cq_status (*qkern)
-  (const size_t NQUBITS, qubit * qreg, cstate * creg, 
+  (const size_t NQUBITS, qubit * qreg, const size_t NMEASURE, cstate * creg, 
   struct qkern_map * registration);
 
 typedef cq_status (*pqkern)
-  (const size_t NQUBITS, qubit * qreg, cstate * creg, void * params, 
+  (const size_t NQUBITS, qubit * qreg, const size_t NMEASURE, cstate * creg, void * params, 
   struct pqkern_map * registration);
 
 typedef struct qkern_map {

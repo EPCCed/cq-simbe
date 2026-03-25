@@ -91,7 +91,7 @@ cq_status run_qkernel(void * par) {
     for (size_t shot = 0; shot < NSHOTS; ++shot) {
       init_creg(NMEASURE, -1, local_creg);
 
-      status = qk(NQUBITS, p_exec->qreg, local_creg, NULL);
+      status = qk(NQUBITS, p_exec->qreg, NMEASURE, local_creg, NULL);
 
       device_sync_exec(status, shot, local_creg, p_exec);
       if (status != CQ_SUCCESS || p_exec->halt) break;
@@ -121,7 +121,7 @@ cq_status run_pqkernel(void * par) {
     for (size_t shot = 0; shot < NSHOTS; ++shot) {
       init_creg(NMEASURE, -1, local_creg);
 
-      status = pqk(NQUBITS, p_exec->qreg, local_creg, p_exec->params, NULL);
+      status = pqk(NQUBITS, p_exec->qreg, NMEASURE, local_creg, p_exec->params, NULL);
 
       device_sync_exec(status, shot, local_creg, p_exec);
       if (status != CQ_SUCCESS || p_exec->halt) break;

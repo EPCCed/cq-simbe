@@ -18,7 +18,7 @@ cq_status register_qkern(qkern kernel) {
       status = CQ_WARNING;
     } else {
       qkern_map * pkmap = &qk_reg.qkernels[qk_reg.next_available_slot];
-      kernel(0, NULL, NULL, pkmap);
+      kernel(0, NULL, 0, NULL, pkmap);
       if (pkmap->fname[0] != '\0') {
         pkmap->fn = kernel;
         ++qk_reg.next_available_slot;

@@ -18,11 +18,12 @@ status = cq_finalise(0)
 
 contains
 
-  function simple_gates_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function simple_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
@@ -61,11 +62,12 @@ contains
  
   end function
 
-  function rotation_gates_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function rotation_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
@@ -93,11 +95,12 @@ contains
  
   end function
 
-  function control_gates_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function control_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
@@ -125,11 +128,12 @@ contains
  
   end function
 
-  function control_rotation_gates(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function control_rotation_gates(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
@@ -156,11 +160,12 @@ contains
  
   end function
 
-  function multi_control_gates_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function multi_control_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state

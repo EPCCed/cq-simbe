@@ -20,11 +20,12 @@ contains
   subroutine test_registering_kernel()
   end subroutine
 
-  function qureg_setter_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function qureg_setter_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX
     integer(kind=8) :: measured_state
@@ -44,12 +45,13 @@ contains
     end do
   end function qureg_setter_kernel
 
-  function set_qureg_with_creg_kernel(NQUBITS, qr, cr_res, reg) result(status) bind(C)
+  function set_qureg_with_creg_kernel(NQUBITS, qr, NMEASURE, cr_res, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr_setter(0:NQUBITS)
-    integer(kind=2) :: cr_res(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2) :: cr_setter(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr_res(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: i
     integer :: status
@@ -64,11 +66,12 @@ contains
 
   end function
 
-  function abort_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function abort_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: qubit_idx = 0
@@ -88,11 +91,12 @@ contains
 
   end function
 
-  function device_measurement_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function device_measurement_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     integer(kind=8), parameter :: NTARGETS = 10
     integer(kind=8) :: TARGETS(0:NTARGETS)
     type(qkern_map), value :: reg
@@ -125,11 +129,12 @@ contains
 
   end function
 
-  function host_measurement_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function host_measurement_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
     integer(kind=8), parameter :: NTARGETS = 10
     integer(kind=8) :: TARGETS(0:NTARGETS)
     type(qkern_map), value :: reg

@@ -30,13 +30,14 @@ end type cq_exec
 
 ! ------------------------------ HOST OPERATIONS ------------------------------
 abstract interface
-  function qkern(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function qkern(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     use iso_c_binding, only: c_int, c_size_t, c_short
     import :: qubit, qkern_map
     implicit none
     integer(c_size_t), value :: NQUBITS
     type(qubit), value :: qr
-    integer(c_short) :: cr(0:NQUBITS)
+    integer(c_size_t), value :: NMEASURE
+    integer(c_short), intent(inout) :: cr(0:NMEASURE)
     type(qkern_map), value :: reg
     integer(c_int) :: status
   end function qkern

@@ -14,11 +14,13 @@ call test_async_qrun()
 call test_finalising_cq()
 
 contains
-  function good_kernel(NQUBITS, qr, cr, reg) result(status) bind(C)
+  function good_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=8), value :: NMEASURE
+    integer(kind=2), intent(inout) :: cr(0:NQUBITS)
+    !integer(kind=2), intent(inout) :: cr(:)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer :: status
