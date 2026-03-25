@@ -87,7 +87,7 @@ interface
     implicit none
     integer(kind=8), value :: LENGTH
     integer, value :: INIT_VAL
-    integer(c_short) :: cr(0:LENGTH)
+    integer(c_short), intent(inout) :: cr(0:LENGTH)
   end subroutine cq_init_creg
 
 ! Synchronisation
@@ -158,7 +158,7 @@ interface
     implicit none
     integer(kind=8), value :: N
     type(qubit), value :: qr
-    integer(kind=2) :: CR(0:N)
+    integer(kind=2), intent(inout) :: CR(0:N)
     integer :: status
   end function cq_set_qureg_cstate
 
@@ -182,7 +182,8 @@ interface
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    ! this is slice to possibly larger cr so inout?
+    integer(kind=2), intent(inout) :: cr(0:NQUBITS)
     integer :: status
   end function cq_dmeasure_qureg
 
@@ -190,8 +191,8 @@ interface
     implicit none
     integer(kind=8), value :: NQUBITS
     integer(kind=8), value :: NTARGETS
-    integer(kind=2) :: cr(0:NTARGETS)
-    integer(kind=8) :: TARGETS(0:NTARGETS)
+    integer(kind=2), intent(inout) :: cr(0:NTARGETS)
+    integer(kind=8), intent(in) :: TARGETS(0:NTARGETS)
     type(qubit), value :: qr
     integer :: status
   end function cq_dmeasure
@@ -208,7 +209,7 @@ interface
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2) :: cr(0:NQUBITS)
+    integer(kind=2), intent(inout) :: cr(0:NQUBITS)
     integer :: status
   end function cq_measure_qureg
 
@@ -216,8 +217,8 @@ interface
     implicit none
     integer(kind=8), value :: NQUBITS
     integer(kind=8), value :: NTARGETS
-    integer(kind=2) :: cr(0:NTARGETS)
-    integer(kind=8) :: TARGETS(0:NTARGETS)
+    integer(kind=2), intent(inout) :: cr(0:NTARGETS)
+    integer(kind=8), intent(in) :: TARGETS(0:NTARGETS)
     type(qubit), value :: qr
     integer :: status
   end function cq_measure
@@ -467,7 +468,7 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
-    integer(c_short) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE)
     integer :: status
     status = s_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE)
   end function
@@ -479,7 +480,7 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
-    integer(c_short) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE)
     type(cq_exec), value :: ehp
     integer :: status
     status = a_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, ehp%this)
@@ -493,7 +494,7 @@ contains
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
     integer(kind=8), value :: NSHOTS
-    integer(c_short) :: crp(0:NSHOTS*NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE)
     integer :: status
     status = sm_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS)
    end function
@@ -506,7 +507,7 @@ contains
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
     integer(kind=8), value :: NSHOTS
-    integer(c_short) :: crp(0:NSHOTS*NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE)
     type(cq_exec), value :: ehp
     integer :: status
     status = am_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS, ehp%this)

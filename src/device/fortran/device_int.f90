@@ -40,7 +40,7 @@ interface
     implicit none
     type(c_ptr), value :: qr
     integer(c_size_t), value :: N
-    integer(c_short) :: CR(0:N)
+    integer(c_short), intent(inout) :: CR(0:N)
     integer(c_int) :: set_qureg_cstate
   end function
 
@@ -67,7 +67,7 @@ interface
     implicit none
     integer(c_size_t), value :: NQUBITS
     type(c_ptr), value :: qr
-    integer(c_short) :: cr(0:NQUBITS)
+    integer(c_short), intent(inout) :: cr(0:NQUBITS)
     integer(c_int) :: dmeasure_qureg
   end function dmeasure_qureg
 
@@ -78,8 +78,8 @@ interface
     implicit none
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NTARGETS
-    integer(c_short) :: cr(0:NTARGETS)
-    integer(c_size_t) :: TARGETS(0:NTARGETS)
+    integer(c_short), intent(inout) :: cr(0:NTARGETS)
+    integer(c_size_t), intent(in) :: TARGETS(0:NTARGETS)
     type(c_ptr), value :: qr
     integer(c_int) :: dmeasure
   end function dmeasure
@@ -99,7 +99,7 @@ interface
     implicit none
     type(c_ptr), value :: qr
     integer(c_size_t), value :: NQUBITS
-    integer(c_short) :: cr(0:NQUBITS)
+    integer(c_short), intent(inout) :: cr(0:NQUBITS)
     integer(c_int) :: measure_qureg
   end function measure_qureg
 
@@ -110,8 +110,8 @@ interface
     implicit none
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NTARGETS
-    integer(c_short) :: cr(0:NTARGETS)
-    integer(c_size_t) :: TARGETS(0:NTARGETS)
+    integer(c_short), intent(inout) :: cr(0:NTARGETS)
+    integer(c_size_t), intent(in) :: TARGETS(0:NTARGETS)
     type(c_ptr), value :: qr
     integer(c_int) :: measure
   end function measure

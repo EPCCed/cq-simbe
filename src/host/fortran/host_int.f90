@@ -59,7 +59,7 @@ interface
      implicit none
      integer(c_size_t), value :: LENGTH
      integer(c_int), value :: INIT_VAL
-     integer(c_short) :: cr(0:LENGTH)
+     integer(c_short), intent(inout) :: cr(0:LENGTH)
   end subroutine init_creg
 
   !cq_status register_qkern(qkern kernel)
@@ -79,7 +79,7 @@ interface
     type(c_ptr), value :: qrp
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NMEASURE
-    integer(c_short) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE)
     integer(c_int) :: status
   end function s_qrun
 
@@ -92,7 +92,7 @@ interface
     type(c_ptr), value :: qrp
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NMEASURE
-    integer(c_short) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE)
     type(c_ptr), value :: ehp
     integer(c_int) :: status
   end function a_qrun
@@ -107,7 +107,7 @@ interface
      integer(c_size_t), value :: NQUBITS
      integer(c_size_t), value :: NMEASURE
      integer(c_size_t), value :: NSHOTS
-     integer(c_short) :: crp(0, NSHOTS*NMEASURE)
+     integer(c_short), intent(inout) :: crp(0, NSHOTS*NMEASURE)
      integer(c_int) :: sm_qrun
    end function sm_qrun
 
@@ -122,7 +122,7 @@ interface
      integer(c_size_t), value :: NQUBITS
      integer(c_size_t), value :: NMEASURE
      integer(c_size_t), value :: NSHOTS
-     integer(c_short) :: crp(0, NSHOTS*NMEASURE)
+     integer(c_short), intent(inout) :: crp(0, NSHOTS*NMEASURE)
      type(c_ptr), value :: ehp
      integer(c_int) :: am_qrun
    end function am_qrun
