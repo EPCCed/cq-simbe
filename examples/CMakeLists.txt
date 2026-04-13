@@ -8,3 +8,7 @@ if (${NLopt_FOUND} OR FORCE_BUILD_VQE)
 else()
   message(STATUS "Could not find NLopt: skipping VQE example. Try FORCE_BUILD_VQE=ON if needed.")
 endif()
+
+if(BUILD_FORTRAN_INTERFACE)
+  add_subdirectory(fortran)
+endif()

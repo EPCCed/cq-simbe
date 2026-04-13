@@ -21,7 +21,7 @@
 #define CQ_ADDR_GLOBAL 0
 #define CQ_ADDR_LOCAL 1
 
-cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, cstate * cr, qkern_map * reg)
+cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, const size_t NMEASURE, cstate * cr, qkern_map * reg)
 {
   CQ_REGISTER_KERNEL(reg);
   set_qureg(qr, 0, NQUBITS);

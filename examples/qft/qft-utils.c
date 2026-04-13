@@ -41,7 +41,7 @@ void full_qft_circuit(const size_t NQUBITS, qubit * qr) {
 }
 
 cq_status zero_init_full_qft(
-const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
+const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg)
 
   // Prepare state
@@ -57,7 +57,7 @@ const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
 }
 
 cq_status plus_init_full_qft(
-const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
+const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
   // Prepare state

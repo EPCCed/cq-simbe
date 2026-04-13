@@ -22,10 +22,10 @@ jobs:
       - name: Checkout QuEST
         run: |
           cd ${{ env.DEPENDENCY_DIR }}
-          git clone https://github.com/QuEST-Kit/QuEST.git
+          git clone https://github.com/otbrown/QuEST.git
           cd QuEST
           git fetch
-          git checkout -b devel origin/devel
+          git checkout -b cq-simbe origin/cq-simbe
         
       - name: Checkout Unity
         run: |
@@ -92,7 +92,7 @@ jobs:
             -B ${DEPENDENCY_DIR}/QuEST/build
             -S ${DEPENDENCY_DIR}/QuEST
             -DCMAKE_BUILD_TYPE=Release
-            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}
+            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/quest
 
       - name: Configure Unity
         run:
@@ -200,6 +200,7 @@ jobs:
         -DENABLE_TESTING=On
         -DBUILD_EXAMPLES=On
         -DFORCE_BUILD_VQE=On
+        -DBUILD_FORTRAN_INTERFACE=On
         -DQuEST_DIR=${DEPENDENCY_INSTALL_DIR}/quest/lib/cmake/QuEST
         -Dunity_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/unity
         -DNLopt_DIR=${DEPENDENCY_INSTALL_DIR}/nlopt/lib/cmake/nlopt

@@ -40,7 +40,7 @@ typedef struct hamiltonian {
 extern hamiltonian h2_hamil;
 
 void init_hf_state(qubit * qr, int num_spin_orbitals);
-cq_status ansatz(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg);
+cq_status ansatz(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, qkern_map * reg);
 
 
 static double get_term_expectation(int *histogram, int num_bins,

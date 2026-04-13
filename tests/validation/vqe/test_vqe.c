@@ -23,7 +23,7 @@ static void init_hf_state(qubit * qr, int num_spin_orbitals) {
   }
 }
 
-static cq_status ansatz(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
+static cq_status ansatz(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg)
 
   HANDLE_CQ_ERROR(set_qureg(qr, 0, NQUBITS));

@@ -35,6 +35,12 @@ option(
   OFF
 )
 
+option(
+  BUILD_FORTRAN_INTERFACE
+  "Build with Fortran interface. Turned OFF by default."
+  OFF
+)
+
 # Dependencies
 
 find_package(Threads REQUIRED)
@@ -58,6 +64,32 @@ target_include_directories(cq-simbe
 
 target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
 
+if (BUILD_FORTRAN_INTERFACE)
+  enable_language(Fortran)
+
+  # Fortran_PREPROCESS adds the C preprocessor flag when compiling fortran
+  # Fortran_MODULE_DIRECTORY sets where compiled module files are placed
+  set_target_properties(cq-simbe
+    PROPERTIES
+    Fortran_PREPROCESS ON
+    Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/include
+  )
+
+  target_include_directories(cq-simbe
+    PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/fortran>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/build/include>
+  )
+
+  target_compile_options(cq-simbe
+    PRIVATE
+    $<$<COMPILE_LANGUAGE:Fortran>:-Wimplicit-interface>
+  )
+
+  # add the cq module file
+  target_sources(cq-simbe PRIVATE ${PROJECT_SOURCE_DIR}/include/fortran/cq.f90)
+endif()
+
 add_subdirectory(src)
 
 if (ENABLE_TESTING)
@@ -71,3 +103,5 @@ endif()
 if (BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
+
+

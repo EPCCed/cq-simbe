@@ -8,3 +8,7 @@ target_sources(cq-simbe
 )
 
 add_subdirectory(analog)
+
+if(BUILD_FORTRAN_INTERFACE)
+add_subdirectory(fortran)
+endif()

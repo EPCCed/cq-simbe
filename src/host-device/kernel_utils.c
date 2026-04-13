@@ -18,7 +18,7 @@ cq_status register_qkern(qkern kernel) {
       status = CQ_WARNING;
     } else {
       qkern_map * pkmap = &qk_reg.qkernels[qk_reg.next_available_slot];
-      kernel(0, NULL, NULL, pkmap);
+      kernel(0, NULL, 0, NULL, pkmap);
       if (pkmap->fname[0] != '\0') {
         pkmap->fn = kernel;
         ++qk_reg.next_available_slot;
@@ -131,4 +131,35 @@ void finalise_exec_handle(cq_exec * ehp) {
     pthread_cond_destroy(&(ehp->cond_exec_complete));
   }
   return;
+}
+
+// fortran helpers -- just don't call them from C
+cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
+  if (reg != NULL) {
+    size_t strsz = sizeof(FNAME);
+    if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {
+      strcpy(reg->fname, FNAME);
+      return CQ_SUCCESS;
+    } else {
+      reg->fname[0] = '\0';
+      return CQ_ERROR;
+    }
+  }
+  return CQ_ERROR;
+}
+
+cq_status fort_create_exec_handle(cq_exec ** ehp) {
+  cq_status status = CQ_ERROR;
+  if (*ehp == NULL) {
+    *ehp = (cq_exec *) malloc(sizeof(cq_exec));
+    // check malloc
+    if (*ehp != NULL) status = CQ_SUCCESS;
+  }
+  return status;
+}
+
+cq_status fort_free_exec_handle(cq_exec ** ehp) {
+  free(*ehp);
+  *ehp = NULL;
+  return CQ_SUCCESS;
 }

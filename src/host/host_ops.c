@@ -105,6 +105,7 @@ cstate * crp, const size_t NMEASURE, cq_exec * const ehp) {
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
+  if (ehp == NULL) return status;
   init_exec_handle(NQUBITS, 1, NMEASURE, ehp);
 
   if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
@@ -150,6 +151,7 @@ cq_exec * const ehp) {
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
+  if (ehp == NULL) return status;
   // init_exec_handle will malloc qkern_param array
   init_exec_handle(NQUBITS, NSHOTS, NMEASURE, ehp);
 
