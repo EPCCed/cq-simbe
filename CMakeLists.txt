@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 3.21)
 project(CQ-SIMBE
   VERSION 0.1.0
   DESCRIPTION "CQ compliant simulated backend."
-  LANGUAGES C
-)
+  LANGUAGES C)
 
 # User configure options
 
@@ -41,10 +40,22 @@ option(
   OFF
 )
 
+option(
+  BUILD_WITH_MPI
+  "Build with MPI-based communication. Turned ON by default." 
+  ON
+)
+message(STATUS "BUILD_WITH_MPI turned ${BUILD_WITH_MPI}.")
+
+if (BUILD_WITH_MPI)
+  find_package(MPI REQUIRED)
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+endif()
+
 # Dependencies
 
 find_package(Threads REQUIRED)
-find_package(QuEST 4.0 REQUIRED)
+find_package(QuEST REQUIRED)
 
 # CQ-SimBE Library
 
@@ -63,6 +74,10 @@ target_include_directories(cq-simbe
 )
 
 target_link_libraries(cq-simbe PRIVATE Threads::Threads QuEST::QuEST)
+
+if (BUILD_WITH_MPI)
+    target_link_libraries(cq-simbe PRIVATE ${MPI_C_LIBRARIES})
+endif()
 
 if (BUILD_FORTRAN_INTERFACE)
   enable_language(Fortran)
@@ -91,6 +106,10 @@ if (BUILD_FORTRAN_INTERFACE)
 endif()
 
 add_subdirectory(src)
+
+add_executable(cq-mpi-test mpi-test.c)
+target_link_libraries(cq-mpi-test PRIVATE CQ-SIMBE::cq-simbe)
+#target_link_libraries(cq-mpi-test PRIVATE ${MPI_C_LIBRARIES})
 
 if (ENABLE_TESTING)
   find_package(unity REQUIRED)
