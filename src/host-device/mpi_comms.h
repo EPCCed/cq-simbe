@@ -12,6 +12,7 @@
 #define __CQ_DEVICE_QUEUE_SIZE__ 16
 #define __CQ_HOST_DEVICE_MPI_PROC__ 0
 #define CQ_MPI_HOST_RANK 0
+#define CQ_MPI_DEVICE_RANK 1
 #define CQ_HOST_DEVICE_MPI_TAG 0
 
 enum ctrl_params_datatype { PARAMS_UINT_T, PARAMS_ALLOC_T, PARAMS_EXEC_T };
@@ -27,6 +28,8 @@ struct device_ctrl_params {
 };
 
 void print_params_header(struct ctrl_params_header header);
+void print_alloc_params(void* params);
+void print_op(const enum ctrl_code OP);
 
 typedef void (*param_packer_fn)(void* src, void* dest);
 
@@ -38,13 +41,17 @@ void pack_exec_params(void* src, void* dest);
 // void send_alloc_params(void* params);
 // void send_exec_params(void* params);
 
+void send_ctrl_params(struct device_ctrl_params ctrl_params);
 void send_uint_params(struct device_ctrl_params ctrl_params);
+
+// TODO: Need to send the updated params back from device to host.
 void send_alloc_params(struct device_ctrl_params ctrl_params);
 void send_exec_params(struct device_ctrl_params ctrl_params);
 
-void recv_uint_params(void* params);
-void recv_alloc_params(void* params);
-void recv_exec_params(void* params);
+void recv_ctrl_params(void** params);
+void recv_uint_params(void** params, int params_size);
+void recv_alloc_params(void** params, int params_size);
+void recv_exec_params(void** params, int params_size);
 
 // void comm_ctrl_params(struct ctrl_params_header msg_header,
 //                       void* params,
@@ -52,9 +59,6 @@ void recv_exec_params(void* params);
 //  void send_ctrl_params(struct ctrl_params_header msg_header,
 //                        void* params,
 //                        param_packer_fn packer);
-void send_ctrl_params(struct device_ctrl_params ctrl_params);
-
-void recv_ctrl_params(void* params);
 
 int mpi_initialise_device(const unsigned int VERBOSITY);
 
@@ -64,6 +68,7 @@ void mpi_host_comm_ctrl_op(const enum ctrl_code OP,
 size_t mpi_host_send_ctrl_op(const enum ctrl_code OP,
                              struct device_ctrl_params ctrl_params);
 
+// TODO: rename -- it is device comms thread that runs this
 size_t mpi_host_recv_ctrl_op(void);
 
 size_t mpi_host_sync_exec(cq_exec* const ehp);

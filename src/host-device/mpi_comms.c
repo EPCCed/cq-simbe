@@ -25,11 +25,10 @@ static struct cq_mpi_env mpi_env;
 
 void print_params_header(struct ctrl_params_header header) {
   if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-    printf("host header: ");
+    printf("Host [header]: ");
   } else {
-    printf("device header: ");
+    printf("Device [header]: ");
   }
-  printf("Incoming header:\n");
   switch (header.type) {
     case PARAMS_UINT_T: {
       printf("type: UINT, ");
@@ -50,16 +49,63 @@ void print_params_header(struct ctrl_params_header header) {
   printf(" %d\n", header.params_msg_size);
 }
 
-void pack_uint_params(void* src, void* dest) {}
+void print_alloc_params(void* params) {
+  device_alloc_params* alloc_params = (device_alloc_params*)params;
+
+  printf("Device alloc params: NQUBITS: %zu, qreg_idx: %zu, STATUS: %d\n",
+         alloc_params->NQUBITS, alloc_params->qregistry_idx,
+         alloc_params->status);
+}
+
+void print_op(const enum ctrl_code OP) {
+  switch (OP) {
+    case CQ_CTRL_IDLE: {
+      printf("CQ_CTRL_IDLE");
+      break;
+    }
+    case CQ_CTRL_ALLOC: {
+      printf("CQ_CTRL_ALLOC");
+      break;
+    }
+    case CQ_CTRL_DEALLOC: {
+      printf("CQ_CTRL_DEALLOC");
+      break;
+    }
+    case CQ_CTRL_INIT: {
+      printf("CQ_CTRL_INIT");
+      break;
+    }
+    case CQ_CTRL_FINALISE: {
+      printf("CQ_CTRL_FINALISE");
+      break;
+    }
+    case CQ_CTRL_RUN_QKERNEL: {
+      break;
+    }
+    case CQ_CTRL_RUN_PQKERNEL: {
+      break;
+    }
+    case CQ_CTRL_TEST: {
+      break;
+    }
+    case CQ_CTRL_ABORT: {
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+  printf("\n");
+}
 
 // void send_uint_params(void* params) {
 void send_uint_params(struct device_ctrl_params ctrl_params) {
-  int device_rank = 1;
+  int device_rank = CQ_MPI_DEVICE_RANK;
   MPI_Datatype uint_type =
       sizeof(unsigned int) == 4 ? MPI_UINT32_T : MPI_UINT64_T;
 
-  struct ctrl_params_header msg_header = {.type = ctrl_params.type,
-                                          .params_msg_size = 1};
+  struct ctrl_params_header msg_header = {
+      .type = ctrl_params.type, .params_msg_size = sizeof(unsigned int)};
   int header_size = sizeof(struct ctrl_params_header);
 
   MPI_Ssend(&msg_header, header_size, MPI_BYTE, device_rank,
@@ -68,58 +114,110 @@ void send_uint_params(struct device_ctrl_params ctrl_params) {
             cq_mpi_comm);
 }
 
-void recv_uint_params(void* params) {
-  MPI_Datatype uint_type =
-      sizeof(unsigned int) == 4 ? MPI_UINT32_T : MPI_UINT64_T;
+void recv_uint_params(void** params, int params_size) {
+  printf("Device: Attempting to recieve verbosity param...\n");
+  if (params == NULL) {
+    printf("From recv_uint_params: params is NULL.\n");
+    exit(-2);
+  }
+
+  // free previous, now unused resources
+  if (*params != NULL) {
+    free(params);
+    *params = NULL;
+  }
+
   MPI_Status status;
-  params = malloc(sizeof(unsigned int));
-  MPI_Recv((unsigned int*)params, 1, uint_type, CQ_MPI_HOST_RANK,
+  *params = malloc(params_size);
+  if (*params == NULL) {
+    printf("From recv_uint_params: malloc failed.\n");
+    exit(-2);
+  }
+
+  MPI_Recv(*params, params_size, MPI_BYTE, CQ_MPI_HOST_RANK,
            CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm, &status);
-  printf("successfully copied into params %d\n", *(unsigned int*)(params));
 }
 
 // void send_alloc_params(void* params) {
 void send_alloc_params(struct device_ctrl_params ctrl_params) {
+  // TODO: use memcpy because no pointers in alloc params
+  //
   // pack device_alloc_params
-  device_alloc_params* alloc_params = (device_alloc_params*)ctrl_params.data;
-  int max_buffer_size;
-  MPI_Pack_size(1, MPI_UINT64_T, cq_mpi_comm, &max_buffer_size);  // NQUBITS
-  int member_size;
-  MPI_Pack_size(1, MPI_UINT64_T, cq_mpi_comm, &member_size);  // qregistry_idx
-  max_buffer_size += member_size;
-  MPI_Pack_size(1, MPI_INT, cq_mpi_comm, &member_size);  // status
-  max_buffer_size += member_size;
-
-  char* send_buffer = malloc(max_buffer_size);
-  if (send_buffer == NULL) {
-    printf("Failed to allocate buffer for sending device allocation params.\n");
-    exit(-1);
-  }
-  int position;
-  MPI_Pack(&alloc_params->NQUBITS, 1, MPI_UINT64_T, send_buffer,
-           max_buffer_size, &position, cq_mpi_comm);
-  MPI_Pack(&alloc_params->qregistry_idx, 1, MPI_UINT64_T, send_buffer,
-           max_buffer_size, &position, cq_mpi_comm);
-  MPI_Pack(&alloc_params->status, 1, MPI_INT, send_buffer, max_buffer_size,
-           &position, cq_mpi_comm);
+  //  device_alloc_params* alloc_params =
+  //  (device_alloc_params*)ctrl_params.data; int max_buffer_size;
+  //  MPI_Pack_size(1, MPI_UINT64_T, cq_mpi_comm, &max_buffer_size);  // NQUBITS
+  //  int member_size;
+  //  MPI_Pack_size(1, MPI_UINT64_T, cq_mpi_comm, &member_size);  //
+  //  qregistry_idx max_buffer_size += member_size; MPI_Pack_size(1, MPI_INT,
+  //  cq_mpi_comm, &member_size);  // status max_buffer_size += member_size;
+  //
+  //  char* send_buffer = malloc(max_buffer_size);
+  //  if (send_buffer == NULL) {
+  //    printf("Failed to allocate buffer for sending device allocation
+  //    params.\n"); exit(-1);
+  //  }
+  //  int position;
+  //  MPI_Pack(&alloc_params->NQUBITS, 1, MPI_UINT64_T, send_buffer,
+  //           max_buffer_size, &position, cq_mpi_comm);
+  //  MPI_Pack(&alloc_params->qregistry_idx, 1, MPI_UINT64_T, send_buffer,
+  //           max_buffer_size, &position, cq_mpi_comm);
+  //  MPI_Pack(&alloc_params->status, 1, MPI_INT, send_buffer, max_buffer_size,
+  //           &position, cq_mpi_comm);
 
   // all nicely packed
+  //  struct ctrl_params_header msg_header = {.type = ctrl_params.type,
+  //                                          .params_msg_size = position};
 
+  printf("Host: Attempting to send device_alloc_params...\n");
+  size_t buffer_size = sizeof(device_alloc_params);
+  void* send_buffer = malloc(buffer_size);
+  memcpy(send_buffer, ctrl_params.data, buffer_size);
   struct ctrl_params_header msg_header = {.type = ctrl_params.type,
-                                          .params_msg_size = position};
+                                          .params_msg_size = buffer_size};
+
   int header_size = sizeof(struct ctrl_params_header);
 
-  int device_rank = 1;
+  int device_rank = CQ_MPI_DEVICE_RANK;
   MPI_Ssend(&msg_header, header_size, MPI_BYTE, device_rank,
             CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm);
-  MPI_Ssend(send_buffer, position, MPI_PACKED, 1, CQ_HOST_DEVICE_MPI_TAG,
-            cq_mpi_comm);
+  MPI_Ssend(send_buffer, buffer_size, MPI_BYTE, device_rank,
+            CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm);
+
+  //  MPI_Ssend(send_buffer, position, MPI_PACKED, device_rank,
+  //  CQ_HOST_DEVICE_MPI_TAG,
+  //            cq_mpi_comm);
 
   free(send_buffer);
+  printf("Host: Sent device_alloc_params...\n");
 }
-void recv_alloc_params(void* params) {}
+
+void recv_alloc_params(void** params, int params_size) {
+  printf("Device: Attempting to recieve device_alloc_params...\n");
+  if (params == NULL) {
+    printf("From recv_alloc_params: params is NULL.\n");
+    exit(-2);
+  }
+
+  // free previous, now unused resources
+  if (*params != NULL) {
+    free(params);
+    *params = NULL;
+  }
+
+  MPI_Status status;
+  *params = malloc(params_size);
+  if (*params == NULL) {
+    printf("From recv_alloc_params: malloc failed.\n");
+    exit(-2);
+  }
+
+  MPI_Recv(*params, params_size, MPI_BYTE, CQ_MPI_HOST_RANK,
+           CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm, &status);
+  printf("Device: Recieved device_alloc_params...\n");
+}
+
 void send_exec_params(struct device_ctrl_params ctrl_params) {}
-void recv_exec_params(void* params) {}
+void recv_exec_params(void** params, int params_size) {}
 
 // void comm_ctrl_params(struct ctrl_params_header msg_header,
 //                       void* params,
@@ -160,7 +258,7 @@ void send_ctrl_params(struct device_ctrl_params ctrl_params) {
   }
 }
 
-void recv_ctrl_params(void* params) {
+void recv_ctrl_params(void** params) {
   struct ctrl_params_header msg_header;
   size_t header_size = sizeof(struct ctrl_params_header);
   MPI_Status status;
@@ -169,15 +267,15 @@ void recv_ctrl_params(void* params) {
   print_params_header(msg_header);
   switch (msg_header.type) {
     case PARAMS_UINT_T: {
-      recv_uint_params(params);
+      recv_uint_params(params, msg_header.params_msg_size);
       break;
     }
     case PARAMS_ALLOC_T: {
-      recv_alloc_params(params);
+      recv_alloc_params(params, msg_header.params_msg_size);
       break;
     }
     case PARAMS_EXEC_T: {
-      recv_exec_params(params);
+      recv_exec_params(params, msg_header.params_msg_size);
       break;
     }
     default: {
@@ -235,10 +333,10 @@ void mpi_host_comm_ctrl_op(const enum ctrl_code OP,
                            struct device_ctrl_params ctrl_params) {
   if (mpi_env.rank == CQ_MPI_HOST_RANK) {
     mpi_host_send_ctrl_op(OP, ctrl_params);
-    printf("host finished sending ctrl op\n");
+    printf("Host [comm_ctrl_op]: finished sending ctrl op\n");
   } else {
     mpi_host_recv_ctrl_op();
-    printf("device finished recv ctrl op\n");
+    printf("Device [comm_ctrl_op]: finished recv ctrl op\n");
   }
 }
 
@@ -251,10 +349,11 @@ void mpi_host_comm_ctrl_op(const enum ctrl_code OP,
 // and wrap it whenever there is call to host_send_ctrl_op
 size_t mpi_host_send_ctrl_op(const enum ctrl_code OP,
                              struct device_ctrl_params ctrl_params) {
-  int device_rank = 1;
+  int device_rank = CQ_MPI_DEVICE_RANK;
+  // TODO: merge sends?
   MPI_Ssend(&OP, 1, MPI_INT, device_rank, CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm);
-  printf("Host sent OP\n");
-  // TODO: send ctrl_params
+  printf("Host [send_ctrl_op]: Sent ");
+  print_op(OP);
   send_ctrl_params(ctrl_params);
 
   size_t num_ops = 0;
@@ -266,6 +365,7 @@ size_t mpi_host_send_ctrl_op(const enum ctrl_code OP,
   return num_ops;
 }
 
+// TODO: rename -- it is device comms thread that runs this
 size_t mpi_host_recv_ctrl_op() {
   pthread_mutex_lock(&dev_ctrl.device_lock);
 
@@ -278,10 +378,17 @@ size_t mpi_host_recv_ctrl_op() {
   MPI_Status status;
   MPI_Recv(&dev_ctrl.op_buffer[dev_ctrl.next_op_in], 1, MPI_INT,
            CQ_MPI_HOST_RANK, CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm, &status);
-  printf("device recv OP\n");
-  // TODO: recv ctrl_params
-  recv_ctrl_params(dev_ctrl.op_params_buffer[dev_ctrl.next_op_in]);
-  printf("device recv op params\n");
+  printf("Device [recv_ctrl_op]: Recieved ");
+  print_op(dev_ctrl.op_buffer[dev_ctrl.next_op_in]);
+
+  recv_ctrl_params(&dev_ctrl.op_params_buffer[dev_ctrl.next_op_in]);
+  if (dev_ctrl.op_buffer[dev_ctrl.next_op_in] == CQ_CTRL_ALLOC ||
+      dev_ctrl.op_buffer[dev_ctrl.next_op_in] == CQ_CTRL_DEALLOC) {
+    print_alloc_params(dev_ctrl.op_params_buffer[dev_ctrl.next_op_in]);
+  } else {
+    printf("Device verbosity params: VERBOSITY: %d\n",
+           *(unsigned int*)dev_ctrl.op_params_buffer[dev_ctrl.next_op_in]);
+  }
 
   ++dev_ctrl.num_ops;
 
@@ -292,7 +399,7 @@ size_t mpi_host_recv_ctrl_op() {
 
   MPI_Ssend(&dev_ctrl.num_ops, 1, MPI_UINT64_T, CQ_MPI_HOST_RANK,
             CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm);
-  printf("device sent num ops: %zu\n", dev_ctrl.num_ops);
+  printf("Device [recv_ctrl_op]: sent num ops: %zu\n", dev_ctrl.num_ops);
 
   pthread_cond_signal(&dev_ctrl.cond_queue_empty);
   pthread_mutex_unlock(&dev_ctrl.device_lock);
@@ -301,12 +408,11 @@ size_t mpi_host_recv_ctrl_op() {
 }
 
 size_t mpi_host_wait_all_ops(void) {
-  printf("rank is %d\n", mpi_env.rank);
   if (mpi_env.rank == CQ_MPI_HOST_RANK) {
     size_t num_ops = 0;
     MPI_Status status;
-    int device_rank = 1;
-    printf("host got here\n");
+    int device_rank = CQ_MPI_DEVICE_RANK;
+    printf("Host [wait_all_ops]: got here\n");
     MPI_Recv(&num_ops, 1, MPI_UINT64_T, device_rank, CQ_HOST_DEVICE_MPI_TAG,
              cq_mpi_comm, &status);
     return num_ops;
@@ -315,11 +421,11 @@ size_t mpi_host_wait_all_ops(void) {
     pthread_mutex_lock(&dev_ctrl.device_lock);
     int foo = 0;
     while (dev_ctrl.num_ops > 0 || dev_ctrl.device_busy) {
-      printf("%d: device got here\n", foo);
+      printf("Device [wait_all_ops][loop]: got here %d\n", foo);
       ++foo;
       pthread_cond_wait(&dev_ctrl.cond_device_busy, &dev_ctrl.device_lock);
     }
-    printf("device got here\n");
+    printf("Device [wait_all_ops]: got here\n");
     MPI_Ssend(&dev_ctrl.num_ops, 1, MPI_UINT64_T, CQ_MPI_HOST_RANK,
               CQ_HOST_DEVICE_MPI_TAG, cq_mpi_comm);
 
@@ -353,7 +459,13 @@ void* mpi_device_control_thread(void*) {
       printf("Params are null!\n");
     }
     dev_ctrl.op_buffer[dev_ctrl.next_op_out] = CQ_CTRL_IDLE;
-    dev_ctrl.op_params_buffer[dev_ctrl.next_op_out] = NULL;
+    // release resources allocated in specialisation of recv_ctrl_params
+    // Alternativally comment this out and handle freeing in those
+    // specialisations -- see commented out first few lines in recv_uint_params.
+    // free(dev_ctrl.op_params_buffer[dev_ctrl.next_op_out]);
+    // dev_ctrl.op_params_buffer[dev_ctrl.next_op_out] = NULL;
+    // NOTE: 1: went with freeing in recievers solution
+    // NOTE: 2: since we have ring buffer, resources will be freed on snd pass
 
     // decrease the number of queued operations and advance next_op_out
     --dev_ctrl.num_ops;
