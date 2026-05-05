@@ -27,31 +27,44 @@ struct device_ctrl_params {
   void* data;
 };
 
+const char* get_comm_source();
 void print_params_header(struct ctrl_params_header header);
 void print_alloc_params(void* params);
 void print_op(const enum ctrl_code OP);
 
 typedef void (*param_packer_fn)(void* src, void* dest);
 
-void pack_uint_params(void* src, void* dest);
-void pack_alloc_params(void* src, void* dest);
-void pack_exec_params(void* src, void* dest);
-// or send_xxx_params and recv_xxx_params
-// void send_uint_params(void* params);
-// void send_alloc_params(void* params);
-// void send_exec_params(void* params);
+enum ctrl_params_datatype op_type_to_params_type(enum ctrl_code op_type);
 
-void send_ctrl_params(struct device_ctrl_params ctrl_params);
-void send_uint_params(struct device_ctrl_params ctrl_params);
+void params_deep_copy(enum ctrl_params_datatype params_type,
+                      void* src,
+                      void** dest);
+
+// void pack_uint_params(void* src, void* dest);
+// void pack_alloc_params(void* src, void* dest);
+// void pack_exec_params(void* src, void* dest);
+//  or send_xxx_params and recv_xxx_params
+//  void send_uint_params(void* params);
+//  void send_alloc_params(void* params);
+//  void send_exec_params(void* params);
+
+// TODO: const what should be const
+
+// NOTE: currently sending 2 messages, header than the payload
+// could do 1 message and first probe the size on the recv side
+// but probe might be actually slower -- benchmark?
+void send_ctrl_params(const struct device_ctrl_params* ctrl_params, int dest);
+
+void send_uint_params(struct device_ctrl_params ctrl_params, int dest);
 
 // TODO: Need to send the updated params back from device to host.
-void send_alloc_params(struct device_ctrl_params ctrl_params);
-void send_exec_params(struct device_ctrl_params ctrl_params);
+void send_alloc_params(struct device_ctrl_params ctrl_params, int dest);
+void send_exec_params(struct device_ctrl_params ctrl_params, int dest);
 
-void recv_ctrl_params(void** params);
-void recv_uint_params(void** params, int params_size);
-void recv_alloc_params(void** params, int params_size);
-void recv_exec_params(void** params, int params_size);
+void recv_ctrl_params(void** params, int src);
+void recv_uint_params(void** params, int params_size, int src);
+void recv_alloc_params(void** params, int params_size, int src);
+void recv_exec_params(void** params, int params_size, int src);
 
 // void comm_ctrl_params(struct ctrl_params_header msg_header,
 //                       void* params,
@@ -63,10 +76,10 @@ void recv_exec_params(void** params, int params_size);
 int mpi_initialise_device(const unsigned int VERBOSITY);
 
 void mpi_host_comm_ctrl_op(const enum ctrl_code OP,
-                           struct device_ctrl_params ctrl_params);
+                           struct device_ctrl_params* ctrl_params);
 
 size_t mpi_host_send_ctrl_op(const enum ctrl_code OP,
-                             struct device_ctrl_params ctrl_params);
+                             struct device_ctrl_params* ctrl_params);
 
 // TODO: rename -- it is device comms thread that runs this
 size_t mpi_host_recv_ctrl_op(void);

@@ -18,7 +18,11 @@ int main() {
   cq_init(1);
   qubit* qr;
   alloc_qureg(&qr, 5);
-  printf("\n\nresult of free qureg: %d\n\n", free_qureg(&qr));
+  printf(
+      "[MAIN]: created qreg: with NQUBITS: %zu, qregistry_idx: %d, offset: "
+      "%d\n",
+      qr->N, qr->registry_index, qr->offset);
+  // printf("\n\nresult of free qureg: %d\n\n", free_qureg(&qr));
   cq_finalise(1);
   return 0;
 }
