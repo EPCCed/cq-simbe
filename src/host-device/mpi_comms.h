@@ -2,6 +2,7 @@
 #define CQ_HOST_DEVICE_MPI_COMMS_H
 
 #include <stddef.h>
+#include "datatypes.h"
 #include "src/host-device/comms.h"
 #include "src/host/opcodes.h"
 
@@ -114,8 +115,9 @@ void recv_alloc_params(device_alloc_params* params, int src);
 /// @param dest destination rank of outgoing message
 void send_alloc_params(const device_alloc_params* params, int dest);
 
-// void recv_exec_params(device_alloc_params* params, int src);
-// void send_exec_params(device_alloc_params* params, int dest);
+// maybe **ehp
+void recv_exec_params(cq_exec* ehp, int src);
+void send_exec_params(cq_exec* ehp, int dest);
 
 // ----------------------------------------------------------------------------
 // Helpers
@@ -143,4 +145,8 @@ const char* op_to_str(const enum ctrl_code OP);
 /// @param[in] params reference to parameters
 void print_alloc_params(const device_alloc_params* params);
 
+///
+/// prints members of the executor.
+/// @param[in] ehp reference to executor
+void print_ehp(const cq_exec* ehp);
 #endif
