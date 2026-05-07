@@ -168,7 +168,9 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
     }
     case CQ_CTRL_RUN_QKERNEL: {
       const int host_rank = CQ_MPI_HOST_RANK;
-      recv_exec_params(executor_handles[executor_id], host_rank);
+      recv_exec_params(&executor_handles[executor_id], host_rank);
+      printf("PRINTING!!!");
+      print_ehp(executor_handles[executor_id]);
       insert_op(OP, executor_handles[executor_id]);
       break;
     }
@@ -257,7 +259,7 @@ void host_comm_params(const enum ctrl_code OP, void* params) {
     }
     case CQ_CTRL_WAIT_EXEC: {
       const int device_rank = CQ_MPI_DEVICE_RANK;
-      recv_exec_params(params, device_rank);
+      recv_exec_params(&params, device_rank);
       break;
     }
     default: {
@@ -288,7 +290,8 @@ void send_alloc_params(const device_alloc_params* params, int dest) {
   printf("%s [send_alloc_params]: sent.\n", get_comm_source());
 }
 
-void recv_exec_params(cq_exec* ehp, int src) {
+void recv_exec_params(cq_exec** ehp, int src) {
+  // TODO: do validation
   printf("%s [recv_exec_params]: receiving...\n", get_comm_source());
   int msg_size;
   MPI_Status status;
@@ -296,19 +299,20 @@ void recv_exec_params(cq_exec* ehp, int src) {
   void* recv_buffer = malloc(msg_size);
 
   // reserve space for all the date + currently unused members
-  if (ehp == NULL) {
-    printf("%s [recv_exec_params]: ehp is NULL. Allocating on device.\n",
+  if (*ehp == NULL) {
+    printf("%s [recv_exec_params]: *ehp is NULL. Allocating on device.\n",
            get_comm_source());
 
     // ehp = (cq_exec*)malloc(msg_size + sizeof(pthread_mutex_t) +
     //                        sizeof(pthread_cond_t) + sizeof(void*));
-    ehp = (cq_exec*)malloc(sizeof(cq_exec));
+    *ehp = (cq_exec*)malloc(sizeof(cq_exec));
   } else {
-    printf("%s [recv_exec_params]: ehp is already allocated. So I'm on host.\n",
-           get_comm_source());
+    printf(
+        "%s [recv_exec_params]: *ehp is already allocated. So I'm on host.\n",
+        get_comm_source());
   }
 
-  if (recv_buffer == NULL || ehp == NULL) {
+  if (recv_buffer == NULL || *ehp == NULL) {
     printf("%s [recv_exec_params]: malloc failed. Exiting\n",
            get_comm_source());
     exit(-10);
@@ -321,56 +325,58 @@ void recv_exec_params(cq_exec* ehp, int src) {
   const size_t cq_status_size = sizeof(cq_status);
   // unpack
   int position = 0;
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->exec_init, bool_size,
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->exec_init, bool_size,
              MPI_BYTE, CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->complete, bool_size,
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->complete, bool_size,
              MPI_BYTE, CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->halt, bool_size, MPI_BYTE,
-             CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->status, cq_status_size,
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->halt, bool_size,
              MPI_BYTE, CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->nqubits, 1, MPI_UINT64_T,
-             CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->completed_shots, 1,
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->status, cq_status_size,
+             MPI_BYTE, CQ_MPI_COMM);
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->nqubits, 1,
              MPI_UINT64_T, CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->expected_shots, 1,
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->completed_shots, 1,
              MPI_UINT64_T, CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, &ehp->nmeasure, 1, MPI_UINT64_T,
-             CQ_MPI_COMM);
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->expected_shots, 1,
+             MPI_UINT64_T, CQ_MPI_COMM);
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->nmeasure, 1,
+             MPI_UINT64_T, CQ_MPI_COMM);
 
   size_t fname_size = 0;
   MPI_Unpack(recv_buffer, msg_size, &position, &fname_size, 1, MPI_UINT64_T,
              CQ_MPI_COMM);
-  ehp->fname = (char*)malloc(fname_size);
-  if (ehp->fname == NULL) {
-    printf("%s [recv_exec_params]: malloc ehp->fname failed. Exiting\n",
+  fname_size *= sizeof(char);
+
+  (*ehp)->fname = (char*)malloc(fname_size);
+  if ((*ehp)->fname == NULL) {
+    printf("%s [recv_exec_params]: malloc *ehp->fname failed. Exiting\n",
            get_comm_source());
     exit(-10);
   }
-  MPI_Unpack(recv_buffer, msg_size, &position, ehp->fname, fname_size, MPI_CHAR,
-             CQ_MPI_COMM);
+  MPI_Unpack(recv_buffer, msg_size, &position, (*ehp)->fname, fname_size,
+             MPI_CHAR, CQ_MPI_COMM);
 
-  const size_t qreg_size = sizeof(qubit) * ehp->nqubits;
+  const size_t qreg_size = sizeof(qubit) * (*ehp)->nqubits;
   // NOTE: creg_size * expected_shots??
-  const size_t creg_size = sizeof(cstate) * ehp->nmeasure;
+  const size_t creg_size = sizeof(cstate) * (*ehp)->nmeasure;
 
-  ehp->qreg = (qubit*)malloc(qreg_size);
-  if (ehp->qreg == NULL) {
-    printf("%s [recv_exec_params]: malloc ehp->qreg failed. Exiting\n",
+  (*ehp)->qreg = (qubit*)malloc(qreg_size);
+  if ((*ehp)->qreg == NULL) {
+    printf("%s [recv_exec_params]: malloc *ehp->qreg failed. Exiting\n",
            get_comm_source());
     exit(-10);
   }
 
-  ehp->creg = (cstate*)malloc(creg_size);
-  if (ehp->creg == NULL) {
-    printf("%s [recv_exec_params]: malloc ehp->creg failed. Exiting\n",
+  (*ehp)->creg = (cstate*)malloc(creg_size);
+  if ((*ehp)->creg == NULL) {
+    printf("%s [recv_exec_params]: malloc *ehp->creg failed. Exiting\n",
            get_comm_source());
     exit(-10);
   }
 
-  MPI_Unpack(recv_buffer, msg_size, &position, (char*)ehp->qreg, qreg_size,
+  MPI_Unpack(recv_buffer, msg_size, &position, (char*)(*ehp)->qreg, qreg_size,
              MPI_BYTE, CQ_MPI_COMM);
-  MPI_Unpack(recv_buffer, msg_size, &position, (char*)ehp->creg, creg_size,
+  MPI_Unpack(recv_buffer, msg_size, &position, (char*)(*ehp)->creg, creg_size,
              MPI_BYTE, CQ_MPI_COMM);
 
   // NOTE: recv ehp->params left for another day... it's for pqkerns
@@ -378,7 +384,7 @@ void recv_exec_params(cq_exec* ehp, int src) {
   free(recv_buffer);
 
   printf("%s [recv_exec_params]: received.\n", get_comm_source());
-  print_ehp(ehp);
+  print_ehp(*ehp);
 }
 
 void send_exec_params(cq_exec* ehp, int dest) {
@@ -437,6 +443,7 @@ void send_exec_params(cq_exec* ehp, int dest) {
   MPI_Pack_size(fname_size, MPI_CHAR, CQ_MPI_COMM,
                 &member_size);  // fname
   max_buffer_size += member_size;
+
   const size_t qreg_size = sizeof(qubit) * ehp->nqubits;
   MPI_Pack_size(qreg_size, MPI_BYTE, CQ_MPI_COMM,
                 &member_size);  // qreg
@@ -455,7 +462,7 @@ void send_exec_params(cq_exec* ehp, int dest) {
     printf("Failed to allocate buffer for sending executor handle.\n");
     exit(-1);
   }
-  int position;
+  int position = 0;
   MPI_Pack(&ehp->exec_init, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
            &position, CQ_MPI_COMM);
   MPI_Pack(&ehp->complete, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
@@ -478,12 +485,12 @@ void send_exec_params(cq_exec* ehp, int dest) {
 
   MPI_Pack(&fname_size, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
            &position, CQ_MPI_COMM);
-  MPI_Pack(&ehp->fname, fname_size, MPI_CHAR, send_buffer, max_buffer_size,
+  MPI_Pack(ehp->fname, fname_size, MPI_CHAR, send_buffer, max_buffer_size,
            &position, CQ_MPI_COMM);
 
   MPI_Pack(ehp->qreg, qreg_size, MPI_BYTE, send_buffer, max_buffer_size,
            &position, CQ_MPI_COMM);
-  MPI_Pack(&ehp->creg, creg_size, MPI_BYTE, send_buffer, max_buffer_size,
+  MPI_Pack(ehp->creg, creg_size, MPI_BYTE, send_buffer, max_buffer_size,
            &position, CQ_MPI_COMM);
 
   // NOTE: ehp->prams left for another day

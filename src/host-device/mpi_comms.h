@@ -115,9 +115,13 @@ void recv_alloc_params(device_alloc_params* params, int src);
 /// @param dest destination rank of outgoing message
 void send_alloc_params(const device_alloc_params* params, int dest);
 
-// maybe **ehp
-void recv_exec_params(cq_exec* ehp, int src);
+void recv_exec_params(cq_exec** ehp, int src);
 void send_exec_params(cq_exec* ehp, int dest);
+
+void recv_qkern_name(char fname[__CQ_MAX_QKERN_NAME_LENGTH__],
+                     size_t* fname_size,
+                     int src);
+void send_qkern_name(const char* fname, size_t fname_size, int dest);
 
 // ----------------------------------------------------------------------------
 // Helpers
