@@ -20,14 +20,15 @@ int main() {
   // return 0;
 
   cq_init(1);
-  //  qubit* qr;
-  //  alloc_qureg(&qr, 5);
-  //  printf(
-  //      "[MAIN]: created qreg: with NQUBITS: %zu, qregistry_idx: %d, offset: "
-  //      "%d\n",
-  //      qr->N, qr->registry_index, qr->offset);
-  //  // printf("\n\nresult of free qureg: %d\n\n", free_qureg(&qr));
+  qubit* qr;
+  alloc_qureg(&qr, 5);
+  if (get_rank() == 0) {
+    printf(
+        "[MAIN]: created qreg: with NQUBITS: %zu, qregistry_idx: %zu, offset: "
+        "%zu\n",
+        qr->N, qr->registry_index, qr->offset);
+    printf("\n\nresult of free qureg: %d\n\n", free_qureg(&qr));
+  }
   cq_finalise(1);
-  //  finalise_host_device_mpi(1);
   return 0;
 }

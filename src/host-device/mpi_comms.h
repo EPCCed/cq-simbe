@@ -2,6 +2,7 @@
 #define CQ_HOST_DEVICE_MPI_COMMS_H
 
 #include <stddef.h>
+#include "src/host-device/comms.h"
 #include "src/host/opcodes.h"
 
 // ----------------------------------------------------------------------------
@@ -56,7 +57,12 @@ void finalise_host_device_mpi(const unsigned int VERBOSITY);
 /// for a given control operation
 // void mpi_host_send_ctrl_op(const enum ctrl_code OP, struct ctrl_params*
 // params);
-void mpi_host_send_ctrl_op(const enum ctrl_code OP, struct ctrl_params* params);
+
+///
+/// sends the control operation to the device.
+/// @param OP an enum argument specifying CQ_CTRL_OP
+/// @param[in,out] params void pointer to arbitrary control parameters
+void mpi_host_send_ctrl_op(const enum ctrl_code OP, void* params);
 
 ///
 /// blocks and waits for the operations to complete on the device.
@@ -86,6 +92,32 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP);
 size_t device_wait_all_ops(void);
 
 // ----------------------------------------------------------------------------
+// Device Control Paramaters Comms
+// ----------------------------------------------------------------------------
+
+///
+/// communicates control parameters between host and device.
+/// @param OP an enum argument specifying CQ_CTRL_OP
+/// @param[in,out] params void pointer to arbitrary params
+void host_comm_params(const enum ctrl_code OP, void* params);
+
+///
+/// recieves allocation parameters from the source.
+/// @param[out] params reference to parameters to store the results of
+/// communication
+/// @param src source rank of incoming message
+void recv_alloc_params(device_alloc_params* params, int src);
+
+///
+/// sends allocation parameters to the destination.
+/// @param[in] params reference to parameters to communicate
+/// @param dest destination rank of outgoing message
+void send_alloc_params(const device_alloc_params* params, int dest);
+
+// void recv_exec_params(device_alloc_params* params, int src);
+// void send_exec_params(device_alloc_params* params, int dest);
+
+// ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
 
@@ -105,5 +137,10 @@ int get_rank(void);
 /// @param OP an enum argument specifying CQ_CTRL_OP
 /// @return string represntation of OP.
 const char* op_to_str(const enum ctrl_code OP);
+
+///
+/// prints values of the alloc parameters.
+/// @param[in] params reference to parameters
+void print_alloc_params(const device_alloc_params* params);
 
 #endif
