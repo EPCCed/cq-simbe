@@ -13,13 +13,14 @@
 #define CQ_MPI_DEVICE_RANK 1
 #define CQ_MPI_COMMS_TAG 0
 
-#define RUN_HOST_ONLY()                 \
-  {                                     \
-    int rank = get_rank();              \
-    if (rank == -1)                     \
-      return CQ_ERROR;                  \
-    if (get_rank() != CQ_MPI_HOST_RANK) \
-      return CQ_SUCCESS;                \
+#define RUN_HOST_ONLY()                   \
+  {                                       \
+    int rank = get_rank();                \
+    if (rank == -1)                       \
+      return CQ_ERROR;                    \
+    if (get_rank() != CQ_MPI_HOST_RANK) { \
+      return CQ_SUCCESS;                  \
+    }                                     \
   }
 
 // ----------------------------------------------------------------------------
@@ -81,7 +82,7 @@ void mpi_device_recv_ctrl_op(void);
 
 ///
 /// starts listening for the incoming messages from the host.
-void device_listen(void);
+void* device_listen(void*);
 
 ///
 /// dispatches recieved control operation to the worker thread.
@@ -92,6 +93,14 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP);
 /// blocks device comms thread and awaits for the worker to complete.
 size_t device_wait_all_ops(void);
 
+///
+/// blocks device master thread and awaits for the comms to complete
+void device_wait_comms(void);
+
+///
+/// wrapper around device_wait_comms, intended to be called from the host.
+/// The intended caller of this function is cq_finalise only!
+void host_device_final_sync(void);
 // ----------------------------------------------------------------------------
 // Device Control Paramaters Comms
 // ----------------------------------------------------------------------------
@@ -118,6 +127,7 @@ void send_alloc_params(const device_alloc_params* params, int dest);
 void recv_exec_params(cq_exec** ehp, int src);
 void send_exec_params(cq_exec* ehp, int dest);
 
+// no!
 void recv_qkern_name(char fname[__CQ_MAX_QKERN_NAME_LENGTH__],
                      size_t* fname_size,
                      int src);

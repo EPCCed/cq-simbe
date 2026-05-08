@@ -24,6 +24,15 @@ static cq_exec* executor_handles[__CQ_DEVICE_QUEUE_SIZE__];
 static int executor_id = 0;
 static struct cq_mpi_env mpi_env = {.rank = -1};
 
+struct communicator {
+  bool comm_busy;
+  pthread_t device_comm_thread;
+  pthread_cond_t cond_comm_busy;
+  pthread_mutex_t comm_lock;
+};
+
+static struct communicator dev_comm = {0};
+
 void init_host_device_mpi(const unsigned int VERBOSITY) {
   if (VERBOSITY > 0) {
     printf("Initialising MPI.\n");
@@ -36,14 +45,24 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
 
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     dev_ctrl.run_device = true;
-    printf("%s started listening...\n", get_comm_source());
-    device_listen();
-    printf("%s closing connection.\n", get_comm_source());
-    finalise_host_device_mpi(VERBOSITY);
+    // printf("%s started listening...\n", get_comm_source());
+    // device_listen();
+    // printf("%s closing connection.\n", get_comm_source());
+    // finalise_host_device_mpi(VERBOSITY);
+    dev_comm.comm_busy = true;
+    pthread_mutex_init(&dev_comm.comm_lock, NULL);
+    pthread_cond_init(&dev_comm.cond_comm_busy, NULL);
+    pthread_create(&dev_comm.device_comm_thread, NULL, &device_listen, NULL);
   }
 }
 
 void finalise_host_device_mpi(const unsigned int VERBOSITY) {
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    pthread_join(dev_comm.device_comm_thread, NULL);
+    dev_comm.comm_busy = false;
+    pthread_cond_destroy(&dev_comm.cond_comm_busy);
+    pthread_mutex_destroy(&dev_comm.comm_lock);
+  }
   if (VERBOSITY > 0) {
     printf("%s Finalising MPI.\n", get_comm_source());
   }
@@ -81,9 +100,15 @@ void mpi_host_wait_all_ops(void) {
 // Device Comm Ops
 // ----------------------------------------------------------------------------
 
-void device_listen(void) {
+void* device_listen(void*) {
   // run_device set to FALSE when OP == CQ_CTRL_FINALISE
+  printf("%s started listening...\n", get_comm_source());
   while (dev_ctrl.run_device) {
+    pthread_mutex_lock(&dev_comm.comm_lock);
+    dev_comm.comm_busy = true;
+    pthread_cond_signal(&dev_comm.cond_comm_busy);
+    pthread_mutex_unlock(&dev_comm.comm_lock);
+
     enum ctrl_code OP;
     const int host_rank = CQ_MPI_HOST_RANK;
     MPI_Status status;
@@ -94,7 +119,15 @@ void device_listen(void) {
            op_to_str(OP));
 
     device_dispatch_ctrl_op(OP);
+
+    pthread_mutex_lock(&dev_comm.comm_lock);
+    dev_comm.comm_busy = false;
+    pthread_cond_signal(&dev_comm.cond_comm_busy);
+    pthread_mutex_unlock(&dev_comm.comm_lock);
   }
+  printf("%s closing connection.\n", get_comm_source());
+
+  finalise_host_device_mpi(1);
 }
 
 // NOTE: aka host_send_ctrl_op from comm.c
@@ -226,6 +259,20 @@ size_t device_wait_all_ops(void) {
 
   pthread_mutex_unlock(&dev_ctrl.device_lock);
   return dev_ctrl.num_ops;
+}
+
+void device_wait_comms(void) {
+  pthread_mutex_lock(&dev_comm.comm_lock);
+  while (dev_comm.comm_busy) {
+    pthread_cond_wait(&dev_comm.cond_comm_busy, &dev_comm.comm_lock);
+  }
+  pthread_mutex_unlock(&dev_comm.comm_lock);
+}
+
+void host_device_final_sync(void) {
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    device_wait_comms();
+  }
 }
 
 // ----------------------------------------------------------------------------
