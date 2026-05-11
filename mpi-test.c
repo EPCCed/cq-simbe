@@ -53,8 +53,9 @@ int main() {
   register_qkern(test_qkern);
 
   cq_exec eh;
-  a_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, &eh);
-  wait_qrun(&eh);
+  // a_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, &eh);
+  // wait_qrun(&eh);
+  s_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE);
 
   free_qureg(&qr);
   cq_finalise(1);

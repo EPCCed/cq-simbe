@@ -8,13 +8,14 @@
 #include <mpi.h>
 #include <mpi_proto.h>
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static MPI_Comm CQ_MPI_COMM = MPI_COMM_WORLD;
+static const MPI_Comm CQ_MPI_COMM = MPI_COMM_WORLD;
 
 struct cq_mpi_env {
   int rank;
@@ -32,43 +33,42 @@ struct communicator {
 };
 
 static struct communicator dev_comm = {0};
+static unsigned int cq_mpi_verbosity = 0;
+
+static void cq_log(const char* format, ...) {
+  if (CQ_MPI_IMPL_DEBUG) {
+    va_list(args);
+    va_start(args, format);
+    vprintf(format, args);
+  }
+}
 
 void init_host_device_mpi(const unsigned int VERBOSITY) {
+  cq_mpi_verbosity = VERBOSITY;
   if (VERBOSITY > 0) {
-    printf("Initialising MPI.\n");
+    cq_log("Initialising MPI.\n");
   }
   MPI_Init(NULL, NULL);
   MPI_Comm_rank(CQ_MPI_COMM, &mpi_env.rank);
   if (VERBOSITY > 0) {
-    printf("Initialised MPI.\n");
+    cq_log("Initialised MPI.\n");
   }
 
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-    dev_ctrl.run_device = true;
-    // printf("%s started listening...\n", get_comm_source());
-    // device_listen();
-    // printf("%s closing connection.\n", get_comm_source());
-    // finalise_host_device_mpi(VERBOSITY);
-    dev_comm.comm_busy = true;
-    pthread_mutex_init(&dev_comm.comm_lock, NULL);
-    pthread_cond_init(&dev_comm.cond_comm_busy, NULL);
-    pthread_create(&dev_comm.device_comm_thread, NULL, &device_listen, NULL);
+    device_init_comms(VERBOSITY);
   }
 }
 
 void finalise_host_device_mpi(const unsigned int VERBOSITY) {
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-    pthread_join(dev_comm.device_comm_thread, NULL);
-    dev_comm.comm_busy = false;
-    pthread_cond_destroy(&dev_comm.cond_comm_busy);
-    pthread_mutex_destroy(&dev_comm.comm_lock);
+    device_finalise_comms(VERBOSITY);
   }
   if (VERBOSITY > 0) {
-    printf("%s Finalising MPI.\n", get_comm_source());
+    cq_log("%s Finalising MPI.\n", get_comm_source());
   }
   MPI_Finalize();
   if (VERBOSITY > 0) {
-    printf("Finalised MPI.\n");
+    cq_log("Finalised MPI.\n");
   }
 }
 
@@ -76,59 +76,35 @@ void finalise_host_device_mpi(const unsigned int VERBOSITY) {
 //                            struct ctrl_params* params) {
 void mpi_host_send_ctrl_op(const enum ctrl_code OP, void* params) {
   const int device_rank = CQ_MPI_DEVICE_RANK;
-  printf("%s [send_ctrl_op]: sending %s...\n", get_comm_source(),
+  cq_log("%s [send_ctrl_op]: sending %s...\n", get_comm_source(),
          op_to_str(OP));
   MPI_Ssend(&OP, 1, MPI_INT, device_rank, CQ_MPI_COMMS_TAG, CQ_MPI_COMM);
   // send params based on OP
   host_comm_params(OP, params);
-  printf("%s [send_ctrl_op]: sent %s\n", get_comm_source(), op_to_str(OP));
+  cq_log("%s [send_ctrl_op]: sent %s\n", get_comm_source(), op_to_str(OP));
 }
 
 void mpi_host_wait_all_ops(void) {
-  printf("%s [wait_all_ops]: waiting...\n", get_comm_source());
+  cq_log("%s [wait_all_ops]: waiting...\n", get_comm_source());
   mpi_host_send_ctrl_op(CQ_CTRL_WAIT, NULL);
   size_t num_ops;
   const int device_rank = CQ_MPI_DEVICE_RANK;
   MPI_Status status;
   MPI_Recv(&num_ops, 1, MPI_UINT64_T, device_rank, CQ_MPI_COMMS_TAG,
            CQ_MPI_COMM, &status);
-  printf("%s [wait_all_ops]: all ops completed (num_ops: %zu)\n",
+  cq_log("%s [wait_all_ops]: all ops completed (num_ops: %zu)\n",
          get_comm_source(), num_ops);
+}
+
+void host_device_final_sync(void) {
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    device_wait_comms();
+  }
 }
 
 // ----------------------------------------------------------------------------
 // Device Comm Ops
 // ----------------------------------------------------------------------------
-
-void* device_listen(void*) {
-  // run_device set to FALSE when OP == CQ_CTRL_FINALISE
-  printf("%s started listening...\n", get_comm_source());
-  while (dev_ctrl.run_device) {
-    pthread_mutex_lock(&dev_comm.comm_lock);
-    dev_comm.comm_busy = true;
-    pthread_cond_signal(&dev_comm.cond_comm_busy);
-    pthread_mutex_unlock(&dev_comm.comm_lock);
-
-    enum ctrl_code OP;
-    const int host_rank = CQ_MPI_HOST_RANK;
-    MPI_Status status;
-    printf("%s [device_listen]: receiving OP...\n", get_comm_source());
-    MPI_Recv(&OP, 1, MPI_INT, host_rank, CQ_MPI_COMMS_TAG, CQ_MPI_COMM,
-             &status);
-    printf("%s [device_listen]: received %s\n", get_comm_source(),
-           op_to_str(OP));
-
-    device_dispatch_ctrl_op(OP);
-
-    pthread_mutex_lock(&dev_comm.comm_lock);
-    dev_comm.comm_busy = false;
-    pthread_cond_signal(&dev_comm.cond_comm_busy);
-    pthread_mutex_unlock(&dev_comm.comm_lock);
-  }
-  printf("%s closing connection.\n", get_comm_source());
-
-  finalise_host_device_mpi(1);
-}
 
 // NOTE: aka host_send_ctrl_op from comm.c
 // really what I want to use is host_send_ctrl_op implemenetation but it needs
@@ -156,6 +132,77 @@ void insert_op(const enum ctrl_code OP, void* ctrl_params) {
   pthread_mutex_unlock(&dev_ctrl.device_lock);
 }
 
+void device_init_comms(const unsigned int VERBOSITY) {
+  if (VERBOSITY > 0) {
+    cq_log(
+        "%s [device_init_comms]: setting up on-device communication thread.\n",
+        get_comm_source());
+  }
+  dev_ctrl.run_device = true;
+  // cq_log("%s started listening...\n", get_comm_source());
+  // device_listen();
+  // cq_log("%s closing connection.\n", get_comm_source());
+  // finalise_host_device_mpi(VERBOSITY);
+  dev_comm.comm_busy = true;
+  pthread_mutex_init(&dev_comm.comm_lock, NULL);
+  pthread_cond_init(&dev_comm.cond_comm_busy, NULL);
+  pthread_create(&dev_comm.device_comm_thread, NULL, &device_listen, NULL);
+  if (VERBOSITY > 0) {
+    cq_log("%s [device_init_comms]: on-device communication thread set up.\n",
+           get_comm_source());
+  }
+}
+
+void device_finalise_comms(const unsigned int VERBOSITY) {
+  if (VERBOSITY > 0) {
+    cq_log(
+        "%s [device_finalise_comms]: finalising on-device communication "
+        "thread.\n",
+        get_comm_source());
+  }
+
+  pthread_join(dev_comm.device_comm_thread, NULL);
+  dev_comm.comm_busy = false;
+  pthread_cond_destroy(&dev_comm.cond_comm_busy);
+  pthread_mutex_destroy(&dev_comm.comm_lock);
+  if (VERBOSITY > 0) {
+    cq_log(
+        "%s [device_finalise_comms]: on-device communication thread closed.\n",
+        get_comm_source());
+  }
+}
+
+void* device_listen(void* args) {
+  // run_device set to FALSE when OP == CQ_CTRL_FINALISE
+  cq_log("%s started listening...\n", get_comm_source());
+  while (dev_ctrl.run_device) {
+    pthread_mutex_lock(&dev_comm.comm_lock);
+    dev_comm.comm_busy = true;
+    pthread_cond_signal(&dev_comm.cond_comm_busy);
+    pthread_mutex_unlock(&dev_comm.comm_lock);
+
+    enum ctrl_code OP;
+    const int host_rank = CQ_MPI_HOST_RANK;
+    MPI_Status status;
+    cq_log("%s [device_listen]: receiving OP...\n", get_comm_source());
+    MPI_Recv(&OP, 1, MPI_INT, host_rank, CQ_MPI_COMMS_TAG, CQ_MPI_COMM,
+             &status);
+    cq_log("%s [device_listen]: received %s\n", get_comm_source(),
+           op_to_str(OP));
+
+    device_dispatch_ctrl_op(OP);
+
+    pthread_mutex_lock(&dev_comm.comm_lock);
+    dev_comm.comm_busy = false;
+    pthread_cond_signal(&dev_comm.cond_comm_busy);
+    pthread_mutex_unlock(&dev_comm.comm_lock);
+  }
+  cq_log("%s closing connection.\n", get_comm_source());
+
+  finalise_host_device_mpi(cq_mpi_verbosity);
+  return NULL;
+}
+
 // optionally get params and run op
 // by running op I mean modyfing the internal dev_ctrl fields
 // and then the worker thread handles the rest.
@@ -164,16 +211,15 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
   // then modyfing host_sync_exec and host_wait_exec
   switch (OP) {
     case CQ_CTRL_INIT: {
-      const unsigned int VERBOSITY = 1;
-      initialise_device(VERBOSITY);
-      insert_op(OP, &VERBOSITY);
+      initialise_device(cq_mpi_verbosity);
+      insert_op(OP, &cq_mpi_verbosity);
       break;
     }
     case CQ_CTRL_FINALISE: {
       // don't need to insert op into worker.
       // we just wait until worker is done and cleanup.
       device_wait_all_ops();
-      finalise_device(1);
+      finalise_device(cq_mpi_verbosity);
       break;
     }
     case CQ_CTRL_ALLOC: {
@@ -202,8 +248,6 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
     case CQ_CTRL_RUN_QKERNEL: {
       const int host_rank = CQ_MPI_HOST_RANK;
       recv_exec_params(&executor_handles[executor_id], host_rank);
-      printf("PRINTING!!!");
-      print_ehp(executor_handles[executor_id]);
       insert_op(OP, executor_handles[executor_id]);
       break;
     }
@@ -216,8 +260,7 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       device_wait_all_ops();
       const int host_rank = CQ_MPI_HOST_RANK;
       send_exec_params(executor_handles[executor_id], host_rank);
-      free(executor_handles[executor_id]);
-      executor_handles[executor_id] = NULL;
+      device_free_exec(&executor_handles[executor_id]);
       break;
     }
     case CQ_CTRL_WAIT: {
@@ -225,11 +268,11 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       // (which is blocked and waiting).
       size_t num_ops = device_wait_all_ops();
       const int host_rank = CQ_MPI_HOST_RANK;
-      printf("%s [dispatch]: sending num ops: %zu...\n", get_comm_source(),
+      cq_log("%s [dispatch]: sending num ops: %zu...\n", get_comm_source(),
              num_ops);
       MPI_Ssend(&num_ops, 1, MPI_UINT64_T, host_rank, CQ_MPI_COMMS_TAG,
                 CQ_MPI_COMM);
-      printf("%s [dispatch]: sent num ops.\n", get_comm_source());
+      cq_log("%s [dispatch]: sent num ops.\n", get_comm_source());
       break;
     }
     case CQ_CTRL_ABORT: {
@@ -267,12 +310,6 @@ void device_wait_comms(void) {
     pthread_cond_wait(&dev_comm.cond_comm_busy, &dev_comm.comm_lock);
   }
   pthread_mutex_unlock(&dev_comm.comm_lock);
-}
-
-void host_device_final_sync(void) {
-  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-    device_wait_comms();
-  }
 }
 
 // ----------------------------------------------------------------------------
@@ -316,7 +353,7 @@ void host_comm_params(const enum ctrl_code OP, void* params) {
 }
 
 void recv_alloc_params(device_alloc_params* params, int src) {
-  printf("%s [recv_alloc_params]: receiving...\n", get_comm_source());
+  cq_log("%s [recv_alloc_params]: receiving...\n", get_comm_source());
 
   const size_t params_size = sizeof(device_alloc_params);
   MPI_Status status;
@@ -324,22 +361,22 @@ void recv_alloc_params(device_alloc_params* params, int src) {
   MPI_Recv((char*)params, params_size, MPI_BYTE, src, CQ_MPI_COMMS_TAG,
            CQ_MPI_COMM, &status);
 
-  printf("%s [recv_alloc_params]: received.\n", get_comm_source());
+  cq_log("%s [recv_alloc_params]: received.\n", get_comm_source());
   print_alloc_params(params);
 }
 
 void send_alloc_params(const device_alloc_params* params, int dest) {
-  printf("%s [send_alloc_params]: sending...\n", get_comm_source());
+  cq_log("%s [send_alloc_params]: sending...\n", get_comm_source());
   const size_t params_size = sizeof(device_alloc_params);
   print_alloc_params(params);
   MPI_Ssend((char*)params, params_size, MPI_BYTE, dest, CQ_MPI_COMMS_TAG,
             CQ_MPI_COMM);
-  printf("%s [send_alloc_params]: sent.\n", get_comm_source());
+  cq_log("%s [send_alloc_params]: sent.\n", get_comm_source());
 }
 
 void recv_exec_params(cq_exec** ehp, int src) {
   // TODO: do validation
-  printf("%s [recv_exec_params]: receiving...\n", get_comm_source());
+  cq_log("%s [recv_exec_params]: receiving...\n", get_comm_source());
   int msg_size;
   MPI_Status status;
   MPI_Recv(&msg_size, 1, MPI_INT, src, CQ_MPI_COMMS_TAG, CQ_MPI_COMM, &status);
@@ -347,20 +384,20 @@ void recv_exec_params(cq_exec** ehp, int src) {
 
   // reserve space for all the date + currently unused members
   if (*ehp == NULL) {
-    printf("%s [recv_exec_params]: *ehp is NULL. Allocating on device.\n",
+    cq_log("%s [recv_exec_params]: *ehp is NULL. Allocating on device.\n",
            get_comm_source());
 
     // ehp = (cq_exec*)malloc(msg_size + sizeof(pthread_mutex_t) +
     //                        sizeof(pthread_cond_t) + sizeof(void*));
     *ehp = (cq_exec*)malloc(sizeof(cq_exec));
   } else {
-    printf(
+    cq_log(
         "%s [recv_exec_params]: *ehp is already allocated. So I'm on host.\n",
         get_comm_source());
   }
 
   if (recv_buffer == NULL || *ehp == NULL) {
-    printf("%s [recv_exec_params]: malloc failed. Exiting\n",
+    cq_log("%s [recv_exec_params]: malloc failed. Exiting\n",
            get_comm_source());
     exit(-10);
   }
@@ -396,7 +433,7 @@ void recv_exec_params(cq_exec** ehp, int src) {
 
   (*ehp)->fname = (char*)malloc(fname_size);
   if ((*ehp)->fname == NULL) {
-    printf("%s [recv_exec_params]: malloc *ehp->fname failed. Exiting\n",
+    cq_log("%s [recv_exec_params]: malloc *ehp->fname failed. Exiting\n",
            get_comm_source());
     exit(-10);
   }
@@ -409,14 +446,14 @@ void recv_exec_params(cq_exec** ehp, int src) {
 
   (*ehp)->qreg = (qubit*)malloc(qreg_size);
   if ((*ehp)->qreg == NULL) {
-    printf("%s [recv_exec_params]: malloc *ehp->qreg failed. Exiting\n",
+    cq_log("%s [recv_exec_params]: malloc *ehp->qreg failed. Exiting\n",
            get_comm_source());
     exit(-10);
   }
 
   (*ehp)->creg = (cstate*)malloc(creg_size);
   if ((*ehp)->creg == NULL) {
-    printf("%s [recv_exec_params]: malloc *ehp->creg failed. Exiting\n",
+    cq_log("%s [recv_exec_params]: malloc *ehp->creg failed. Exiting\n",
            get_comm_source());
     exit(-10);
   }
@@ -430,12 +467,12 @@ void recv_exec_params(cq_exec** ehp, int src) {
 
   free(recv_buffer);
 
-  printf("%s [recv_exec_params]: received.\n", get_comm_source());
+  cq_log("%s [recv_exec_params]: received.\n", get_comm_source());
   print_ehp(*ehp);
 }
 
 void send_exec_params(cq_exec* ehp, int dest) {
-  printf("%s [send_exec_params]: sending...\n", get_comm_source());
+  cq_log("%s [send_exec_params]: sending...\n", get_comm_source());
   print_ehp(ehp);
 
   const size_t bool_size = sizeof(bool);
@@ -506,7 +543,7 @@ void send_exec_params(cq_exec* ehp, int dest) {
 
   char* send_buffer = malloc(max_buffer_size);
   if (send_buffer == NULL) {
-    printf("Failed to allocate buffer for sending executor handle.\n");
+    cq_log("Failed to allocate buffer for sending executor handle.\n");
     exit(-1);
   }
   int position = 0;
@@ -546,7 +583,34 @@ void send_exec_params(cq_exec* ehp, int dest) {
   MPI_Ssend(send_buffer, position, MPI_PACKED, dest, CQ_MPI_COMMS_TAG,
             CQ_MPI_COMM);
 
-  printf("%s [send_exec_params]: sent.\n", get_comm_source());
+  cq_log("%s [send_exec_params]: sent.\n", get_comm_source());
+}
+
+void device_free_exec(cq_exec** ehp) {
+  if ((*ehp)->fname != NULL) {
+    free((*ehp)->fname);
+    (*ehp)->fname = NULL;
+  }
+
+  if ((*ehp)->qreg != NULL) {
+    free((*ehp)->qreg);
+    (*ehp)->qreg = NULL;
+  }
+
+  if ((*ehp)->creg != NULL) {
+    free((*ehp)->creg);
+    (*ehp)->creg = NULL;
+  }
+
+  if ((*ehp)->params != NULL) {
+    free((*ehp)->params);
+    (*ehp)->params = NULL;
+  }
+
+  if ((*ehp) != NULL) {
+    free((*ehp));
+    (*ehp) = NULL;
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -617,17 +681,17 @@ const char* op_to_str(const enum ctrl_code OP) {
 }
 
 void print_alloc_params(const device_alloc_params* params) {
-  printf("%s alloc params: NQUBITS: %zu, qreg_idx: %zu, STATUS: %d\n",
+  cq_log("%s alloc params: NQUBITS: %zu, qreg_idx: %zu, STATUS: %d\n",
          get_comm_source(), params->NQUBITS, params->qregistry_idx,
          params->status);
 }
 
 void print_ehp(const cq_exec* ehp) {
   if (ehp == NULL) {
-    printf("ehp is NULL\n");
+    cq_log("ehp is NULL\n");
   }
 
-  printf(
+  cq_log(
       "%s ehp details:\nexec_init: %d, complete: %d, halt: %d, STATUS: "
       "%d\nNQUBITS: "
       "%zu, completed_shots: %zu, expected_shots: %zu, NMEASURE: %zu\nfname: "
@@ -637,13 +701,13 @@ void print_ehp(const cq_exec* ehp) {
       ehp->fname);
 
   for (size_t i = 0; i < ehp->nqubits; ++i) {
-    printf("qubit[%zu]: reg_idx: %zu, offset: %zu, N: %zu\n", i,
+    cq_log("qubit[%zu]: reg_idx: %zu, offset: %zu, N: %zu\n", i,
            ehp->qreg[i].registry_index, ehp->qreg[i].offset, ehp->qreg[i].N);
   }
-  printf("\ncreg:\n");
+  cq_log("\ncreg:\n");
 
   for (size_t i = 0; i < ehp->nmeasure; ++i) {
-    printf("cstate[%zu]: %d\n", i, ehp->creg[i]);
+    cq_log("cstate[%zu]: %d\n", i, ehp->creg[i]);
   }
-  printf("%s ehp details END\n\n", get_comm_source());
+  cq_log("%s ehp details END\n\n", get_comm_source());
 }

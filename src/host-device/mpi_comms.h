@@ -9,6 +9,8 @@
 // ----------------------------------------------------------------------------
 // Macros
 // ----------------------------------------------------------------------------
+#define CQ_MPI_IMPL_DEBUG 1
+
 #define CQ_MPI_HOST_RANK 0
 #define CQ_MPI_DEVICE_RANK 1
 #define CQ_MPI_COMMS_TAG 0
@@ -22,21 +24,6 @@
       return CQ_SUCCESS;                  \
     }                                     \
   }
-
-// ----------------------------------------------------------------------------
-// Datatypes
-// ----------------------------------------------------------------------------
-
-enum params_type {
-  CQ_CTRL_PARAMS_UINT,  // this will not be needed
-  CQ_CTRL_PARAMS_ALLOC,
-  CQ_CTRL_PARAMS_EXEC
-};
-
-struct ctrl_params {
-  enum params_type type;
-  void* data;
-};
 
 ///
 /// initialises MPI environment both on host and on the device.
@@ -71,6 +58,11 @@ void mpi_host_send_ctrl_op(const enum ctrl_code OP, void* params);
 /// at the end it should recieve updated params if needed???
 void mpi_host_wait_all_ops(void);
 
+///
+/// wrapper around device_wait_comms, intended to be called from the host.
+/// The intended caller of this function is cq_finalise only!
+void host_device_final_sync(void);
+
 // ----------------------------------------------------------------------------
 // Device Comm Ops
 // ----------------------------------------------------------------------------
@@ -78,11 +70,27 @@ void mpi_host_wait_all_ops(void);
 ///
 /// wait for message with control operation from the host. The intended use of
 /// this function is to use it as a listener in the loop on the device.
-void mpi_device_recv_ctrl_op(void);
+// void mpi_device_recv_ctrl_op(void);
+
+///
+/// initialises on-device communication thread responsible for MPI messaging
+/// with host.
+/// @param VERBOSITY unsigned integer controlling diagnostic output.
+void device_init_comms(const unsigned int VERBOSITY);
+
+///
+/// finalises on-device communication thread responsible for MPI messaging
+/// with host.
+/// @param VERBOSITY unsigned integer controlling diagnostic output.
+void device_finalise_comms(const unsigned int VERBOSITY);
 
 ///
 /// starts listening for the incoming messages from the host.
-void* device_listen(void*);
+/// @param args arbitrary arguments to function to satisfy pthread function
+/// signature
+/// @return arbitrary return data to satisfy pthread function signature.
+/// Currently always returns NULL.
+void* device_listen(void* args);
 
 ///
 /// dispatches recieved control operation to the worker thread.
@@ -90,17 +98,15 @@ void* device_listen(void*);
 void device_dispatch_ctrl_op(const enum ctrl_code OP);
 
 ///
-/// blocks device comms thread and awaits for the worker to complete.
+/// blocks device main thread and awaits for the worker to complete.
 size_t device_wait_all_ops(void);
 
 ///
-/// blocks device master thread and awaits for the comms to complete
+/// blocks device master thread and awaits for the comms to complete.
+/// it needs to be called only once at the end to ensure that the main thread
+/// does not clean-up and close MPI before work is done on the worker.
 void device_wait_comms(void);
 
-///
-/// wrapper around device_wait_comms, intended to be called from the host.
-/// The intended caller of this function is cq_finalise only!
-void host_device_final_sync(void);
 // ----------------------------------------------------------------------------
 // Device Control Paramaters Comms
 // ----------------------------------------------------------------------------
@@ -112,7 +118,7 @@ void host_device_final_sync(void);
 void host_comm_params(const enum ctrl_code OP, void* params);
 
 ///
-/// recieves allocation parameters from the source.
+/// receives allocation parameters from the source.
 /// @param[out] params reference to parameters to store the results of
 /// communication
 /// @param src source rank of incoming message
@@ -124,14 +130,23 @@ void recv_alloc_params(device_alloc_params* params, int src);
 /// @param dest destination rank of outgoing message
 void send_alloc_params(const device_alloc_params* params, int dest);
 
+///
+/// receives executor handle from the source. Also, if called on device,
+/// allocates executor in on-device memory, which then needs to be freed using
+/// device_free_exec.
+/// @param[out] ehp executor handle used for host-device offloading
+/// @param src source rank of incoming message
 void recv_exec_params(cq_exec** ehp, int src);
+
+/// sends updated executor handle to the destination.
+/// @param[in] ehp executor handle used for host-device offloading
+/// @param dest destination rank of outgoing message
 void send_exec_params(cq_exec* ehp, int dest);
 
-// no!
-void recv_qkern_name(char fname[__CQ_MAX_QKERN_NAME_LENGTH__],
-                     size_t* fname_size,
-                     int src);
-void send_qkern_name(const char* fname, size_t fname_size, int dest);
+///
+/// frees on-device memory pointed to by executor handle.
+/// @param[in,out] ehp executor handle used for host-device offloading
+void device_free_exec(cq_exec** ehp);
 
 // ----------------------------------------------------------------------------
 // Helpers
