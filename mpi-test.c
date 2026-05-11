@@ -33,7 +33,7 @@ int main() {
   //    sleep(5);
   // return 0;
   const size_t NQUBITS = 10;
-  const size_t NSHOTS = 1;
+  const size_t NSHOTS = 10;
   const size_t NMEASURE = NQUBITS;
 
   cq_init(1);
@@ -55,7 +55,10 @@ int main() {
   cq_exec eh;
   // a_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, &eh);
   // wait_qrun(&eh);
-  s_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE);
+  // s_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE);
+  am_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh);
+  halt_qrun(&eh);
+  // wait_qrun(&eh);
 
   free_qureg(&qr);
   cq_finalise(1);

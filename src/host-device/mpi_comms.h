@@ -178,4 +178,13 @@ void print_alloc_params(const device_alloc_params* params);
 /// prints members of the executor.
 /// @param[in] ehp reference to executor
 void print_ehp(const cq_exec* ehp);
+
+// ----------------------------------------------------------------------------
+// TODO: Need to go to comms.h and comms.c and use existing stuff to wrap around
+// ----------------------------------------------------------------------------
+
+size_t comms_exec_sync(cq_exec* const ehp);
+size_t comms_exec_wait(cq_exec* const ehp);
+void comms_exec_halt(cq_exec* const ehp);
+
 #endif

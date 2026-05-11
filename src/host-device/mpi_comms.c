@@ -207,8 +207,6 @@ void* device_listen(void* args) {
 // by running op I mean modyfing the internal dev_ctrl fields
 // and then the worker thread handles the rest.
 void device_dispatch_ctrl_op(const enum ctrl_code OP) {
-  // TODO: needs to add extra CTRL ops for EXEC sync in opcodes.h
-  // then modyfing host_sync_exec and host_wait_exec
   switch (OP) {
     case CQ_CTRL_INIT: {
       initialise_device(cq_mpi_verbosity);
@@ -257,10 +255,34 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       break;
     }
     case CQ_CTRL_WAIT_EXEC: {
-      device_wait_all_ops();
+      if (executor_handles[executor_id] == NULL) {
+        cq_log(
+            "%s [dispatch][WAIT_EXEC]: device ehp is NULL. Returning. "
+            "Expect crash.\n",
+            get_comm_source());
+        return;
+      }
+      comms_exec_wait(executor_handles[executor_id]);
+      // device_wait_all_ops();
       const int host_rank = CQ_MPI_HOST_RANK;
       send_exec_params(executor_handles[executor_id], host_rank);
       device_free_exec(&executor_handles[executor_id]);
+      break;
+    }
+    case CQ_CTRL_SYNC_EXEC: {
+      // NOTE: open question, do we want to sync creg as well?
+      if (executor_handles[executor_id] == NULL) {
+        cq_log(
+            "%s [dispatch][SYNC_EXEC]: device ehp is NULL. Returning. "
+            "Expect crash.\n",
+            get_comm_source());
+        return;
+      }
+      comms_exec_sync(executor_handles[executor_id]);
+      cq_log("%s [dispatch][SYNC_EXEC]: executor synced\n", get_comm_source());
+      const int host_rank = CQ_MPI_HOST_RANK;
+      send_exec_params(executor_handles[executor_id], host_rank);
+      cq_log("%s [dispatch][SYNC_EXEC]: sent executor\n", get_comm_source());
       break;
     }
     case CQ_CTRL_WAIT: {
@@ -276,12 +298,22 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       break;
     }
     case CQ_CTRL_ABORT: {
+      if (executor_handles[executor_id] == NULL) {
+        cq_log(
+            "%s [dispatch][ABORT]: device ehp is NULL. Returning. "
+            "Expect crash.\n",
+            get_comm_source());
+        return;
+      }
+      comms_exec_halt(executor_handles[executor_id]);
+      cq_log("%s [dispatch][ABORT]: executor halted\n", get_comm_source());
       break;
     }
     case CQ_CTRL_IDLE: {
       break;
     }
     case CQ_CTRL_TEST: {
+      cq_log("%s [dispatch][TEST]: called test op\n", get_comm_source());
       break;
     }
     default: {
@@ -292,8 +324,8 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
 
 // NOTE: aka host_wait_all_ops from comm.c
 // really what I want to use is host_wait_all_ops implementation but it needs
-// renaming and wrapping into function called host_send_ctrl_op and depending on
-// either MPI or pthread implementation use this in different ctx.
+// renaming and wrapping into function called host_send_ctrl_op and depending
+// on either MPI or pthread implementation use this in different ctx.
 size_t device_wait_all_ops(void) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
   while (dev_ctrl.num_ops > 0 || dev_ctrl.device_busy) {
@@ -310,6 +342,44 @@ void device_wait_comms(void) {
     pthread_cond_wait(&dev_comm.cond_comm_busy, &dev_comm.comm_lock);
   }
   pthread_mutex_unlock(&dev_comm.comm_lock);
+}
+
+// for those below I probably I want comms_exec_sync, comms_exec_wait,
+// comms_exec_halt
+// NOTE: really what I want to use is host_sync_exec
+// implemenetation but it needs renaming and wrapping into function called
+// host_send_ctrl_op and depending on either MPI or pthread implementation use
+// this in different ctx.
+size_t comms_exec_sync(cq_exec* const ehp) {
+  size_t completed_shots = 0;
+  pthread_mutex_lock(&(ehp->lock));
+  completed_shots = ehp->completed_shots;
+  pthread_mutex_unlock(&(ehp->lock));
+  return completed_shots;
+}
+
+// NOTE:
+// really what I want to use is host_wait_exec implemenetation but it needs
+// renaming and wrapping into function called host_send_ctrl_op and depending
+// on either MPI or pthread implementation use this in different ctx.
+size_t comms_exec_wait(cq_exec* const ehp) {
+  pthread_mutex_lock(&(ehp->lock));
+  while (!ehp->complete) {
+    pthread_cond_wait(&(ehp->cond_exec_complete), &(ehp->lock));
+  }
+  pthread_mutex_unlock(&(ehp->lock));
+  return ehp->completed_shots;
+}
+
+// NOTE:
+// really what I want to use is host_request_halt implemenetation but it needs
+// renaming and wrapping into function called host_send_ctrl_op and depending
+// on either MPI or pthread implementation use this in different ctx.
+void comms_exec_halt(cq_exec* const ehp) {
+  pthread_mutex_lock(&(ehp->lock));
+  ehp->halt = true;
+  pthread_mutex_unlock(&(ehp->lock));
+  return;
 }
 
 // ----------------------------------------------------------------------------
@@ -431,33 +501,44 @@ void recv_exec_params(cq_exec** ehp, int src) {
              CQ_MPI_COMM);
   fname_size *= sizeof(char);
 
-  (*ehp)->fname = (char*)malloc(fname_size);
-  if ((*ehp)->fname == NULL) {
-    cq_log("%s [recv_exec_params]: malloc *ehp->fname failed. Exiting\n",
-           get_comm_source());
-    exit(-10);
+  const size_t qreg_size = sizeof(qubit) * (*ehp)->nqubits;
+  // NOTE: creg_size * expected_shots?? or completed_shots?
+  // host should get completed, device should get expected
+  // and similarly when sending
+  size_t num_shots = 0;
+  if (mpi_env.rank == CQ_MPI_HOST_RANK) {
+    num_shots = (*ehp)->completed_shots;
+  } else {
+    num_shots = (*ehp)->expected_shots;
   }
+  const size_t creg_size = sizeof(cstate) * (*ehp)->nmeasure * num_shots;
+
+  // when on host the resources are already allocated!
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    (*ehp)->fname = (char*)malloc(fname_size);
+    if ((*ehp)->fname == NULL) {
+      cq_log("%s [recv_exec_params]: malloc *ehp->fname failed. Exiting\n",
+             get_comm_source());
+      exit(-10);
+    }
+
+    (*ehp)->qreg = (qubit*)malloc(qreg_size);
+    if ((*ehp)->qreg == NULL) {
+      cq_log("%s [recv_exec_params]: malloc *ehp->qreg failed. Exiting\n",
+             get_comm_source());
+      exit(-10);
+    }
+
+    (*ehp)->creg = (cstate*)malloc(creg_size);
+    if ((*ehp)->creg == NULL) {
+      cq_log("%s [recv_exec_params]: malloc *ehp->creg failed. Exiting\n",
+             get_comm_source());
+      exit(-10);
+    }
+  }
+
   MPI_Unpack(recv_buffer, msg_size, &position, (*ehp)->fname, fname_size,
              MPI_CHAR, CQ_MPI_COMM);
-
-  const size_t qreg_size = sizeof(qubit) * (*ehp)->nqubits;
-  // NOTE: creg_size * expected_shots??
-  const size_t creg_size = sizeof(cstate) * (*ehp)->nmeasure;
-
-  (*ehp)->qreg = (qubit*)malloc(qreg_size);
-  if ((*ehp)->qreg == NULL) {
-    cq_log("%s [recv_exec_params]: malloc *ehp->qreg failed. Exiting\n",
-           get_comm_source());
-    exit(-10);
-  }
-
-  (*ehp)->creg = (cstate*)malloc(creg_size);
-  if ((*ehp)->creg == NULL) {
-    cq_log("%s [recv_exec_params]: malloc *ehp->creg failed. Exiting\n",
-           get_comm_source());
-    exit(-10);
-  }
-
   MPI_Unpack(recv_buffer, msg_size, &position, (char*)(*ehp)->qreg, qreg_size,
              MPI_BYTE, CQ_MPI_COMM);
   MPI_Unpack(recv_buffer, msg_size, &position, (char*)(*ehp)->creg, creg_size,
@@ -533,8 +614,16 @@ void send_exec_params(cq_exec* ehp, int dest) {
                 &member_size);  // qreg
   max_buffer_size += member_size;
 
-  // NOTE: creg_size * expected_shots??
-  const size_t creg_size = sizeof(cstate) * ehp->nmeasure;
+  // NOTE: creg_size * expected_shots?? or completed_shots?
+  // host should send expected, device should send completed
+  size_t num_shots = 0;
+  if (mpi_env.rank == CQ_MPI_HOST_RANK) {
+    num_shots = ehp->expected_shots;
+  } else {
+    num_shots = ehp->completed_shots;
+  }
+  const size_t creg_size = sizeof(cstate) * ehp->nmeasure * num_shots;
+
   MPI_Pack_size(creg_size, MPI_BYTE, CQ_MPI_COMM,
                 &member_size);  // creg
   max_buffer_size += member_size;
@@ -706,7 +795,7 @@ void print_ehp(const cq_exec* ehp) {
   }
   cq_log("\ncreg:\n");
 
-  for (size_t i = 0; i < ehp->nmeasure; ++i) {
+  for (size_t i = 0; i < ehp->nmeasure * ehp->expected_shots; ++i) {
     cq_log("cstate[%zu]: %d\n", i, ehp->creg[i]);
   }
   cq_log("%s ehp details END\n\n", get_comm_source());
