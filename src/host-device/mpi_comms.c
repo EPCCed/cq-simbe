@@ -672,6 +672,7 @@ void send_exec_params(cq_exec* ehp, int dest) {
   MPI_Ssend(send_buffer, position, MPI_PACKED, dest, CQ_MPI_COMMS_TAG,
             CQ_MPI_COMM);
 
+  free(send_buffer);
   cq_log("%s [send_exec_params]: sent.\n", get_comm_source());
 }
 
