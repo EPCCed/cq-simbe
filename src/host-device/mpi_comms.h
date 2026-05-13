@@ -6,24 +6,34 @@
 #include "src/host-device/comms.h"
 #include "src/host/opcodes.h"
 
+#include <mpi.h>
+
 // ----------------------------------------------------------------------------
 // Macros
 // ----------------------------------------------------------------------------
-#define CQ_MPI_IMPL_DEBUG 1
+#define CQ_MPI_IMPL_DEBUG
+
+// #define CQ_WITH_MPI_COMMS
 
 #define CQ_MPI_HOST_RANK 0
 #define CQ_MPI_DEVICE_RANK 1
+#define CQ_MPI_DEVICE_MASTER_RANK 0
 #define CQ_MPI_COMMS_TAG 0
 
 #define CQ_MPI_RUNTIME_ERROR -4
 #define CQ_MPI_MALLOC_ERROR -5
 
 // device_wait_comms();
+// if (is_quantum_worker()) {
+//      return CQ_SUCCESS;
+//    }
+
 #define RUN_HOST_ONLY()                   \
   {                                       \
     int rank = get_rank();                \
-    if (rank == -1)                       \
+    if (rank == -1) {                     \
       return CQ_ERROR;                    \
+    }                                     \
     if (get_rank() != CQ_MPI_HOST_RANK) { \
       return CQ_SUCCESS;                  \
     }                                     \
@@ -124,6 +134,9 @@ void device_wait_comms(void);
 /// @param[in,out] params void pointer to arbitrary params
 void host_comm_params(const enum ctrl_code OP, void* params);
 
+// NOTE: Alloc params can check the results across thread
+// before Device Master sends to Host (in send)
+// in recv Master will broadcast to Q-workers
 ///
 /// receives allocation parameters from the source.
 /// @param[out] params reference to parameters to store the results of
@@ -140,6 +153,8 @@ void send_alloc_params(const device_alloc_params* params, int dest);
 size_t recv_exec_id(const int src);
 void send_exec_id(const size_t id, const int dest);
 
+// NOTE: Exec params can be send by Device Master to Host (in send)
+// in recv Master will broadcast to Q-workers
 ///
 /// receives executor handle from the source. Also, if called on device,
 /// allocates executor in on-device memory, which then needs to be freed using
@@ -190,6 +205,9 @@ void print_alloc_params(const device_alloc_params* params);
 void print_ehp(const cq_exec* ehp);
 
 size_t assign_exec_id(void);
+
+int is_quantum_worker(void);
+MPI_Comm get_quest_comm(void);
 
 // ----------------------------------------------------------------------------
 // TODO: Need to go to comms.h and comms.c and use existing stuff to wrap around
