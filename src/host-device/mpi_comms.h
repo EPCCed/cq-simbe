@@ -13,8 +13,6 @@
 // ----------------------------------------------------------------------------
 #define CQ_MPI_IMPL_DEBUG
 
-// #define CQ_WITH_MPI_COMMS
-
 #define CQ_MPI_HOST_RANK 0
 #define CQ_MPI_DEVICE_RANK 1
 #define CQ_MPI_DEVICE_MASTER_RANK 0

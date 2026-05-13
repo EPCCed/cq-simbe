@@ -47,10 +47,12 @@ option(
 )
 message(STATUS "BUILD_WITH_MPI turned ${BUILD_WITH_MPI}.")
 
-if (BUILD_WITH_MPI)
-  find_package(MPI REQUIRED)
-  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-endif()
+option(
+  QUEST_WITH_MPI
+  "Flag to define if QuEST was built with MPI. This will affect how we do the communication." 
+  OFF
+)
+message(STATUS "QUEST_WITH_MPI turned ${QUEST_WITH_MPI}.")
 
 # Dependencies
 
@@ -61,6 +63,17 @@ find_package(QuEST REQUIRED)
 
 add_library(cq-simbe)
 add_library(CQ-SIMBE::cq-simbe ALIAS cq-simbe)
+
+if (BUILD_WITH_MPI)
+  find_package(MPI REQUIRED)
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  target_compile_definitions(cq-simbe PRIVATE CQ_WITH_MPI_COMMS=1)
+endif()
+
+if (BUILD_WITH_MPI AND QUEST_WITH_MPI)
+    target_compile_definitions(cq-simbe PRIVATE CQ_CONF_QUEST_WITH_MPI=1)
+endif()
+
 
 target_compile_features(cq-simbe PRIVATE c_std_99)
 target_compile_options(cq-simbe PRIVATE -Wall)
