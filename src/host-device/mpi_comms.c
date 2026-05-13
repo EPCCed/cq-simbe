@@ -4,9 +4,7 @@
 #include "src/host-device/comms.h"
 #include "src/host/opcodes.h"
 
-#include <assert.h>
 #include <mpi.h>
-#include <mpi_proto.h>
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -22,8 +20,10 @@ struct cq_mpi_env {
 };
 
 static cq_exec* executor_handles[__CQ_DEVICE_QUEUE_SIZE__];
-static int executor_id = 0;
+// static size_t executor_id = 0;
+static size_t global_exec_id_counter = -1;
 static struct cq_mpi_env mpi_env = {.rank = -1};
+static size_t num_active_executors = 0;
 
 struct communicator {
   bool comm_busy;
@@ -56,6 +56,9 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
 
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     device_init_comms(VERBOSITY);
+    for (size_t i = 0; i < __CQ_DEVICE_QUEUE_SIZE__; ++i) {
+      executor_handles[i] = NULL;
+    }
   }
 }
 
@@ -68,7 +71,7 @@ void finalise_host_device_mpi(const unsigned int VERBOSITY) {
   }
   MPI_Finalize();
   if (VERBOSITY > 0) {
-    cq_log("Finalised MPI.\n");
+    cq_log("%s Finalised MPI.\n", get_comm_source());
   }
 }
 
@@ -217,6 +220,14 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       // don't need to insert op into worker.
       // we just wait until worker is done and cleanup.
       device_wait_all_ops();
+      for (size_t i = 0; i < __CQ_DEVICE_QUEUE_SIZE__; ++i) {
+        if (executor_handles[i] != NULL) {
+          cq_log(
+              "%s [dispatch][FINALISE]: executor handle with id: %zu is still "
+              "active. Something went wrong!\n",
+              get_comm_source(), i);
+        }
+      }
       finalise_device(cq_mpi_verbosity);
       break;
     }
@@ -224,12 +235,15 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       // Alloc is blocking: we get params, run allocation and
       // send back the updated params.
       // Also, because it's blocking I don't need to worry about
-      // params lifetime (from the worker perspecitve)
+      // params lifetime (from the worker perspective)
       const int host_rank = CQ_MPI_HOST_RANK;
       device_alloc_params params = {0};
       recv_alloc_params(&params, host_rank);
+      cq_log("%s [dispatch][ALLOC]: inserting op\n", get_comm_source());
       insert_op(OP, &params);
+      cq_log("%s [dispatch][ALLOC]: inserted op\n", get_comm_source());
       device_wait_all_ops();
+      cq_log("%s [dispatch][ALLOC]: waited for finish\n", get_comm_source());
       send_alloc_params(&params, host_rank);
       break;
     }
@@ -244,9 +258,38 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       break;
     }
     case CQ_CTRL_RUN_QKERNEL: {
+      if (num_active_executors >= __CQ_DEVICE_QUEUE_SIZE__) {
+        cq_log(
+            "%s [dispatch][RUN_QKERNEL]: You have oversubsribed the executor "
+            "queue. We allow up to %d "
+            "concurrent executors per device. Exiting",
+            get_comm_source(), __CQ_DEVICE_QUEUE_SIZE__);
+        exit(CQ_MPI_RUNTIME_ERROR);
+      }
       const int host_rank = CQ_MPI_HOST_RANK;
-      recv_exec_params(&executor_handles[executor_id], host_rank);
-      insert_op(OP, executor_handles[executor_id]);
+      cq_exec* tmp_exec = NULL;
+      recv_exec_params(&tmp_exec, host_rank);
+      // NOTE: this can be done here to free old one
+      // and allocate new one rather than in wait_exec
+      // device_free_exec(&executor_handles[tmp_exec->id]);
+      // actually if executor_handles[id] != NULL then it didn't finish and we
+      // should wait here until we are done.
+      //
+      // NOTE: 2
+      // Now the question is should we block?
+      // 1. if we block here and wait for all ops to complete then
+      // in situation if host submits N_exe > QUEUE_SIZE, we lock here
+      // indefinitely
+      // ex: a_qrun(...) x QUEUE_SIZE + 1 (and no wait_qrun...)
+      // => deadlock
+      // 2. alternative would be wait to set exec_queue_full flag
+      // and wait until it is released
+      // 3. we can just exit and fail! -- most reasonable:
+      executor_handles[tmp_exec->id] = tmp_exec;
+      insert_op(OP, executor_handles[tmp_exec->id]);
+      ++num_active_executors;
+      // recv_exec_params(&executor_handles[executor_id], host_rank);
+      // insert_op(OP, executor_handles[executor_id]);
       break;
     }
     case CQ_CTRL_RUN_PQKERNEL: {
@@ -255,32 +298,44 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       break;
     }
     case CQ_CTRL_WAIT_EXEC: {
+      const int host_rank = CQ_MPI_HOST_RANK;
+      const size_t executor_id = recv_exec_id(host_rank);
       if (executor_handles[executor_id] == NULL) {
         cq_log(
             "%s [dispatch][WAIT_EXEC]: device ehp is NULL. Returning. "
-            "Expect crash.\n",
+            "Exiting\n",
             get_comm_source());
-        return;
+        exit(CQ_MPI_RUNTIME_ERROR);
       }
-      comms_exec_wait(executor_handles[executor_id]);
-      // device_wait_all_ops();
-      const int host_rank = CQ_MPI_HOST_RANK;
+      // NOTE: This is commented out as it can cause a deadlock
+      // comms_exec_wait(executor_handles[executor_id]);
+      device_wait_all_ops();
       send_exec_params(executor_handles[executor_id], host_rank);
+      // NOTE: This can be done when allocating new in offload
+      // i.e. clear old one and allocate new one
       device_free_exec(&executor_handles[executor_id]);
+      --num_active_executors;
+      if (num_active_executors < 0) {
+        cq_log(
+            "%s [dispatch][WAIT_EXEC]: The number of active executors is < 0! "
+            "Should not happen. Exiting",
+            get_comm_source());
+        exit(CQ_MPI_RUNTIME_ERROR);
+      }
       break;
     }
     case CQ_CTRL_SYNC_EXEC: {
-      // NOTE: open question, do we want to sync creg as well?
+      const int host_rank = CQ_MPI_HOST_RANK;
+      const size_t executor_id = recv_exec_id(host_rank);
       if (executor_handles[executor_id] == NULL) {
         cq_log(
             "%s [dispatch][SYNC_EXEC]: device ehp is NULL. Returning. "
-            "Expect crash.\n",
+            "Exiting\n",
             get_comm_source());
-        return;
+        exit(CQ_MPI_RUNTIME_ERROR);
       }
       comms_exec_sync(executor_handles[executor_id]);
       cq_log("%s [dispatch][SYNC_EXEC]: executor synced\n", get_comm_source());
-      const int host_rank = CQ_MPI_HOST_RANK;
       send_exec_params(executor_handles[executor_id], host_rank);
       cq_log("%s [dispatch][SYNC_EXEC]: sent executor\n", get_comm_source());
       break;
@@ -298,12 +353,14 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       break;
     }
     case CQ_CTRL_ABORT: {
+      const int host_rank = CQ_MPI_HOST_RANK;
+      const size_t executor_id = recv_exec_id(host_rank);
       if (executor_handles[executor_id] == NULL) {
         cq_log(
             "%s [dispatch][ABORT]: device ehp is NULL. Returning. "
-            "Expect crash.\n",
+            "Exiting\n",
             get_comm_source());
-        return;
+        exit(CQ_MPI_RUNTIME_ERROR);
       }
       comms_exec_halt(executor_handles[executor_id]);
       cq_log("%s [dispatch][ABORT]: executor halted\n", get_comm_source());
@@ -363,11 +420,18 @@ size_t comms_exec_sync(cq_exec* const ehp) {
 // renaming and wrapping into function called host_send_ctrl_op and depending
 // on either MPI or pthread implementation use this in different ctx.
 size_t comms_exec_wait(cq_exec* const ehp) {
+  cq_log("%s [comms_exec_wait]: started wait...\n", get_comm_source());
   pthread_mutex_lock(&(ehp->lock));
+  cq_log("%s [comms_exec_wait]: locked mutex\n", get_comm_source());
   while (!ehp->complete) {
+    cq_log("%s [comms_exec_wait]: started loop\n", get_comm_source());
     pthread_cond_wait(&(ehp->cond_exec_complete), &(ehp->lock));
+    cq_log("%s [comms_exec_wait]: ending loop\n", get_comm_source());
   }
+  cq_log("%s [comms_exec_wait]: done while loop\n", get_comm_source());
   pthread_mutex_unlock(&(ehp->lock));
+  cq_log("%s [comms_exec_wait]: unlocked mutex\n", get_comm_source());
+  cq_log("%s [comms_exec_wait]: done waiting\n", get_comm_source());
   return ehp->completed_shots;
 }
 
@@ -413,7 +477,19 @@ void host_comm_params(const enum ctrl_code OP, void* params) {
     }
     case CQ_CTRL_WAIT_EXEC: {
       const int device_rank = CQ_MPI_DEVICE_RANK;
+      send_exec_id(((cq_exec*)params)->id, device_rank);
       recv_exec_params(&params, device_rank);
+      break;
+    }
+    case CQ_CTRL_SYNC_EXEC: {
+      const int device_rank = CQ_MPI_DEVICE_RANK;
+      send_exec_id(((cq_exec*)params)->id, device_rank);
+      recv_exec_params(&params, device_rank);
+      break;
+    }
+    case CQ_CTRL_ABORT: {
+      const int device_rank = CQ_MPI_DEVICE_RANK;
+      send_exec_id(((cq_exec*)params)->id, device_rank);
       break;
     }
     default: {
@@ -428,8 +504,8 @@ void recv_alloc_params(device_alloc_params* params, int src) {
   const size_t params_size = sizeof(device_alloc_params);
   MPI_Status status;
 
-  MPI_Recv((char*)params, params_size, MPI_BYTE, src, CQ_MPI_COMMS_TAG,
-           CQ_MPI_COMM, &status);
+  MPI_Recv(params, params_size, MPI_BYTE, src, CQ_MPI_COMMS_TAG, CQ_MPI_COMM,
+           &status);
 
   cq_log("%s [recv_alloc_params]: received.\n", get_comm_source());
   print_alloc_params(params);
@@ -442,6 +518,21 @@ void send_alloc_params(const device_alloc_params* params, int dest) {
   MPI_Ssend((char*)params, params_size, MPI_BYTE, dest, CQ_MPI_COMMS_TAG,
             CQ_MPI_COMM);
   cq_log("%s [send_alloc_params]: sent.\n", get_comm_source());
+}
+
+size_t recv_exec_id(const int src) {
+  cq_log("%s [recv_exec_id]: receiving...\n", get_comm_source());
+  size_t id = -1;
+  MPI_Status status;
+  MPI_Recv(&id, 1, MPI_UINT64_T, src, CQ_MPI_COMMS_TAG, CQ_MPI_COMM, &status);
+  cq_log("%s [recv_exec_id]: received id: %zu\n", get_comm_source(), id);
+  return id;
+}
+
+void send_exec_id(const size_t id, const int dest) {
+  cq_log("%s [send_exec_id]: sending id: %zu...\n", get_comm_source(), id);
+  MPI_Ssend(&id, 1, MPI_UINT64_T, dest, CQ_MPI_COMMS_TAG, CQ_MPI_COMM);
+  cq_log("%s [send_exec_id]: sent\n", get_comm_source());
 }
 
 void recv_exec_params(cq_exec** ehp, int src) {
@@ -460,16 +551,19 @@ void recv_exec_params(cq_exec** ehp, int src) {
     // ehp = (cq_exec*)malloc(msg_size + sizeof(pthread_mutex_t) +
     //                        sizeof(pthread_cond_t) + sizeof(void*));
     *ehp = (cq_exec*)malloc(sizeof(cq_exec));
+    pthread_mutex_init(&(*ehp)->lock, NULL);
+    pthread_cond_init(&(*ehp)->cond_exec_complete, NULL);
   } else {
     cq_log(
         "%s [recv_exec_params]: *ehp is already allocated. So I'm on host.\n",
         get_comm_source());
   }
+  pthread_mutex_lock(&(*ehp)->lock);
 
   if (recv_buffer == NULL || *ehp == NULL) {
     cq_log("%s [recv_exec_params]: malloc failed. Exiting\n",
            get_comm_source());
-    exit(-10);
+    exit(CQ_MPI_MALLOC_ERROR);
   }
 
   MPI_Recv(recv_buffer, msg_size, MPI_PACKED, src, CQ_MPI_COMMS_TAG,
@@ -479,6 +573,8 @@ void recv_exec_params(cq_exec** ehp, int src) {
   const size_t cq_status_size = sizeof(cq_status);
   // unpack
   int position = 0;
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->id, 1, MPI_UINT64_T,
+             CQ_MPI_COMM);
   MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->exec_init, bool_size,
              MPI_BYTE, CQ_MPI_COMM);
   MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->complete, bool_size,
@@ -519,21 +615,21 @@ void recv_exec_params(cq_exec** ehp, int src) {
     if ((*ehp)->fname == NULL) {
       cq_log("%s [recv_exec_params]: malloc *ehp->fname failed. Exiting\n",
              get_comm_source());
-      exit(-10);
+      exit(CQ_MPI_MALLOC_ERROR);
     }
 
     (*ehp)->qreg = (qubit*)malloc(qreg_size);
     if ((*ehp)->qreg == NULL) {
       cq_log("%s [recv_exec_params]: malloc *ehp->qreg failed. Exiting\n",
              get_comm_source());
-      exit(-10);
+      exit(CQ_MPI_MALLOC_ERROR);
     }
 
     (*ehp)->creg = (cstate*)malloc(creg_size);
     if ((*ehp)->creg == NULL) {
       cq_log("%s [recv_exec_params]: malloc *ehp->creg failed. Exiting\n",
              get_comm_source());
-      exit(-10);
+      exit(CQ_MPI_MALLOC_ERROR);
     }
   }
 
@@ -550,9 +646,11 @@ void recv_exec_params(cq_exec** ehp, int src) {
 
   cq_log("%s [recv_exec_params]: received.\n", get_comm_source());
   print_ehp(*ehp);
+  pthread_mutex_unlock(&(*ehp)->lock);
 }
 
 void send_exec_params(cq_exec* ehp, int dest) {
+  pthread_mutex_lock(&ehp->lock);
   cq_log("%s [send_exec_params]: sending...\n", get_comm_source());
   print_ehp(ehp);
 
@@ -560,8 +658,11 @@ void send_exec_params(cq_exec* ehp, int dest) {
   const size_t cq_status_size = sizeof(cq_status);
   int max_buffer_size = 0;
   int member_size = 0;
+  MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM,
+                &max_buffer_size);  // id
   MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM,
-                &max_buffer_size);  // exec_init
+                &member_size);  // exec_init
+  max_buffer_size += member_size;
   MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM,
                 &member_size);  // complete
   max_buffer_size += member_size;
@@ -630,12 +731,14 @@ void send_exec_params(cq_exec* ehp, int dest) {
 
   // NOTE: sending ehp->params left for another day... it's for pqkerns
 
-  char* send_buffer = malloc(max_buffer_size);
+  void* send_buffer = malloc(max_buffer_size);
   if (send_buffer == NULL) {
-    cq_log("Failed to allocate buffer for sending executor handle.\n");
-    exit(-1);
+    cq_log("Failed to allocate buffer for sending executor handle. Exiting\n");
+    exit(CQ_MPI_MALLOC_ERROR);
   }
   int position = 0;
+  MPI_Pack(&ehp->id, 1, MPI_UINT64_T, send_buffer, max_buffer_size, &position,
+           CQ_MPI_COMM);
   MPI_Pack(&ehp->exec_init, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
            &position, CQ_MPI_COMM);
   MPI_Pack(&ehp->complete, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
@@ -669,14 +772,28 @@ void send_exec_params(cq_exec* ehp, int dest) {
   // NOTE: ehp->prams left for another day
 
   MPI_Ssend(&position, 1, MPI_INT, dest, CQ_MPI_COMMS_TAG, CQ_MPI_COMM);
+
   MPI_Ssend(send_buffer, position, MPI_PACKED, dest, CQ_MPI_COMMS_TAG,
             CQ_MPI_COMM);
 
   free(send_buffer);
   cq_log("%s [send_exec_params]: sent.\n", get_comm_source());
+  pthread_mutex_unlock(&ehp->lock);
 }
 
 void device_free_exec(cq_exec** ehp) {
+  cq_log("%s [device_free_exec]: freeing the executor\n", get_comm_source());
+  if (ehp == NULL) {
+    cq_log("%s [device_free_exec]: ehp is NULL\n", get_comm_source());
+    return;
+  }
+
+  if (*ehp == NULL) {
+    cq_log("%s [device_free_exec]: *ehp is NULL\n", get_comm_source());
+    return;
+  }
+
+  pthread_mutex_lock(&(*ehp)->lock);
   if ((*ehp)->fname != NULL) {
     free((*ehp)->fname);
     (*ehp)->fname = NULL;
@@ -697,10 +814,15 @@ void device_free_exec(cq_exec** ehp) {
     (*ehp)->params = NULL;
   }
 
+  pthread_mutex_unlock(&(*ehp)->lock);
+  pthread_mutex_destroy(&(*ehp)->lock);
+  pthread_cond_destroy(&(*ehp)->cond_exec_complete);
   if ((*ehp) != NULL) {
     free((*ehp));
     (*ehp) = NULL;
   }
+
+  cq_log("%s [device_free_exec]: freed the executor\n", get_comm_source());
 }
 
 // ----------------------------------------------------------------------------
@@ -763,6 +885,14 @@ const char* op_to_str(const enum ctrl_code OP) {
       return "CQ_CTRL_ABORT";
       break;
     }
+    case CQ_CTRL_WAIT_EXEC: {
+      return "CQ_CTRL_WAIT_EXEC";
+      break;
+    }
+    case CQ_CTRL_SYNC_EXEC: {
+      return "CQ_CTRL_SYNC_EXEC";
+      break;
+    }
     default: {
       break;
     }
@@ -782,13 +912,14 @@ void print_ehp(const cq_exec* ehp) {
   }
 
   cq_log(
-      "%s ehp details:\nexec_init: %d, complete: %d, halt: %d, STATUS: "
+      "%s ehp details:\nid: %zu, exec_init: %d, complete: %d, halt: %d, "
+      "STATUS: "
       "%d\nNQUBITS: "
       "%zu, completed_shots: %zu, expected_shots: %zu, NMEASURE: %zu\nfname: "
       "%s\nqreg:\n",
-      get_comm_source(), ehp->exec_init, ehp->complete, ehp->halt, ehp->status,
-      ehp->nqubits, ehp->completed_shots, ehp->expected_shots, ehp->nmeasure,
-      ehp->fname);
+      get_comm_source(), ehp->id, ehp->exec_init, ehp->complete, ehp->halt,
+      ehp->status, ehp->nqubits, ehp->completed_shots, ehp->expected_shots,
+      ehp->nmeasure, ehp->fname);
 
   for (size_t i = 0; i < ehp->nqubits; ++i) {
     cq_log("qubit[%zu]: reg_idx: %zu, offset: %zu, N: %zu\n", i,
@@ -800,4 +931,12 @@ void print_ehp(const cq_exec* ehp) {
     cq_log("cstate[%zu]: %d\n", i, ehp->creg[i]);
   }
   cq_log("%s ehp details END\n\n", get_comm_source());
+}
+
+size_t assign_exec_id(void) {
+  //  ++executor_id;
+  // return executor_id;
+  ++global_exec_id_counter;
+  global_exec_id_counter %= __CQ_DEVICE_QUEUE_SIZE__;
+  return global_exec_id_counter;
 }

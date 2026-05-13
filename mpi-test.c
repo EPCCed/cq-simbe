@@ -4,6 +4,7 @@
 #include "cq.h"
 #include "datatypes.h"
 #include "host_ops.h"
+#include "src/host-device/comms.h"
 #include "src/host-device/mpi_comms.h"
 
 #include <mpi.h>
@@ -56,8 +57,9 @@ int main() {
   // a_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, &eh);
   // wait_qrun(&eh);
   // s_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE);
-  am_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh);
-  halt_qrun(&eh);
+  sm_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS);
+  // am_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh);
+  //  halt_qrun(&eh);
   // wait_qrun(&eh);
 
   free_qureg(&qr);

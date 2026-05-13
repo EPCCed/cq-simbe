@@ -15,6 +15,10 @@
 #define CQ_MPI_DEVICE_RANK 1
 #define CQ_MPI_COMMS_TAG 0
 
+#define CQ_MPI_RUNTIME_ERROR -4
+#define CQ_MPI_MALLOC_ERROR -5
+
+// device_wait_comms();
 #define RUN_HOST_ONLY()                   \
   {                                       \
     int rank = get_rank();                \
@@ -62,6 +66,8 @@ void mpi_host_wait_all_ops(void);
 /// wrapper around device_wait_comms, intended to be called from the host.
 /// The intended caller of this function is cq_finalise only!
 void host_device_final_sync(void);
+// TODO: rename above with below
+void host_device_sync_comms(void);
 
 // ----------------------------------------------------------------------------
 // Device Comm Ops
@@ -106,6 +112,7 @@ size_t device_wait_all_ops(void);
 /// it needs to be called only once at the end to ensure that the main thread
 /// does not clean-up and close MPI before work is done on the worker.
 void device_wait_comms(void);
+// TODO: above can be static and in mpi_comms.c
 
 // ----------------------------------------------------------------------------
 // Device Control Paramaters Comms
@@ -129,6 +136,9 @@ void recv_alloc_params(device_alloc_params* params, int src);
 /// @param[in] params reference to parameters to communicate
 /// @param dest destination rank of outgoing message
 void send_alloc_params(const device_alloc_params* params, int dest);
+
+size_t recv_exec_id(const int src);
+void send_exec_id(const size_t id, const int dest);
 
 ///
 /// receives executor handle from the source. Also, if called on device,
@@ -178,6 +188,8 @@ void print_alloc_params(const device_alloc_params* params);
 /// prints members of the executor.
 /// @param[in] ehp reference to executor
 void print_ehp(const cq_exec* ehp);
+
+size_t assign_exec_id(void);
 
 // ----------------------------------------------------------------------------
 // TODO: Need to go to comms.h and comms.c and use existing stuff to wrap around
