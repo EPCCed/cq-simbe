@@ -4,8 +4,10 @@
 #include "src/host-device/comms.h"
 #include "src/host/opcodes.h"
 
+#include <assert.h>
 #include <mpi.h>
 
+#include <mpi_proto.h>
 #include <quest/include/environment.h>
 #include <quest/include/subcommunicator.h>
 #include <stdarg.h>
@@ -20,13 +22,16 @@ static MPI_Comm CQ_MPI_SPLIT_COMM;
 
 struct cq_mpi_env {
   int rank;
+  int subcomm_rank;
   unsigned int verbosity;
 };
 
 static cq_exec* executor_handles[__CQ_DEVICE_QUEUE_SIZE__];
 static size_t global_exec_id_counter = -1;
 static size_t num_active_executors = 0;
-static struct cq_mpi_env mpi_env = {.rank = -1, .verbosity = 0};
+static struct cq_mpi_env mpi_env = {.rank = -1,
+                                    .subcomm_rank = -1,
+                                    .verbosity = 0};
 
 struct communicator {
   bool comm_busy;
@@ -37,6 +42,8 @@ struct communicator {
 
 static struct communicator dev_comm = {0};
 
+static char worker_name[64] = {0};
+
 static void cq_log(const char* format, ...) {
 #ifdef CQ_MPI_IMPL_DEBUG
   va_list(args);
@@ -46,40 +53,38 @@ static void cq_log(const char* format, ...) {
 }
 
 void init_host_device_mpi(const unsigned int VERBOSITY) {
+  assert(sizeof(enum ctrl_code) == sizeof(int));
   mpi_env.verbosity = VERBOSITY;
   if (VERBOSITY > 0) {
     cq_log("Initialising MPI.\n");
   }
 
-  int nprocs, quest_nprocs, world_rank, quest_rank;
-  MPI_Comm comm_split;
+  int nprocs;
 
   MPI_Init(NULL, NULL);
 
   MPI_Comm_size(CQ_MPI_COMM_WORLD, &nprocs);
-  // TODO: check nproc - 2 (host + device) == power of 2
+  // TODO: check nproc - 1 == power of 2
+  // TODO: for multi-device check that:
+  // (nproc - 1) == n_device * power of 2
 
-  MPI_Comm_rank(CQ_MPI_COMM_WORLD, &world_rank);
   MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
-  const int QUANTUM_WORKER = world_rank > 1;
 
-  // MPI_Comm_split(MPI_COMM_WORLD, QUANTUM_WORKER, world_rank, &comm_split);
-  // MPI_Comm_dup(comm_split, &CQ_MPI_COMM_WORLD);
-  // MPI_Comm_free(&comm_split);
+#if CQ_CONF_QUEST_WITH_MPI
+  const int QUANTUM_WORKER = mpi_env.rank > 0;
+  MPI_Barrier(CQ_MPI_COMM_WORLD);
+  MPI_Comm_split(CQ_MPI_COMM_WORLD, QUANTUM_WORKER, mpi_env.rank,
+                 &CQ_MPI_SPLIT_COMM);
+  MPI_Comm_rank(CQ_MPI_SPLIT_COMM, &mpi_env.subcomm_rank);
+  cq_log("%s in subcomm I'm rank %d\n", get_comm_source(),
+         mpi_env.subcomm_rank);
 
-  // MPI_Comm_split(CQ_MPI_COMM_WORLD_WORLD, QUANTUM_WORKER, world_rank,
-  // &CQ_MPI_COMM_WORLD); MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
-  // MPI_Comm_size(CQ_MPI_COMM_WORLD, &quest_nprocs);
-  //  cq_log("%s there are %d processes in quest comm\n", get_comm_source(),
-  //         quest_nprocs);
+  sprintf(worker_name, "Quantum Worker [%d]:\t\t", mpi_env.subcomm_rank);
+#endif
 
   if (VERBOSITY > 0) {
     cq_log("Initialised MPI.\n");
   }
-
-  //  if (is_quantum_worker()) {
-  //    return;
-  //  }
 
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     device_init_comms(VERBOSITY);
@@ -91,11 +96,13 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
 
 void finalise_host_device_mpi(const unsigned int VERBOSITY) {
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
     device_finalise_comms(VERBOSITY);
   }
   if (VERBOSITY > 0) {
     cq_log("%s Finalising MPI.\n", get_comm_source());
   }
+  MPI_Barrier(CQ_MPI_COMM_WORLD);
   MPI_Finalize();
   if (VERBOSITY > 0) {
     cq_log("%s Finalised MPI.\n", get_comm_source());
@@ -108,7 +115,9 @@ void mpi_host_send_ctrl_op(const enum ctrl_code OP, void* params) {
   const int device_rank = CQ_MPI_DEVICE_RANK;
   cq_log("%s [send_ctrl_op]: sending %s...\n", get_comm_source(),
          op_to_str(OP));
-  MPI_Ssend(&OP, 1, MPI_INT, device_rank, CQ_MPI_COMMS_TAG, CQ_MPI_COMM_WORLD);
+  int op_comm_buffer = (int)OP;
+  MPI_Ssend(&op_comm_buffer, 1, MPI_INT, device_rank, CQ_MPI_WORLD_COMMS_TAG,
+            CQ_MPI_COMM_WORLD);
   // send params based on OP
   host_comm_params(OP, params);
   cq_log("%s [send_ctrl_op]: sent %s\n", get_comm_source(), op_to_str(OP));
@@ -120,7 +129,7 @@ void mpi_host_wait_all_ops(void) {
   size_t num_ops;
   const int device_rank = CQ_MPI_DEVICE_RANK;
   MPI_Status status;
-  MPI_Recv(&num_ops, 1, MPI_UINT64_T, device_rank, CQ_MPI_COMMS_TAG,
+  MPI_Recv(&num_ops, 1, MPI_UINT64_T, device_rank, CQ_MPI_WORLD_COMMS_TAG,
            CQ_MPI_COMM_WORLD, &status);
   cq_log("%s [wait_all_ops]: all ops completed (num_ops: %zu)\n",
          get_comm_source(), num_ops);
@@ -128,6 +137,7 @@ void mpi_host_wait_all_ops(void) {
 
 void host_device_final_sync(void) {
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    cq_log("%s [final_sync]: simply waiting\n", get_comm_source());
     device_wait_comms();
   }
 }
@@ -212,16 +222,49 @@ void* device_listen(void* args) {
     pthread_mutex_unlock(&dev_comm.comm_lock);
 
     enum ctrl_code OP;
-    // device master (rank 0) gets from host from different comm
-    const int host_rank = CQ_MPI_HOST_RANK;
-    MPI_Status status;
+    int op_comm_buffer;
+
     cq_log("%s [device_listen]: receiving OP...\n", get_comm_source());
-    MPI_Recv(&OP, 1, MPI_INT, host_rank, CQ_MPI_COMMS_TAG, CQ_MPI_COMM_WORLD,
-             &status);
+#if CQ_CONF_QUEST_WITH_MPI
+    // device master (rank 0) gets from host from different comm
+    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+#endif
+
+      const int host_rank = CQ_MPI_HOST_RANK;
+      MPI_Status status;
+      MPI_Recv(&op_comm_buffer, 1, MPI_INT, host_rank, CQ_MPI_WORLD_COMMS_TAG,
+               CQ_MPI_COMM_WORLD, &status);
+#if CQ_CONF_QUEST_WITH_MPI
+      // rank 0 brodcast to rest of q-workers then all do the dispatch
+    }
+    cq_log("%s [device_listen]: Starting Bcast\n", get_comm_source());
+    // NOTE: doing custom bcast because I have MPI errors on my machine
+    // when calling MPICH Bcast!
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+      int subcomm_size = 0;
+      MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
+
+      for (size_t i = 1; i < subcomm_size; ++i) {
+        MPI_Ssend(&op_comm_buffer, 1, MPI_INT, i, CQ_MPI_SUBCOMMS_TAG,
+                  CQ_MPI_SPLIT_COMM);
+      }
+    } else {
+      MPI_Status status;
+      MPI_Recv(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
+               CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
+    }
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+
+    // MPI_Bcast(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
+    //           CQ_MPI_SPLIT_COMM);
+    cq_log("%s [device_listen]: Finished Bcast\n", get_comm_source());
+#endif
+
+    OP = (enum ctrl_code)op_comm_buffer;
     cq_log("%s [device_listen]: received %s\n", get_comm_source(),
            op_to_str(OP));
 
-    // rank 0 brodcast to rest of q-workers then all do the dispatch
     device_dispatch_ctrl_op(OP);
 
     pthread_mutex_lock(&dev_comm.comm_lock);
@@ -232,6 +275,14 @@ void* device_listen(void* args) {
   cq_log("%s closing connection.\n", get_comm_source());
 
   finalise_host_device_mpi(mpi_env.verbosity);
+
+  pthread_join(dev_ctrl.device_thread, NULL);
+  dev_ctrl.device_busy = false;
+  pthread_cond_destroy(&dev_ctrl.cond_device_busy);
+  pthread_cond_destroy(&dev_ctrl.cond_queue_empty);
+  pthread_cond_destroy(&dev_ctrl.cond_queue_full);
+  pthread_mutex_destroy(&dev_ctrl.device_lock);
+
   return NULL;
 }
 
@@ -243,6 +294,7 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
     case CQ_CTRL_INIT: {
       initialise_device(mpi_env.verbosity);
       insert_op(OP, &mpi_env.verbosity);
+      device_wait_all_ops();
       break;
     }
     case CQ_CTRL_FINALISE: {
@@ -257,7 +309,14 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
               get_comm_source(), i);
         }
       }
-      finalise_device(mpi_env.verbosity);
+
+      insert_op(OP, &mpi_env.verbosity);
+      device_wait_all_ops();
+      pthread_mutex_lock(&dev_ctrl.device_lock);
+      dev_ctrl.run_device = false;
+      pthread_mutex_unlock(&dev_ctrl.device_lock);
+
+      // finalise_device(mpi_env.verbosity);
       break;
     }
     case CQ_CTRL_ALLOC: {
@@ -269,6 +328,7 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       device_alloc_params params = {0};
       recv_alloc_params(&params, host_rank);
       insert_op(OP, &params);
+      cq_log("%s [dispatch][ALLOC]: inserted op\n", get_comm_source());
       device_wait_all_ops();
       send_alloc_params(&params, host_rank);
       break;
@@ -369,13 +429,21 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
     case CQ_CTRL_WAIT: {
       // wait for worker and send info to the host
       // (which is blocked and waiting).
+      cq_log("%s [dispatch][WAIT]: Started waiting\n", get_comm_source());
       size_t num_ops = device_wait_all_ops();
-      const int host_rank = CQ_MPI_HOST_RANK;
-      cq_log("%s [dispatch]: sending num ops: %zu...\n", get_comm_source(),
-             num_ops);
-      MPI_Ssend(&num_ops, 1, MPI_UINT64_T, host_rank, CQ_MPI_COMMS_TAG,
-                CQ_MPI_COMM_WORLD);
-      cq_log("%s [dispatch]: sent num ops.\n", get_comm_source());
+      cq_log("%s [dispatch][WAIT]: Finished waiting\n", get_comm_source());
+#if CQ_CONF_QUEST_WITH_MPI
+      if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+#endif
+        const int host_rank = CQ_MPI_HOST_RANK;
+        cq_log("%s [dispatch]: sending num ops: %zu...\n", get_comm_source(),
+               num_ops);
+        MPI_Ssend(&num_ops, 1, MPI_UINT64_T, host_rank, CQ_MPI_WORLD_COMMS_TAG,
+                  CQ_MPI_COMM_WORLD);
+        cq_log("%s [dispatch]: sent num ops.\n", get_comm_source());
+#if CQ_CONF_QUEST_WITH_MPI
+      }
+#endif
       break;
     }
     case CQ_CTRL_ABORT: {
@@ -411,9 +479,13 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
 // on either MPI or pthread implementation use this in different ctx.
 size_t device_wait_all_ops(void) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
+  cq_log("%s [device_wait_all_ops]: Entering loop, num ops: %d\n",
+         get_comm_source(), dev_ctrl.num_ops);
   while (dev_ctrl.num_ops > 0 || dev_ctrl.device_busy) {
     pthread_cond_wait(&dev_ctrl.cond_device_busy, &dev_ctrl.device_lock);
   }
+  cq_log("%s [device_wait_all_ops]: Exited loop, num ops: %d\n",
+         get_comm_source(), dev_ctrl.num_ops);
 
   pthread_mutex_unlock(&dev_ctrl.device_lock);
   return dev_ctrl.num_ops;
@@ -477,6 +549,7 @@ void comms_exec_halt(cq_exec* const ehp) {
 // ----------------------------------------------------------------------------
 
 void host_comm_params(const enum ctrl_code OP, void* params) {
+  const int device_rank = CQ_MPI_DEVICE_RANK;
   switch (OP) {
     case CQ_CTRL_INIT: {
       break;
@@ -485,36 +558,30 @@ void host_comm_params(const enum ctrl_code OP, void* params) {
       break;
     }
     case CQ_CTRL_ALLOC: {
-      const int device_rank = CQ_MPI_DEVICE_RANK;
       send_alloc_params(params, device_rank);
       recv_alloc_params(params, device_rank);
       break;
     }
     case CQ_CTRL_DEALLOC: {
-      const int device_rank = CQ_MPI_DEVICE_RANK;
       send_alloc_params(params, device_rank);
       recv_alloc_params(params, device_rank);
       break;
     }
     case CQ_CTRL_RUN_QKERNEL: {
-      const int device_rank = CQ_MPI_DEVICE_RANK;
       send_exec_params(params, device_rank);
       break;
     }
     case CQ_CTRL_WAIT_EXEC: {
-      const int device_rank = CQ_MPI_DEVICE_RANK;
       send_exec_id(((cq_exec*)params)->id, device_rank);
       recv_exec_params(&params, device_rank);
       break;
     }
     case CQ_CTRL_SYNC_EXEC: {
-      const int device_rank = CQ_MPI_DEVICE_RANK;
       send_exec_id(((cq_exec*)params)->id, device_rank);
       recv_exec_params(&params, device_rank);
       break;
     }
     case CQ_CTRL_ABORT: {
-      const int device_rank = CQ_MPI_DEVICE_RANK;
       send_exec_id(((cq_exec*)params)->id, device_rank);
       break;
     }
@@ -530,27 +597,66 @@ void recv_alloc_params(device_alloc_params* params, int src) {
   const size_t params_size = sizeof(device_alloc_params);
   MPI_Status status;
 
-  MPI_Recv(params, params_size, MPI_BYTE, src, CQ_MPI_COMMS_TAG,
-           CQ_MPI_COMM_WORLD, &status);
+#if CQ_CONF_QUEST_WITH_MPI
+  // device master (rank 0) gets from host from world comm
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+#endif
+
+    MPI_Recv(params, params_size, MPI_BYTE, src, CQ_MPI_WORLD_COMMS_TAG,
+             CQ_MPI_COMM_WORLD, &status);
+
+#if CQ_CONF_QUEST_WITH_MPI
+    // rank 0 brodcast params to rest of q-workers
+  }
+  if (mpi_env.rank != 0) {
+    // NOTE: doing custom bcast because I have MPI errors on my machine
+    // when calling MPICH Bcast!
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+      int subcomm_size = 0;
+      MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
+
+      for (size_t i = 1; i < subcomm_size; ++i) {
+        MPI_Ssend(params, params_size, MPI_BYTE, i, CQ_MPI_SUBCOMMS_TAG,
+                  CQ_MPI_SPLIT_COMM);
+      }
+    } else {
+      MPI_Recv(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
+               CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
+    }
+    // MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
+    //           CQ_MPI_SPLIT_COMM);
+  }
+#endif
 
   cq_log("%s [recv_alloc_params]: received.\n", get_comm_source());
   print_alloc_params(params);
 }
 
 void send_alloc_params(const device_alloc_params* params, int dest) {
-  cq_log("%s [send_alloc_params]: sending...\n", get_comm_source());
-  const size_t params_size = sizeof(device_alloc_params);
-  print_alloc_params(params);
-  MPI_Ssend((char*)params, params_size, MPI_BYTE, dest, CQ_MPI_COMMS_TAG,
-            CQ_MPI_COMM_WORLD);
-  cq_log("%s [send_alloc_params]: sent.\n", get_comm_source());
+#if CQ_CONF_QUEST_WITH_MPI
+  // device master (rank 0) gets from host from world comm
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
+      mpi_env.rank == CQ_MPI_HOST_RANK) {
+#endif
+
+    cq_log("%s [send_alloc_params]: sending...\n", get_comm_source());
+    const size_t params_size = sizeof(device_alloc_params);
+    print_alloc_params(params);
+    MPI_Ssend(params, params_size, MPI_BYTE, dest, CQ_MPI_WORLD_COMMS_TAG,
+              CQ_MPI_COMM_WORLD);
+    cq_log("%s [send_alloc_params]: sent.\n", get_comm_source());
+
+#if CQ_CONF_QUEST_WITH_MPI
+  }
+#endif
 }
 
 size_t recv_exec_id(const int src) {
   cq_log("%s [recv_exec_id]: receiving...\n", get_comm_source());
   size_t id = -1;
   MPI_Status status;
-  MPI_Recv(&id, 1, MPI_UINT64_T, src, CQ_MPI_COMMS_TAG, CQ_MPI_COMM_WORLD,
+  MPI_Recv(&id, 1, MPI_UINT64_T, src, CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD,
            &status);
   cq_log("%s [recv_exec_id]: received id: %zu\n", get_comm_source(), id);
   return id;
@@ -558,7 +664,8 @@ size_t recv_exec_id(const int src) {
 
 void send_exec_id(const size_t id, const int dest) {
   cq_log("%s [send_exec_id]: sending id: %zu...\n", get_comm_source(), id);
-  MPI_Ssend(&id, 1, MPI_UINT64_T, dest, CQ_MPI_COMMS_TAG, CQ_MPI_COMM_WORLD);
+  MPI_Ssend(&id, 1, MPI_UINT64_T, dest, CQ_MPI_WORLD_COMMS_TAG,
+            CQ_MPI_COMM_WORLD);
   cq_log("%s [send_exec_id]: sent\n", get_comm_source());
 }
 
@@ -567,8 +674,8 @@ void recv_exec_params(cq_exec** ehp, int src) {
   cq_log("%s [recv_exec_params]: receiving...\n", get_comm_source());
   int msg_size;
   MPI_Status status;
-  MPI_Recv(&msg_size, 1, MPI_INT, src, CQ_MPI_COMMS_TAG, CQ_MPI_COMM_WORLD,
-           &status);
+  MPI_Recv(&msg_size, 1, MPI_INT, src, CQ_MPI_WORLD_COMMS_TAG,
+           CQ_MPI_COMM_WORLD, &status);
   void* recv_buffer = malloc(msg_size);
 
   // reserve space for all the date + currently unused members
@@ -583,7 +690,8 @@ void recv_exec_params(cq_exec** ehp, int src) {
     pthread_cond_init(&(*ehp)->cond_exec_complete, NULL);
   } else {
     cq_log(
-        "%s [recv_exec_params]: *ehp is already allocated. So I'm on host.\n",
+        "%s [recv_exec_params]: *ehp is already allocated. So I'm on "
+        "host.\n",
         get_comm_source());
   }
   pthread_mutex_lock(&(*ehp)->lock);
@@ -594,7 +702,7 @@ void recv_exec_params(cq_exec** ehp, int src) {
     exit(CQ_MPI_MALLOC_ERROR);
   }
 
-  MPI_Recv(recv_buffer, msg_size, MPI_PACKED, src, CQ_MPI_COMMS_TAG,
+  MPI_Recv(recv_buffer, msg_size, MPI_PACKED, src, CQ_MPI_WORLD_COMMS_TAG,
            CQ_MPI_COMM_WORLD, &status);
 
   const size_t bool_size = sizeof(bool);
@@ -799,9 +907,10 @@ void send_exec_params(cq_exec* ehp, int dest) {
 
   // NOTE: ehp->prams left for another day
 
-  MPI_Ssend(&position, 1, MPI_INT, dest, CQ_MPI_COMMS_TAG, CQ_MPI_COMM_WORLD);
+  MPI_Ssend(&position, 1, MPI_INT, dest, CQ_MPI_WORLD_COMMS_TAG,
+            CQ_MPI_COMM_WORLD);
 
-  MPI_Ssend(send_buffer, position, MPI_PACKED, dest, CQ_MPI_COMMS_TAG,
+  MPI_Ssend(send_buffer, position, MPI_PACKED, dest, CQ_MPI_WORLD_COMMS_TAG,
             CQ_MPI_COMM_WORLD);
 
   free(send_buffer);
@@ -859,12 +968,11 @@ void device_free_exec(cq_exec** ehp) {
 
 const char* get_comm_source(void) {
   if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-    return "Host:\t\t";
-
-  } else if (is_quantum_worker()) {
-    return "Quantum Worker:\t\t";
+    return "Host:\t\t\t\t";
   } else if (mpi_env.rank == CQ_MPI_DEVICE_RANK) {
-    return "Device:\t\t";
+    return "Device:\t\t\t\t";
+  } else if (is_quantum_worker()) {
+    return worker_name;
   } else {
     return "";
   }
@@ -946,7 +1054,8 @@ void print_ehp(const cq_exec* ehp) {
       "%s ehp details:\nid: %zu, exec_init: %d, complete: %d, halt: %d, "
       "STATUS: "
       "%d\nNQUBITS: "
-      "%zu, completed_shots: %zu, expected_shots: %zu, NMEASURE: %zu\nfname: "
+      "%zu, completed_shots: %zu, expected_shots: %zu, NMEASURE: "
+      "%zu\nfname: "
       "%s\nqreg:\n",
       get_comm_source(), ehp->id, ehp->exec_init, ehp->complete, ehp->halt,
       ehp->status, ehp->nqubits, ehp->completed_shots, ehp->expected_shots,
@@ -972,14 +1081,15 @@ size_t assign_exec_id(void) {
   return global_exec_id_counter;
 }
 
+int is_device(void) {
+  return mpi_env.rank != CQ_MPI_HOST_RANK;
+}
 int is_quantum_worker(void) {
-  int world_rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-  return world_rank > 1;
+  return mpi_env.rank > 0;
 }
 
 MPI_Comm get_quest_comm(void) {
-  return CQ_MPI_COMM_WORLD;
+  return CQ_MPI_SPLIT_COMM;
 }
 
 void foo() {

@@ -16,7 +16,8 @@
 #define CQ_MPI_HOST_RANK 0
 #define CQ_MPI_DEVICE_RANK 1
 #define CQ_MPI_DEVICE_MASTER_RANK 0
-#define CQ_MPI_COMMS_TAG 0
+#define CQ_MPI_WORLD_COMMS_TAG 0
+#define CQ_MPI_SUBCOMMS_TAG 0
 
 #define CQ_MPI_RUNTIME_ERROR -4
 #define CQ_MPI_MALLOC_ERROR -5
@@ -26,15 +27,15 @@
 //      return CQ_SUCCESS;
 //    }
 
-#define RUN_HOST_ONLY()                   \
-  {                                       \
-    int rank = get_rank();                \
-    if (rank == -1) {                     \
-      return CQ_ERROR;                    \
-    }                                     \
-    if (get_rank() != CQ_MPI_HOST_RANK) { \
-      return CQ_SUCCESS;                  \
-    }                                     \
+#define RUN_HOST_ONLY()    \
+  {                        \
+    int rank = get_rank(); \
+    if (rank == -1) {      \
+      return CQ_ERROR;     \
+    }                      \
+    if (is_device()) {     \
+      return CQ_SUCCESS;   \
+    }                      \
   }
 
 ///
@@ -203,6 +204,8 @@ void print_alloc_params(const device_alloc_params* params);
 void print_ehp(const cq_exec* ehp);
 
 size_t assign_exec_id(void);
+
+int is_device(void);
 
 int is_quantum_worker(void);
 MPI_Comm get_quest_comm(void);
