@@ -599,16 +599,17 @@ void recv_alloc_params(device_alloc_params* params, int src) {
 
 #if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
-  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
+      mpi_env.rank == CQ_MPI_HOST_RANK) {
 #endif
 
     MPI_Recv(params, params_size, MPI_BYTE, src, CQ_MPI_WORLD_COMMS_TAG,
              CQ_MPI_COMM_WORLD, &status);
 
 #if CQ_CONF_QUEST_WITH_MPI
-    // rank 0 brodcast params to rest of q-workers
   }
-  if (mpi_env.rank != 0) {
+  // device-rank 0 brodcast params to rest of q-workers
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     // NOTE: doing custom bcast because I have MPI errors on my machine
     // when calling MPICH Bcast!
     MPI_Barrier(CQ_MPI_SPLIT_COMM);
@@ -624,6 +625,7 @@ void recv_alloc_params(device_alloc_params* params, int src) {
       MPI_Recv(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
                CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
     }
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
     // MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
     //           CQ_MPI_SPLIT_COMM);
   }
@@ -656,17 +658,60 @@ size_t recv_exec_id(const int src) {
   cq_log("%s [recv_exec_id]: receiving...\n", get_comm_source());
   size_t id = -1;
   MPI_Status status;
-  MPI_Recv(&id, 1, MPI_UINT64_T, src, CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD,
-           &status);
+
+#if CQ_CONF_QUEST_WITH_MPI
+  // device master (rank 0) gets from host from world comm
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
+      mpi_env.rank == CQ_MPI_HOST_RANK) {
+#endif
+
+    MPI_Recv(&id, 1, MPI_UINT64_T, src, CQ_MPI_WORLD_COMMS_TAG,
+             CQ_MPI_COMM_WORLD, &status);
+
+#if CQ_CONF_QUEST_WITH_MPI
+  }
+  // device-rank 0 brodcast params to rest of q-workers
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    // NOTE: doing custom bcast because I have MPI errors on my machine
+    // when calling MPICH Bcast!
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+      int subcomm_size = 0;
+      MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
+
+      for (size_t i = 1; i < subcomm_size; ++i) {
+        MPI_Ssend(&id, 1, MPI_UINT64_T, i, CQ_MPI_SUBCOMMS_TAG,
+                  CQ_MPI_SPLIT_COMM);
+      }
+    } else {
+      MPI_Recv(&id, 1, MPI_UINT64_T, CQ_MPI_DEVICE_MASTER_RANK,
+               CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
+    }
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    // MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
+    //           CQ_MPI_SPLIT_COMM);
+  }
+#endif
+
   cq_log("%s [recv_exec_id]: received id: %zu\n", get_comm_source(), id);
   return id;
 }
 
 void send_exec_id(const size_t id, const int dest) {
-  cq_log("%s [send_exec_id]: sending id: %zu...\n", get_comm_source(), id);
-  MPI_Ssend(&id, 1, MPI_UINT64_T, dest, CQ_MPI_WORLD_COMMS_TAG,
-            CQ_MPI_COMM_WORLD);
-  cq_log("%s [send_exec_id]: sent\n", get_comm_source());
+#if CQ_CONF_QUEST_WITH_MPI
+  // device master (rank 0) gets from host from world comm
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
+      mpi_env.rank == CQ_MPI_HOST_RANK) {
+#endif
+
+    cq_log("%s [send_exec_id]: sending id: %zu...\n", get_comm_source(), id);
+    MPI_Ssend(&id, 1, MPI_UINT64_T, dest, CQ_MPI_WORLD_COMMS_TAG,
+              CQ_MPI_COMM_WORLD);
+    cq_log("%s [send_exec_id]: sent\n", get_comm_source());
+
+#if CQ_CONF_QUEST_WITH_MPI
+  }
+#endif
 }
 
 void recv_exec_params(cq_exec** ehp, int src) {
@@ -674,8 +719,27 @@ void recv_exec_params(cq_exec** ehp, int src) {
   cq_log("%s [recv_exec_params]: receiving...\n", get_comm_source());
   int msg_size;
   MPI_Status status;
-  MPI_Recv(&msg_size, 1, MPI_INT, src, CQ_MPI_WORLD_COMMS_TAG,
-           CQ_MPI_COMM_WORLD, &status);
+
+#if CQ_CONF_QUEST_WITH_MPI
+  // device-master (rank 0) gets from host from world comm
+  // or host gets from device-master
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
+      mpi_env.rank == CQ_MPI_HOST_RANK) {
+#endif
+
+    MPI_Recv(&msg_size, 1, MPI_INT, src, CQ_MPI_WORLD_COMMS_TAG,
+             CQ_MPI_COMM_WORLD, &status);
+
+#if CQ_CONF_QUEST_WITH_MPI
+  }
+  // device-rank 0 brodcast params to rest of q-workers
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    MPI_Bcast(&msg_size, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
+              CQ_MPI_SPLIT_COMM);
+  }
+#endif
+
   void* recv_buffer = malloc(msg_size);
 
   // reserve space for all the date + currently unused members
@@ -702,8 +766,25 @@ void recv_exec_params(cq_exec** ehp, int src) {
     exit(CQ_MPI_MALLOC_ERROR);
   }
 
-  MPI_Recv(recv_buffer, msg_size, MPI_PACKED, src, CQ_MPI_WORLD_COMMS_TAG,
-           CQ_MPI_COMM_WORLD, &status);
+#if CQ_CONF_QUEST_WITH_MPI
+  // device-master (rank 0) gets from host from world comm
+  // or host gets from device-master
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
+      mpi_env.rank == CQ_MPI_HOST_RANK) {
+#endif
+
+    MPI_Recv(recv_buffer, msg_size, MPI_PACKED, src, CQ_MPI_WORLD_COMMS_TAG,
+             CQ_MPI_COMM_WORLD, &status);
+
+#if CQ_CONF_QUEST_WITH_MPI
+  }
+  // device-rank 0 brodcast params to rest of q-workers
+  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
+    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    MPI_Bcast(recv_buffer, msg_size, MPI_PACKED, CQ_MPI_DEVICE_MASTER_RANK,
+              CQ_MPI_SPLIT_COMM);
+  }
+#endif
 
   const size_t bool_size = sizeof(bool);
   const size_t cq_status_size = sizeof(cq_status);
@@ -737,12 +818,13 @@ void recv_exec_params(cq_exec** ehp, int src) {
   // NOTE: creg_size * expected_shots?? or completed_shots?
   // host should get completed, device should get expected
   // and similarly when sending
-  size_t num_shots = 0;
-  if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-    num_shots = (*ehp)->completed_shots;
-  } else {
-    num_shots = (*ehp)->expected_shots;
-  }
+  // size_t num_shots = 0;
+  //  if (mpi_env.rank == CQ_MPI_HOST_RANK) {
+  //    num_shots = (*ehp)->completed_shots;
+  //  } else {
+  //    num_shots = (*ehp)->expected_shots;
+  //  }
+  const size_t num_shots = (*ehp)->expected_shots;
   const size_t creg_size = sizeof(cstate) * (*ehp)->nmeasure * num_shots;
 
   // when on host the resources are already allocated!
@@ -786,136 +868,151 @@ void recv_exec_params(cq_exec** ehp, int src) {
 }
 
 void send_exec_params(cq_exec* ehp, int dest) {
-  pthread_mutex_lock(&ehp->lock);
-  cq_log("%s [send_exec_params]: sending...\n", get_comm_source());
-  print_ehp(ehp);
+// if running with MPI QuEST, we don't need to communicate
+// with quantum workers because the results from QuEST
+// (e.g. measurements) should be already synchronised.
+// so only device-master communicates its state to host.
+#if CQ_CONF_QUEST_WITH_MPI
+  // device master (rank 0) gets from host from world comm
+  if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
+      mpi_env.rank == CQ_MPI_HOST_RANK) {
+#endif
 
-  const size_t bool_size = sizeof(bool);
-  const size_t cq_status_size = sizeof(cq_status);
-  int max_buffer_size = 0;
-  int member_size = 0;
-  MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
-                &max_buffer_size);  // id
-  MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-                &member_size);  // exec_init
-  max_buffer_size += member_size;
-  MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-                &member_size);  // complete
-  max_buffer_size += member_size;
-  MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-                &member_size);  // halt
-  max_buffer_size += member_size;
-  MPI_Pack_size(cq_status_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-                &member_size);  // status
-  max_buffer_size += member_size;
-  MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
-                &member_size);  // nqubits
-  max_buffer_size += member_size;
-  MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
-                &member_size);  // completed_shots
-  max_buffer_size += member_size;
-  MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
-                &member_size);  // expected_shots
-  max_buffer_size += member_size;
-  MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
-                &member_size);  // nmeasure
-  max_buffer_size += member_size;
+    pthread_mutex_lock(&ehp->lock);
+    cq_log("%s [send_exec_params]: sending...\n", get_comm_source());
+    print_ehp(ehp);
 
-  // -------------------------------------------------------------------------
-  // TODO: sending pthred stuff doesn't sound like a good idea...
-  // sounds like UB
-  //  const size_t pthread_mutex_size = sizeof(pthread_mutex_t);
-  //  MPI_Pack_size(pthread_mutex_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-  //                &member_size);  // lock
-  //  max_buffer_size += member_size;
-  //
-  //  const size_t pthread_cond_size = sizeof(pthread_cond_t);
-  //  MPI_Pack_size(pthread_cond_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-  //                &member_size);  // cond_exec_complete
-  //  max_buffer_size += member_size;
-  // -------------------------------------------------------------------------
+    const size_t bool_size = sizeof(bool);
+    const size_t cq_status_size = sizeof(cq_status);
+    int max_buffer_size = 0;
+    int member_size = 0;
+    MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
+                  &max_buffer_size);  // id
+    MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+                  &member_size);  // exec_init
+    max_buffer_size += member_size;
+    MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+                  &member_size);  // complete
+    max_buffer_size += member_size;
+    MPI_Pack_size(bool_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+                  &member_size);  // halt
+    max_buffer_size += member_size;
+    MPI_Pack_size(cq_status_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+                  &member_size);  // status
+    max_buffer_size += member_size;
+    MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
+                  &member_size);  // nqubits
+    max_buffer_size += member_size;
+    MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
+                  &member_size);  // completed_shots
+    max_buffer_size += member_size;
+    MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
+                  &member_size);  // expected_shots
+    max_buffer_size += member_size;
+    MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
+                  &member_size);  // nmeasure
+    max_buffer_size += member_size;
 
-  size_t fname_size = 0;
-  if (ehp->fname != NULL) {
-    fname_size = strlen(ehp->fname) + 1;
+    // -------------------------------------------------------------------------
+    // TODO: sending pthred stuff doesn't sound like a good idea...
+    // sounds like UB
+    //  const size_t pthread_mutex_size = sizeof(pthread_mutex_t);
+    //  MPI_Pack_size(pthread_mutex_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+    //                &member_size);  // lock
+    //  max_buffer_size += member_size;
+    //
+    //  const size_t pthread_cond_size = sizeof(pthread_cond_t);
+    //  MPI_Pack_size(pthread_cond_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+    //                &member_size);  // cond_exec_complete
+    //  max_buffer_size += member_size;
+    // -------------------------------------------------------------------------
+
+    size_t fname_size = 0;
+    if (ehp->fname != NULL) {
+      fname_size = strlen(ehp->fname) + 1;
+    }
+    MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
+                  &member_size);  // fname_size
+    max_buffer_size += member_size;
+    MPI_Pack_size(fname_size, MPI_CHAR, CQ_MPI_COMM_WORLD,
+                  &member_size);  // fname
+    max_buffer_size += member_size;
+
+    const size_t qreg_size = sizeof(qubit) * ehp->nqubits;
+    MPI_Pack_size(qreg_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+                  &member_size);  // qreg
+    max_buffer_size += member_size;
+
+    // NOTE: creg_size * expected_shots?? or completed_shots?
+    // host should send expected, device should send completed
+    // size_t num_shots = 0;
+    // if (mpi_env.rank == CQ_MPI_HOST_RANK) {
+    //  num_shots = ehp->expected_shots;
+    //} else {
+    //  num_shots = ehp->completed_shots;
+    //}
+    const size_t num_shots = ehp->expected_shots;
+    const size_t creg_size = sizeof(cstate) * ehp->nmeasure * num_shots;
+
+    MPI_Pack_size(creg_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
+                  &member_size);  // creg
+    max_buffer_size += member_size;
+
+    // NOTE: sending ehp->params left for another day... it's for pqkerns
+
+    void* send_buffer = malloc(max_buffer_size);
+    if (send_buffer == NULL) {
+      cq_log(
+          "Failed to allocate buffer for sending executor handle. Exiting\n");
+      exit(CQ_MPI_MALLOC_ERROR);
+    }
+    int position = 0;
+    MPI_Pack(&ehp->id, 1, MPI_UINT64_T, send_buffer, max_buffer_size, &position,
+             CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->exec_init, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->complete, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->halt, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->status, cq_status_size, MPI_BYTE, send_buffer,
+             max_buffer_size, &position, CQ_MPI_COMM_WORLD);
+
+    MPI_Pack(&ehp->nqubits, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->completed_shots, 1, MPI_UINT64_T, send_buffer,
+             max_buffer_size, &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->expected_shots, 1, MPI_UINT64_T, send_buffer,
+             max_buffer_size, &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->nmeasure, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+
+    // NOTE: skip pthread stuff...
+
+    MPI_Pack(&fname_size, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(ehp->fname, fname_size, MPI_CHAR, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+
+    MPI_Pack(ehp->qreg, qreg_size, MPI_BYTE, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(ehp->creg, creg_size, MPI_BYTE, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
+
+    // NOTE: ehp->prams left for another day
+
+    MPI_Ssend(&position, 1, MPI_INT, dest, CQ_MPI_WORLD_COMMS_TAG,
+              CQ_MPI_COMM_WORLD);
+
+    MPI_Ssend(send_buffer, position, MPI_PACKED, dest, CQ_MPI_WORLD_COMMS_TAG,
+              CQ_MPI_COMM_WORLD);
+
+    free(send_buffer);
+    cq_log("%s [send_exec_params]: sent.\n", get_comm_source());
+    pthread_mutex_unlock(&ehp->lock);
+#if CQ_CONF_QUEST_WITH_MPI
   }
-  MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
-                &member_size);  // fname_size
-  max_buffer_size += member_size;
-  MPI_Pack_size(fname_size, MPI_CHAR, CQ_MPI_COMM_WORLD,
-                &member_size);  // fname
-  max_buffer_size += member_size;
-
-  const size_t qreg_size = sizeof(qubit) * ehp->nqubits;
-  MPI_Pack_size(qreg_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-                &member_size);  // qreg
-  max_buffer_size += member_size;
-
-  // NOTE: creg_size * expected_shots?? or completed_shots?
-  // host should send expected, device should send completed
-  size_t num_shots = 0;
-  if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-    num_shots = ehp->expected_shots;
-  } else {
-    num_shots = ehp->completed_shots;
-  }
-  const size_t creg_size = sizeof(cstate) * ehp->nmeasure * num_shots;
-
-  MPI_Pack_size(creg_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-                &member_size);  // creg
-  max_buffer_size += member_size;
-
-  // NOTE: sending ehp->params left for another day... it's for pqkerns
-
-  void* send_buffer = malloc(max_buffer_size);
-  if (send_buffer == NULL) {
-    cq_log("Failed to allocate buffer for sending executor handle. Exiting\n");
-    exit(CQ_MPI_MALLOC_ERROR);
-  }
-  int position = 0;
-  MPI_Pack(&ehp->id, 1, MPI_UINT64_T, send_buffer, max_buffer_size, &position,
-           CQ_MPI_COMM_WORLD);
-  MPI_Pack(&ehp->exec_init, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(&ehp->complete, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(&ehp->halt, bool_size, MPI_BYTE, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(&ehp->status, cq_status_size, MPI_BYTE, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-
-  MPI_Pack(&ehp->nqubits, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(&ehp->completed_shots, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(&ehp->expected_shots, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(&ehp->nmeasure, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-
-  // NOTE: skip pthread stuff...
-
-  MPI_Pack(&fname_size, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(ehp->fname, fname_size, MPI_CHAR, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-
-  MPI_Pack(ehp->qreg, qreg_size, MPI_BYTE, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-  MPI_Pack(ehp->creg, creg_size, MPI_BYTE, send_buffer, max_buffer_size,
-           &position, CQ_MPI_COMM_WORLD);
-
-  // NOTE: ehp->prams left for another day
-
-  MPI_Ssend(&position, 1, MPI_INT, dest, CQ_MPI_WORLD_COMMS_TAG,
-            CQ_MPI_COMM_WORLD);
-
-  MPI_Ssend(send_buffer, position, MPI_PACKED, dest, CQ_MPI_WORLD_COMMS_TAG,
-            CQ_MPI_COMM_WORLD);
-
-  free(send_buffer);
-  cq_log("%s [send_exec_params]: sent.\n", get_comm_source());
-  pthread_mutex_unlock(&ehp->lock);
+#endif
 }
 
 void device_free_exec(cq_exec** ehp) {
