@@ -4,6 +4,10 @@
 #include <string.h>
 #include "kernel_utils.h"
 
+//#include "mpi_comms.h"
+#include "src/host-device/comms.h"
+#include <stdio.h>
+
 struct qkern_registry qk_reg;
 struct pqkern_registry pqk_reg;
 
@@ -29,6 +33,7 @@ cq_status register_qkern(qkern kernel) {
     }
   }
 
+  host_device_sync_comms();
   return status;
 }
 
@@ -105,6 +110,7 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
 }
 
 void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NMEASURE, cq_exec * ehp) {
+  ehp->id = assign_exec_id();
   ehp->exec_init = true;
   ehp->complete = false;
   ehp->halt = false;

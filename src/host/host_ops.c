@@ -4,6 +4,8 @@
 #include "kernel_utils.h"
 #include "src/host-device/comms.h"
 
+//#include "src/host-device/mpi_comms.h"
+#include <stdio.h>
 // Resource Management
 
 cq_status alloc_qubit(qubit ** qhp) {
@@ -11,6 +13,7 @@ cq_status alloc_qubit(qubit ** qhp) {
 }
 
 cq_status alloc_qureg(qubit ** qrp, size_t N) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_SUCCESS;
   
   // check qr is NULL
@@ -61,6 +64,7 @@ cq_status free_qubit(qubit ** qhp) {
 }
 
 cq_status free_qureg(qubit ** qrp) {
+  RUN_HOST_ONLY();
   if (*qrp == NULL) return CQ_WARNING;
 
   device_alloc_params dealloc_params = {
@@ -84,6 +88,7 @@ cq_status free_qureg(qubit ** qrp) {
 
 cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
 cstate * crp, const size_t NMEASURE) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   cq_exec exec_handle;
 
@@ -102,6 +107,7 @@ cstate * crp, const size_t NMEASURE) {
 
 cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
 cstate * crp, const size_t NMEASURE, cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
@@ -148,6 +154,7 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
 cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
 cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
 cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
@@ -182,16 +189,19 @@ cq_exec * const ehp) {
 cq_status sync_qrun(cq_exec * const ehp) {
   cq_status status = CQ_ERROR;
   if (ehp != NULL && ehp->exec_init) {
-    host_sync_exec(ehp);
+    //host_sync_exec(ehp);
+    host_send_ctrl_op(CQ_CTRL_SYNC_EXEC, ehp);
     status = CQ_SUCCESS;
   }
   return status;  
 }
 
 cq_status wait_qrun(cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   if (ehp != NULL && ehp->exec_init) {
-    host_wait_exec(ehp);
+    //host_wait_exec(ehp);
+    host_send_ctrl_op(CQ_CTRL_WAIT_EXEC, ehp);
     finalise_exec_handle(ehp);
     status = CQ_SUCCESS;
   } else if (ehp != NULL && ehp->expected_shots == 0) {
@@ -204,7 +214,8 @@ cq_status wait_qrun(cq_exec * const ehp) {
 cq_status halt_qrun(cq_exec * const ehp) {
   cq_status status = CQ_ERROR;
   if (ehp != NULL && ehp->exec_init) {
-    host_request_halt(ehp);
+    //host_request_halt(ehp);
+    host_send_ctrl_op(CQ_CTRL_ABORT, ehp);
     status = wait_qrun(ehp);
   }
   return status;

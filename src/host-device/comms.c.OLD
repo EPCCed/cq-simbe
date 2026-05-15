@@ -30,9 +30,9 @@ int initialise_device(const unsigned int VERBOSITY) {
 
   pthread_create(&dev_ctrl.device_thread, NULL, &device_control_thread, NULL);
 
-  unsigned int verbosity = VERBOSITY;
-  host_send_ctrl_op(CQ_CTRL_INIT, &verbosity);
-  host_wait_all_ops();
+  //unsigned int verbosity = VERBOSITY;
+  //host_send_ctrl_op(CQ_CTRL_INIT, &verbosity);
+  //host_wait_all_ops();
 
   return 0;
 }

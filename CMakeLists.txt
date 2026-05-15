@@ -50,7 +50,7 @@ message(STATUS "BUILD_WITH_MPI turned ${BUILD_WITH_MPI}.")
 option(
   QUEST_WITH_MPI
   "Flag to define if QuEST was built with MPI. This will affect how we do the communication." 
-  OFF
+  ON
 )
 message(STATUS "QUEST_WITH_MPI turned ${QUEST_WITH_MPI}.")
 

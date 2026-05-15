@@ -5,7 +5,7 @@
 #include "datatypes.h"
 #include "host_ops.h"
 #include "src/host-device/comms.h"
-#include "src/host-device/mpi_comms.h"
+// #include "src/host-device/mpi_comms.h"
 
 #include <mpi.h>
 
@@ -52,17 +52,17 @@ int main() {
   cstate cr[NMEASURE * NSHOTS];
   init_creg(NMEASURE * NSHOTS, -1, cr);
   register_qkern(test_qkern);
-  //
-  //  cq_exec eh;
-  //  // a_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, &eh);
-  //  // wait_qrun(&eh);
-  //  // s_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE);
-  //  sm_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS);
-  //  // am_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh);
-  //  //  halt_qrun(&eh);
-  //  // wait_qrun(&eh);
-  //
-  //  free_qureg(&qr);
+
+  cq_exec eh;
+  // a_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, &eh);
+  // wait_qrun(&eh);
+  // s_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE);
+  sm_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS);
+  // am_qrun(test_qkern, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh);
+  //  halt_qrun(&eh);
+  // wait_qrun(&eh);
+
+  free_qureg(&qr);
   cq_finalise(1);
   return 0;
 }
