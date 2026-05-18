@@ -67,7 +67,10 @@ add_library(CQ-SIMBE::cq-simbe ALIAS cq-simbe)
 if (BUILD_WITH_MPI)
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-  target_compile_definitions(cq-simbe PRIVATE CQ_WITH_MPI_COMMS=1)
+  target_compile_definitions(cq-simbe PRIVATE
+    CQ_WITH_MPI_COMMS=1
+    $<$<CONFIG:Debug>:DEBUG_MODE>
+  )
 endif()
 
 if (BUILD_WITH_MPI AND QUEST_BUILT_WITH_MPI)
@@ -77,6 +80,7 @@ endif()
 
 target_compile_features(cq-simbe PRIVATE c_std_99)
 target_compile_options(cq-simbe PRIVATE -Wall)
+
 
 target_include_directories(cq-simbe
   PUBLIC

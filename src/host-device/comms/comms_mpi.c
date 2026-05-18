@@ -5,12 +5,16 @@
 #include "datatypes.h"
 #include "src/host/opcodes.h"
 
+#ifndef CQ_CONF_QUEST_WITH_MPI
 #include "quest/include/environment.h"
+#endif
+
+#if CQ_CONF_QUEST_WITH_MPI
 #include "quest/include/subcommunicator.h"
+#endif
 
 #include <mpi.h>
 
-#include <mpi_proto.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -21,8 +25,6 @@
 // ----------------------------------------------------------------------------
 // Macros
 // ----------------------------------------------------------------------------
-#define CQ_MPI_IMPL_DEBUG
-
 #define CQ_MPI_HOST_RANK 0
 #define CQ_MPI_DEVICE_RANK 1
 #define CQ_MPI_DEVICE_MASTER_RANK 0
@@ -56,10 +58,10 @@ struct communicator {
 
 static struct communicator dev_comm = {0};
 
-static char worker_name[64] = {0};
+static char debug_worker_name[64] = {0};
 
 static void cq_log(const char* format, ...) {
-#ifdef CQ_MPI_IMPL_DEBUG
+#ifdef DEBUG_MODE
   va_list(args);
   va_start(args, format);
   vprintf(format, args);
@@ -110,7 +112,6 @@ void host_device_sync_comms(void) {
 
 int finalise_device(const unsigned int VERBOSITY) {
   host_device_sync_comms();
-  // RUN_HOST_ONLY();
 
   if (mpi_env.rank == CQ_MPI_HOST_RANK) {
     host_wait_all_ops();
@@ -179,7 +180,7 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
   cq_log("%s in subcomm I'm rank %d\n", get_comm_source(),
          mpi_env.subcomm_rank);
 
-  sprintf(worker_name, "Quantum Worker [%d]:\t\t", mpi_env.subcomm_rank);
+  sprintf(debug_worker_name, "Quantum Worker [%d]:\t\t", mpi_env.subcomm_rank);
 #endif
 
   if (VERBOSITY > 0) {
@@ -195,10 +196,6 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
 }
 
 void finalise_host_device_mpi(const unsigned int VERBOSITY) {
-  // if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-  //   MPI_Barrier(CQ_MPI_SPLIT_COMM);
-  //   device_finalise_comms(VERBOSITY);
-  // }
   if (VERBOSITY > 0) {
     cq_log("%s Finalising MPI.\n", get_comm_source());
   }
@@ -309,7 +306,6 @@ void* device_listen(void* args) {
   }
   cq_log("%s closing connection.\n", get_comm_source());
 
-  // finalise_host_device_mpi(mpi_env.verbosity);
   device_wait_all_ops();
   finalise_device_controls(mpi_env.verbosity);
 
@@ -322,15 +318,13 @@ void* device_listen(void* args) {
 void device_dispatch_ctrl_op(const enum ctrl_code OP) {
   switch (OP) {
     case CQ_CTRL_INIT: {
-      // initialise_device(mpi_env.verbosity);
       init_device_controls(mpi_env.verbosity);
       insert_op(OP, &mpi_env.verbosity);
       device_wait_all_ops();
       break;
     }
     case CQ_CTRL_FINALISE: {
-      // don't need to insert op into worker.
-      // we just wait until worker is done and cleanup.
+      // we wait until worker is done and cleanup.
       device_wait_all_ops();
       for (size_t i = 0; i < __CQ_DEVICE_QUEUE_SIZE__; ++i) {
         if (executor_handles[i] != NULL) {
@@ -343,10 +337,8 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
 
       // this is like finalise_device in original comms.c
       insert_op(OP, &mpi_env.verbosity);
-      device_wait_all_ops();  // this was uncommented
+      device_wait_all_ops();
       stop_device();
-
-      // finalise_device(mpi_env.verbosity);
       break;
     }
     case CQ_CTRL_ALLOC: {
@@ -404,8 +396,6 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       executor_handles[tmp_exec->id] = tmp_exec;
       insert_op(OP, executor_handles[tmp_exec->id]);
       ++num_active_executors;
-      // recv_exec_params(&executor_handles[executor_id], host_rank);
-      // insert_op(OP, executor_handles[executor_id]);
       break;
     }
     case CQ_CTRL_RUN_PQKERNEL: {
@@ -539,13 +529,15 @@ void host_comm_params(const enum ctrl_code OP, void* params) {
       break;
     }
     case CQ_CTRL_WAIT_EXEC: {
+      cq_exec* exec_params = (cq_exec*)params;
       send_exec_id(((cq_exec*)params)->id, device_rank);
-      recv_exec_params(&params, device_rank);
+      recv_exec_params(&exec_params, device_rank);
       break;
     }
     case CQ_CTRL_SYNC_EXEC: {
+      cq_exec* exec_params = (cq_exec*)params;
       send_exec_id(((cq_exec*)params)->id, device_rank);
-      recv_exec_params(&params, device_rank);
+      recv_exec_params(&exec_params, device_rank);
       break;
     }
     case CQ_CTRL_ABORT: {
@@ -1036,7 +1028,7 @@ const char* get_comm_source(void) {
   } else if (mpi_env.rank == CQ_MPI_DEVICE_RANK) {
     return "Device:\t\t\t\t";
   } else if (is_quantum_worker()) {
-    return worker_name;
+    return debug_worker_name;
   } else {
     return "";
   }
@@ -1165,7 +1157,6 @@ void validate_nproc(int nproc) {
 #endif
 }
 
-#undef CQ_MPI_IMPL_DEBUG
 #undef CQ_MPI_HOST_RANK
 #undef CQ_MPI_DEVICE_RANK
 #undef CQ_MPI_DEVICE_MASTER_RANK

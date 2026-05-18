@@ -78,7 +78,16 @@ void recv_alloc_params(device_alloc_params* params, int src);
 /// @param dest destination rank of outgoing message
 void send_alloc_params(const device_alloc_params* params, int dest);
 
+///
+/// receives executor id used for matching results with correct executor.
+/// @param src source rank of incoming message
+/// @return executor id
 size_t recv_exec_id(const int src);
+
+///
+/// sends executor id used for matching results with correct executor.
+/// @param id executor id to be sent
+/// @param dest destination rank of outgoing message
 void send_exec_id(const size_t id, const int dest);
 
 ///
