@@ -164,11 +164,11 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
   MPI_Init(NULL, NULL);
 
   MPI_Comm_size(CQ_MPI_COMM_WORLD, &nprocs);
-  validate_nproc(nprocs);
+  MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
+
   // TODO: for multi-device check that:
   // (nproc - 1) == n_device * power of 2
-
-  MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
+  validate_nproc(nprocs);
 
 #if CQ_CONF_QUEST_WITH_MPI
   const int QUANTUM_WORKER = mpi_env.rank > 0;
@@ -1143,12 +1143,26 @@ MPI_Comm get_quest_comm(void) {
 
 void validate_nproc(int nproc) {
   const int device_nproc = nproc - 1;
+#if CQ_CONF_QUEST_WITH_MPI
   if (!((device_nproc > 0) && ((device_nproc & (device_nproc - 1)) == 0))) {
-    cq_log(
-        "Incorrect number of MPI processes. The (N - 1) should be power of "
-        "2!\n");
+    if (mpi_env.rank == CQ_MPI_HOST_RANK) {
+      cq_log(
+          "Incorrect number of MPI processes. The (N - 1) should be power of "
+          "2!\n");
+    }
     exit(CQ_MPI_RUNTIME_ERROR);
   }
+#endif
+#ifndef CQ_CONF_QUEST_WITH_MPI
+  if (device_nproc != 1) {
+    if (mpi_env.rank == CQ_MPI_HOST_RANK) {
+      cq_log(
+          "Incorrect number of MPI processes. If QuEST uses multi-threading "
+          "only, there should be only 2 MPI processes used for CQ!\n");
+    }
+    exit(CQ_MPI_RUNTIME_ERROR);
+  }
+#endif
 }
 
 #undef CQ_MPI_IMPL_DEBUG

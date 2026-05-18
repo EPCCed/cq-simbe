@@ -1,13 +1,5 @@
-#include <mpi.h>
 #include <stdio.h>
-#include <unistd.h>
 #include "cq.h"
-#include "datatypes.h"
-#include "host_ops.h"
-#include "src/host-device/comms.h"
-// #include "src/host-device/mpi_comms.h"
-
-#include <mpi.h>
 
 cq_status test_qkern(const size_t NQUBITS,
                      qubit* qr,
@@ -24,15 +16,6 @@ cq_status test_qkern(const size_t NQUBITS,
 }
 
 int main() {
-  //  int rank;
-  //  MPI_Init(NULL, NULL);
-  //  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  //  printf("Hello from rank %d\n", rank);
-  //  MPI_Finalize();
-  //  volatile int foo = 1;
-  //  while (foo)
-  //    sleep(5);
-  // return 0;
   const size_t NQUBITS = 10;
   const size_t NSHOTS = 10;
   const size_t NMEASURE = NQUBITS;

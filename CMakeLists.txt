@@ -43,16 +43,16 @@ option(
 option(
   BUILD_WITH_MPI
   "Build with MPI-based communication. Turned ON by default." 
-  ON
+  OFF
 )
 message(STATUS "BUILD_WITH_MPI turned ${BUILD_WITH_MPI}.")
 
 option(
-  QUEST_WITH_MPI
+  QUEST_BUILT_WITH_MPI
   "Flag to define if QuEST was built with MPI. This will affect how we do the communication." 
-  ON
+  OFF
 )
-message(STATUS "QUEST_WITH_MPI turned ${QUEST_WITH_MPI}.")
+message(STATUS "QUEST_BUILT_WITH_MPI turned ${QUEST_BUILT_WITH_MPI}.")
 
 # Dependencies
 
@@ -70,7 +70,7 @@ if (BUILD_WITH_MPI)
   target_compile_definitions(cq-simbe PRIVATE CQ_WITH_MPI_COMMS=1)
 endif()
 
-if (BUILD_WITH_MPI AND QUEST_WITH_MPI)
+if (BUILD_WITH_MPI AND QUEST_BUILT_WITH_MPI)
     target_compile_definitions(cq-simbe PRIVATE CQ_CONF_QUEST_WITH_MPI=1)
 endif()
 

@@ -4,18 +4,28 @@
 #include "src/host-device/comms.h"
 #include "src/host/opcodes.h"
 
-#include <assert.h>
 #include <mpi.h>
 
-#include <mpi_proto.h>
-#include <quest/include/environment.h>
-#include <quest/include/subcommunicator.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// ----------------------------------------------------------------------------
+// Macros
+// ----------------------------------------------------------------------------
+#define CQ_MPI_IMPL_DEBUG
+
+#define CQ_MPI_HOST_RANK 0
+#define CQ_MPI_DEVICE_RANK 1
+#define CQ_MPI_DEVICE_MASTER_RANK 0
+#define CQ_MPI_WORLD_COMMS_TAG 0
+#define CQ_MPI_SUBCOMMS_TAG 0
+
+#define CQ_MPI_RUNTIME_ERROR -4
+#define CQ_MPI_MALLOC_ERROR -5
 
 static const MPI_Comm CQ_MPI_COMM_WORLD = MPI_COMM_WORLD;
 static MPI_Comm CQ_MPI_SPLIT_COMM;
@@ -53,7 +63,6 @@ static void cq_log(const char* format, ...) {
 }
 
 void init_host_device_mpi(const unsigned int VERBOSITY) {
-  assert(sizeof(enum ctrl_code) == sizeof(int));
   mpi_env.verbosity = VERBOSITY;
   if (VERBOSITY > 0) {
     cq_log("Initialising MPI.\n");
@@ -64,11 +73,10 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
   MPI_Init(NULL, NULL);
 
   MPI_Comm_size(CQ_MPI_COMM_WORLD, &nprocs);
-  // TODO: check nproc - 1 == power of 2
+  MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
   // TODO: for multi-device check that:
   // (nproc - 1) == n_device * power of 2
-
-  MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
+  validate_nproc(nprocs);
 
 #if CQ_CONF_QUEST_WITH_MPI
   const int QUANTUM_WORKER = mpi_env.rank > 0;
@@ -109,8 +117,6 @@ void finalise_host_device_mpi(const unsigned int VERBOSITY) {
   }
 }
 
-// void mpi_host_send_ctrl_op(const enum ctrl_code OP,
-//                            struct ctrl_params* params) {
 void mpi_host_send_ctrl_op(const enum ctrl_code OP, void* params) {
   const int device_rank = CQ_MPI_DEVICE_RANK;
   cq_log("%s [send_ctrl_op]: sending %s...\n", get_comm_source(),
@@ -135,7 +141,7 @@ void mpi_host_wait_all_ops(void) {
          get_comm_source(), num_ops);
 }
 
-void host_device_final_sync(void) {
+void host_device_sync_comms(void) {
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     cq_log("%s [final_sync]: simply waiting\n", get_comm_source());
     device_wait_comms();
@@ -1178,9 +1184,10 @@ size_t assign_exec_id(void) {
   return global_exec_id_counter;
 }
 
-int is_device(void) {
+bool is_device(void) {
   return mpi_env.rank != CQ_MPI_HOST_RANK;
 }
+
 int is_quantum_worker(void) {
   return mpi_env.rank > 0;
 }
@@ -1189,14 +1196,34 @@ MPI_Comm get_quest_comm(void) {
   return CQ_MPI_SPLIT_COMM;
 }
 
-void foo() {
-  // initCustomMpiCommQuESTEnv(MPI_Comm questComm, int useGpuAccel, int
-  // useMultithread)
+void validate_nproc(int nproc) {
+  const int device_nproc = nproc - 1;
 
-  // Basically what we want is we get MPI_COMM_WORLD
-  // we check that size - 2 (or host = 1 + n_dev) is power of 2
-  // split it use one subcomm for host-device comms with 2 ranks
-  // the rest goes to quest and can be accessed from here using getter
-  // and then if build with MPI (both this and QuEST) call in control.c
-  // initCustomMpiCommQuESTEnv(get_quest_comm(), gpu, mthrd);
+#if CQ_CONF_QUEST_WITH_MPI
+  if (!((device_nproc > 0) && ((device_nproc & (device_nproc - 1)) == 0))) {
+    cq_log(
+        "Incorrect number of MPI processes. If QuEST was built with MPI, the "
+        "(N - 1) should be power of "
+        "2!\n");
+    exit(CQ_MPI_RUNTIME_ERROR);
+  }
+#endif
+#ifndef CQ_CONF_QUEST_WITH_MPI
+  cq_log("NPROC: %d\n", nproc);
+  if (device_nproc != 1) {
+    cq_log(
+        "Incorrect number of MPI processes. If QuEST uses multi-threading "
+        "only, there should be only 2 MPI processes used for CQ!\n");
+    exit(CQ_MPI_RUNTIME_ERROR);
+  }
+#endif
 }
+
+#undef CQ_MPI_IMPL_DEBUG
+#undef CQ_MPI_HOST_RANK
+#undef CQ_MPI_DEVICE_RANK
+#undef CQ_MPI_DEVICE_MASTER_RANK
+#undef CQ_MPI_WORLD_COMMS_TAG
+#undef CQ_MPI_SUBCOMMS_TAG
+#undef CQ_MPI_RUNTIME_ERROR
+#undef CQ_MPI_MALLOC_ERROR
