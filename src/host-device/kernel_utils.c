@@ -121,6 +121,7 @@ void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NM
   ehp->completed_shots = 0;
   ehp->expected_shots = NSHOTS;
   ehp->nmeasure = NMEASURE;
+  ehp->params_size = 0;
   ehp->fname = NULL;
   ehp->qreg = NULL;
   ehp->creg = NULL;

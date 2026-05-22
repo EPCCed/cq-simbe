@@ -763,6 +763,8 @@ void recv_exec_params(cq_exec** ehp, const int src) {
              MPI_UINT64_T, CQ_MPI_COMM_WORLD);
   MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->nmeasure, 1,
              MPI_UINT64_T, CQ_MPI_COMM_WORLD);
+  MPI_Unpack(recv_buffer, msg_size, &position, &(*ehp)->params_size, 1,
+             MPI_UINT64_T, CQ_MPI_COMM_WORLD);
 
   size_t fname_size = 0;
   MPI_Unpack(recv_buffer, msg_size, &position, &fname_size, 1, MPI_UINT64_T,
@@ -772,6 +774,7 @@ void recv_exec_params(cq_exec** ehp, const int src) {
   const size_t qreg_size = sizeof(qubit) * (*ehp)->nqubits;
   const size_t num_shots = (*ehp)->expected_shots;
   const size_t creg_size = sizeof(cstate) * (*ehp)->nmeasure * num_shots;
+  const size_t params_size = (*ehp)->params_size;
 
   // when on host the resources are already allocated!
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
@@ -795,6 +798,13 @@ void recv_exec_params(cq_exec** ehp, const int src) {
              get_comm_source());
       exit(CQ_MPI_MALLOC_ERROR);
     }
+
+    (*ehp)->params = malloc(params_size);
+    if ((*ehp)->params == NULL) {
+      cq_log("%s [recv_exec_params]: malloc *ehp->params failed. Exiting\n",
+             get_comm_source());
+      exit(CQ_MPI_MALLOC_ERROR);
+    }
   }
 
   MPI_Unpack(recv_buffer, msg_size, &position, (*ehp)->fname, fname_size,
@@ -803,8 +813,8 @@ void recv_exec_params(cq_exec** ehp, const int src) {
              MPI_BYTE, CQ_MPI_COMM_WORLD);
   MPI_Unpack(recv_buffer, msg_size, &position, (char*)(*ehp)->creg, creg_size,
              MPI_BYTE, CQ_MPI_COMM_WORLD);
-
-  // NOTE: recv ehp->params left for another day... it's for pqkerns
+  MPI_Unpack(recv_buffer, msg_size, &position, (char*)(*ehp)->params,
+             params_size, MPI_BYTE, CQ_MPI_COMM_WORLD);
 
   free(recv_buffer);
 
@@ -858,6 +868,8 @@ void send_exec_params(cq_exec* ehp, const int dest) {
     MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD,
                   &member_size);  // nmeasure
     max_buffer_size += member_size;
+    MPI_Pack_size(1, MPI_UINT64_T, CQ_MPI_COMM_WORLD, &member_size);
+    max_buffer_size += member_size;  // params_size
 
     size_t fname_size = 0;
     if (ehp->fname != NULL) {
@@ -882,7 +894,9 @@ void send_exec_params(cq_exec* ehp, const int dest) {
                   &member_size);  // creg
     max_buffer_size += member_size;
 
-    // NOTE: sending ehp->params left for another day... it's for pqkerns
+    const size_t params_size = ehp->params_size;
+    MPI_Pack_size(params_size, MPI_BYTE, CQ_MPI_COMM_WORLD, &member_size);
+    max_buffer_size += member_size;  // params
 
     void* send_buffer = malloc(max_buffer_size);
     if (send_buffer == NULL) {
@@ -910,6 +924,8 @@ void send_exec_params(cq_exec* ehp, const int dest) {
              max_buffer_size, &position, CQ_MPI_COMM_WORLD);
     MPI_Pack(&ehp->nmeasure, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
              &position, CQ_MPI_COMM_WORLD);
+    MPI_Pack(&ehp->params_size, 1, MPI_UINT64_T, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
 
     // NOTE: skip pthread stuff...
 
@@ -922,8 +938,8 @@ void send_exec_params(cq_exec* ehp, const int dest) {
              &position, CQ_MPI_COMM_WORLD);
     MPI_Pack(ehp->creg, creg_size, MPI_BYTE, send_buffer, max_buffer_size,
              &position, CQ_MPI_COMM_WORLD);
-
-    // NOTE: ehp->prams left for another day
+    MPI_Pack(ehp->params, params_size, MPI_BYTE, send_buffer, max_buffer_size,
+             &position, CQ_MPI_COMM_WORLD);
 
     MPI_Ssend(&position, 1, MPI_INT, dest, CQ_MPI_WORLD_COMMS_TAG,
               CQ_MPI_COMM_WORLD);
@@ -1072,11 +1088,11 @@ void print_ehp(const cq_exec* ehp) {
       "STATUS: "
       "%d\nNQUBITS: "
       "%zu, completed_shots: %zu, expected_shots: %zu, NMEASURE: "
-      "%zu\nfname: "
+      "%zu, params_size: %zu\nfname: "
       "%s\nqreg:\n",
       get_comm_source(), ehp->id, ehp->exec_init, ehp->complete, ehp->halt,
       ehp->status, ehp->nqubits, ehp->completed_shots, ehp->expected_shots,
-      ehp->nmeasure, ehp->fname);
+      ehp->nmeasure, ehp->params_size, ehp->fname);
 
   for (size_t i = 0; i < ehp->nqubits; ++i) {
     cq_log("qubit[%zu]: reg_idx: %zu, offset: %zu, N: %zu\n", i,
