@@ -12,7 +12,7 @@ void stop_device(void);
 
 int finalise_device_controls(const unsigned int VERBOSITY);
 
-size_t insert_op(const enum ctrl_code OP, void* ctrl_params); 
+size_t insert_op(const enum ctrl_code OP, void* ctrl_params);
 
 size_t comms_exec_sync(cq_exec* const ehp);
 
@@ -22,6 +22,6 @@ void comms_exec_halt(cq_exec* const ehp);
 
 size_t device_wait_all_ops(void);
 
-void * device_control_thread(void *);
-				      
+void* device_control_thread(void*);
+
 #endif

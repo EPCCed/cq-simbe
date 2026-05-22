@@ -33,7 +33,9 @@ cq_status register_qkern(qkern kernel) {
     }
   }
 
-  host_device_sync_comms();
+  //host_device_sync_comms();
+  RUN_HOST_ONLY();
+  host_wait_all_ops();
   return status;
 }
 

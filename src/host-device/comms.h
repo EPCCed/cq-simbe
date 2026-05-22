@@ -41,13 +41,10 @@ typedef struct device_alloc_params {
 
 extern struct dev_link dev_ctrl;
 
-// TODO: pth as in original comms.c
 int initialise_device(const unsigned int VERBOSITY);
 
-// TODO: pth wrapper around insert_op
 size_t host_send_ctrl_op(const enum ctrl_code OP, void* ctrl_params);
 
-// TODO: pth wrapper around device_wait_all_ops
 size_t host_wait_all_ops(void);
 
 size_t device_sync_exec(const cq_status STATUS,
@@ -55,10 +52,8 @@ size_t device_sync_exec(const cq_status STATUS,
                         cstate const* const RESULT,
                         cq_exec* ehp);
 
-// TODO: Implement for pthreads
 void host_device_sync_comms(void);
 
-// TODO: pth as in original comms.c
 int finalise_device(const unsigned int VERBOSITY);
 
 /// generates and assigns id to the executor that is used for host-device

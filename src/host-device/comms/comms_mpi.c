@@ -1,4 +1,5 @@
 #include "comms_mpi.h"
+#include <mpi_proto.h>
 #include "comms_core.h"
 #include "src/host-device/comms.h"
 
@@ -272,24 +273,24 @@ void* device_listen(void* args) {
     cq_log("%s [device_listen]: Starting Bcast\n", get_comm_source());
     // NOTE: doing custom bcast because I have MPI errors on my machine
     // when calling MPICH Bcast!
-    MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-      int subcomm_size = 0;
-      MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
+    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    // if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+    //  int subcomm_size = 0;
+    //  MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
 
-      for (size_t i = 1; i < subcomm_size; ++i) {
-        MPI_Ssend(&op_comm_buffer, 1, MPI_INT, i, CQ_MPI_SUBCOMMS_TAG,
-                  CQ_MPI_SPLIT_COMM);
-      }
-    } else {
-      MPI_Status status;
-      MPI_Recv(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
-               CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
-    }
-    MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    //  for (size_t i = 1; i < subcomm_size; ++i) {
+    //    MPI_Ssend(&op_comm_buffer, 1, MPI_INT, i, CQ_MPI_SUBCOMMS_TAG,
+    //              CQ_MPI_SPLIT_COMM);
+    //  }
+    //} else {
+    //  MPI_Status status;
+    //  MPI_Recv(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
+    //           CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
+    //}
+    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
 
-    // MPI_Bcast(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
-    //           CQ_MPI_SPLIT_COMM);
+    MPI_Bcast(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
+              CQ_MPI_SPLIT_COMM);
     cq_log("%s [device_listen]: Finished Bcast\n", get_comm_source());
 #endif
 
@@ -312,9 +313,6 @@ void* device_listen(void* args) {
   return NULL;
 }
 
-// optionally get params and run op
-// by running op I mean modyfing the internal dev_ctrl fields
-// and then the worker thread handles the rest.
 void device_dispatch_ctrl_op(const enum ctrl_code OP) {
   switch (OP) {
     case CQ_CTRL_INIT: {
@@ -414,8 +412,8 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
         exit(CQ_MPI_RUNTIME_ERROR);
       }
       // NOTE: This is commented out as it can cause a deadlock
-      // comms_exec_wait(executor_handles[executor_id]);
       device_wait_all_ops();
+      comms_exec_wait(executor_handles[executor_id]);
       send_exec_params(executor_handles[executor_id], host_rank);
       // NOTE: This can be done when allocating new in offload
       // i.e. clear old one and allocate new one
@@ -550,7 +548,7 @@ void host_comm_params(const enum ctrl_code OP, void* params) {
   }
 }
 
-void recv_alloc_params(device_alloc_params* params, int src) {
+void recv_alloc_params(device_alloc_params* params, const int src) {
   cq_log("%s [recv_alloc_params]: receiving...\n", get_comm_source());
 
   const size_t params_size = sizeof(device_alloc_params);
@@ -571,22 +569,22 @@ void recv_alloc_params(device_alloc_params* params, int src) {
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     // NOTE: doing custom bcast because I have MPI errors on my machine
     // when calling MPICH Bcast!
-    MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-      int subcomm_size = 0;
-      MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
+    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    // if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+    //  int subcomm_size = 0;
+    //  MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
 
-      for (size_t i = 1; i < subcomm_size; ++i) {
-        MPI_Ssend(params, params_size, MPI_BYTE, i, CQ_MPI_SUBCOMMS_TAG,
-                  CQ_MPI_SPLIT_COMM);
-      }
-    } else {
-      MPI_Recv(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
-               CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
-    }
-    MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    // MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
-    //           CQ_MPI_SPLIT_COMM);
+    //  for (size_t i = 1; i < subcomm_size; ++i) {
+    //    MPI_Ssend(params, params_size, MPI_BYTE, i, CQ_MPI_SUBCOMMS_TAG,
+    //              CQ_MPI_SPLIT_COMM);
+    //  }
+    //} else {
+    //  MPI_Recv(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
+    //           CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
+    //}
+    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
+              CQ_MPI_SPLIT_COMM);
   }
 #endif
 
@@ -594,7 +592,7 @@ void recv_alloc_params(device_alloc_params* params, int src) {
   print_alloc_params(params);
 }
 
-void send_alloc_params(const device_alloc_params* params, int dest) {
+void send_alloc_params(const device_alloc_params* params, const int dest) {
 #if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
@@ -633,22 +631,22 @@ size_t recv_exec_id(const int src) {
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     // NOTE: doing custom bcast because I have MPI errors on my machine
     // when calling MPICH Bcast!
-    MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-      int subcomm_size = 0;
-      MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
+    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    // if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
+    //  int subcomm_size = 0;
+    //  MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
 
-      for (size_t i = 1; i < subcomm_size; ++i) {
-        MPI_Ssend(&id, 1, MPI_UINT64_T, i, CQ_MPI_SUBCOMMS_TAG,
-                  CQ_MPI_SPLIT_COMM);
-      }
-    } else {
-      MPI_Recv(&id, 1, MPI_UINT64_T, CQ_MPI_DEVICE_MASTER_RANK,
-               CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
-    }
-    MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    // MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
-    //           CQ_MPI_SPLIT_COMM);
+    //  for (size_t i = 1; i < subcomm_size; ++i) {
+    //    MPI_Ssend(&id, 1, MPI_UINT64_T, i, CQ_MPI_SUBCOMMS_TAG,
+    //              CQ_MPI_SPLIT_COMM);
+    //  }
+    //} else {
+    //  MPI_Recv(&id, 1, MPI_UINT64_T, CQ_MPI_DEVICE_MASTER_RANK,
+    //           CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
+    //}
+    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
+    MPI_Bcast(&id, 1, MPI_UINT64_T, CQ_MPI_DEVICE_MASTER_RANK,
+              CQ_MPI_SPLIT_COMM);
   }
 #endif
 
@@ -673,7 +671,7 @@ void send_exec_id(const size_t id, const int dest) {
 #endif
 }
 
-void recv_exec_params(cq_exec** ehp, int src) {
+void recv_exec_params(cq_exec** ehp, const int src) {
   // TODO: do validation
   cq_log("%s [recv_exec_params]: receiving...\n", get_comm_source());
   int msg_size;
@@ -701,13 +699,11 @@ void recv_exec_params(cq_exec** ehp, int src) {
 
   void* recv_buffer = malloc(msg_size);
 
-  // reserve space for all the date + currently unused members
+  // reserve space for all the data + currently unused members
   if (*ehp == NULL) {
     cq_log("%s [recv_exec_params]: *ehp is NULL. Allocating on device.\n",
            get_comm_source());
 
-    // ehp = (cq_exec*)malloc(msg_size + sizeof(pthread_mutex_t) +
-    //                        sizeof(pthread_cond_t) + sizeof(void*));
     *ehp = (cq_exec*)malloc(sizeof(cq_exec));
     pthread_mutex_init(&(*ehp)->lock, NULL);
     pthread_cond_init(&(*ehp)->cond_exec_complete, NULL);
@@ -774,15 +770,6 @@ void recv_exec_params(cq_exec** ehp, int src) {
   fname_size *= sizeof(char);
 
   const size_t qreg_size = sizeof(qubit) * (*ehp)->nqubits;
-  // NOTE: creg_size * expected_shots?? or completed_shots?
-  // host should get completed, device should get expected
-  // and similarly when sending
-  // size_t num_shots = 0;
-  //  if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-  //    num_shots = (*ehp)->completed_shots;
-  //  } else {
-  //    num_shots = (*ehp)->expected_shots;
-  //  }
   const size_t num_shots = (*ehp)->expected_shots;
   const size_t creg_size = sizeof(cstate) * (*ehp)->nmeasure * num_shots;
 
@@ -826,7 +813,7 @@ void recv_exec_params(cq_exec** ehp, int src) {
   pthread_mutex_unlock(&(*ehp)->lock);
 }
 
-void send_exec_params(cq_exec* ehp, int dest) {
+void send_exec_params(cq_exec* ehp, const int dest) {
 // if running with MPI QuEST, we don't need to communicate
 // with quantum workers because the results from QuEST
 // (e.g. measurements) should be already synchronised.
@@ -872,20 +859,6 @@ void send_exec_params(cq_exec* ehp, int dest) {
                   &member_size);  // nmeasure
     max_buffer_size += member_size;
 
-    // -------------------------------------------------------------------------
-    // TODO: sending pthred stuff doesn't sound like a good idea...
-    // sounds like UB
-    //  const size_t pthread_mutex_size = sizeof(pthread_mutex_t);
-    //  MPI_Pack_size(pthread_mutex_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-    //                &member_size);  // lock
-    //  max_buffer_size += member_size;
-    //
-    //  const size_t pthread_cond_size = sizeof(pthread_cond_t);
-    //  MPI_Pack_size(pthread_cond_size, MPI_BYTE, CQ_MPI_COMM_WORLD,
-    //                &member_size);  // cond_exec_complete
-    //  max_buffer_size += member_size;
-    // -------------------------------------------------------------------------
-
     size_t fname_size = 0;
     if (ehp->fname != NULL) {
       fname_size = strlen(ehp->fname) + 1;
@@ -902,14 +875,6 @@ void send_exec_params(cq_exec* ehp, int dest) {
                   &member_size);  // qreg
     max_buffer_size += member_size;
 
-    // NOTE: creg_size * expected_shots?? or completed_shots?
-    // host should send expected, device should send completed
-    // size_t num_shots = 0;
-    // if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-    //  num_shots = ehp->expected_shots;
-    //} else {
-    //  num_shots = ehp->completed_shots;
-    //}
     const size_t num_shots = ehp->expected_shots;
     const size_t creg_size = sizeof(cstate) * ehp->nmeasure * num_shots;
 
@@ -1133,7 +1098,7 @@ MPI_Comm get_quest_comm(void) {
   return CQ_MPI_SPLIT_COMM;
 }
 
-void validate_nproc(int nproc) {
+void validate_nproc(const int nproc) {
   const int device_nproc = nproc - 1;
 #if CQ_CONF_QUEST_WITH_MPI
   if (!((device_nproc > 0) && ((device_nproc & (device_nproc - 1)) == 0))) {

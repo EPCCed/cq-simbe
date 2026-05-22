@@ -30,12 +30,7 @@ int init_device_controls(const unsigned int VERBOSITY) {
 
   pthread_create(&dev_ctrl.device_thread, NULL, &device_control_thread, NULL);
 
-  //unsigned int verbosity = VERBOSITY;
-  //host_send_ctrl_op(CQ_CTRL_INIT, &verbosity);
-  //host_wait_all_ops();
-
   return 0;
-
 }
 
 void stop_device(void) {
@@ -57,10 +52,7 @@ int finalise_device_controls(const unsigned int VERBOSITY) {
   return 0;
 }
 
-// NOTE: aka host_send_ctrl_op from comm.c
-// really what I want to use is host_send_ctrl_op implemenetation but it needs
-// renaming and wrapping into function called host_send_ctrl_op and depending on
-// either MPI or pthread implementation use this in different ctx.
+// NOTE: aka host_send_ctrl_op from OG comm.c
 size_t insert_op(const enum ctrl_code OP, void* ctrl_params) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
 
@@ -109,10 +101,7 @@ void comms_exec_halt(cq_exec* const ehp) {
   return;
 }
 
-// NOTE: aka host_wait_all_ops from comm.c
-// really what I want to use is host_wait_all_ops implementation but it needs
-// renaming and wrapping into function called host_send_ctrl_op and depending
-// on either MPI or pthread implementation use this in different ctx.
+// NOTE: aka host_wait_all_ops from OG comm.c
 size_t device_wait_all_ops(void) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
   while (dev_ctrl.num_ops > 0 || dev_ctrl.device_busy) {
@@ -123,24 +112,25 @@ size_t device_wait_all_ops(void) {
   return dev_ctrl.num_ops;
 }
 
-void * device_control_thread(void * par) {
+void* device_control_thread(void* par) {
   enum ctrl_code current_op = CQ_CTRL_IDLE;
-  void * current_op_params = NULL;
+  void* current_op_params = NULL;
 
   // run_device set to FALSE at cq_finalise
   while (dev_ctrl.run_device) {
     pthread_mutex_lock(&dev_ctrl.device_lock);
 
-    while(dev_ctrl.num_ops <= 0) {
+    while (dev_ctrl.num_ops <= 0) {
       // wait for a new op to be posted
       dev_ctrl.device_busy = false;
       pthread_cond_signal(&dev_ctrl.cond_device_busy);
       pthread_cond_wait(&dev_ctrl.cond_queue_empty, &dev_ctrl.device_lock);
     }
-    
+
     dev_ctrl.device_busy = true;
 
-    // take the next op and params out of the dev_ctrl buffer, and then tidy up the dev_ctrl buffer
+    // take the next op and params out of the dev_ctrl buffer, and then tidy up
+    // the dev_ctrl buffer
     current_op = dev_ctrl.op_buffer[dev_ctrl.next_op_out];
     current_op_params = dev_ctrl.op_params_buffer[dev_ctrl.next_op_out];
     dev_ctrl.op_buffer[dev_ctrl.next_op_out] = CQ_CTRL_IDLE;
@@ -156,17 +146,19 @@ void * device_control_thread(void * par) {
     pthread_mutex_unlock(&dev_ctrl.device_lock);
 
     control_registry[current_op](current_op_params);
-  }  
- 
+  }
+
   pthread_mutex_unlock(&dev_ctrl.device_lock);
 
   return NULL;
 }
 
-size_t device_sync_exec(const cq_status STATUS, const size_t SHOT, 
-cstate const * const RESULT, cq_exec * ehp) {
+size_t device_sync_exec(const cq_status STATUS,
+                        const size_t SHOT,
+                        cstate const* const RESULT,
+                        cq_exec* ehp) {
   pthread_mutex_lock(&ehp->lock);
-  
+
   if (STATUS == CQ_EARLY_SUCCESS) {
     // generally speaking we should respect the kernel-provided
     // status code, but CQ_EARLY_SUCCESS really means CQ_SUCCESS
@@ -175,19 +167,16 @@ cstate const * const RESULT, cq_exec * ehp) {
   } else {
     ehp->status = STATUS;
   }
-  
+
   ehp->completed_shots += 1;
 
   // copy local result register to exec
-  cstate * dest_creg = ehp->creg + SHOT * ehp->nmeasure;
+  cstate* dest_creg = ehp->creg + SHOT * ehp->nmeasure;
   memcpy(dest_creg, RESULT, ehp->nmeasure * sizeof(cstate));
-  
+
   // check if the whole execution is done
-  if (
-    ehp->completed_shots == ehp->expected_shots 
-    || STATUS != CQ_SUCCESS
-    || ehp->halt
-  ) {
+  if (ehp->completed_shots == ehp->expected_shots || STATUS != CQ_SUCCESS ||
+      ehp->halt) {
     ehp->complete = true;
     pthread_cond_signal(&(ehp->cond_exec_complete));
   }

@@ -70,13 +70,13 @@ void host_comm_params(const enum ctrl_code OP, void* params);
 /// @param[out] params reference to parameters to store the results of
 /// communication
 /// @param src source rank of incoming message
-void recv_alloc_params(device_alloc_params* params, int src);
+void recv_alloc_params(device_alloc_params* params, const int src);
 
 ///
 /// sends allocation parameters to the destination.
 /// @param[in] params reference to parameters to communicate
 /// @param dest destination rank of outgoing message
-void send_alloc_params(const device_alloc_params* params, int dest);
+void send_alloc_params(const device_alloc_params* params, const int dest);
 
 ///
 /// receives executor id used for matching results with correct executor.
@@ -96,12 +96,12 @@ void send_exec_id(const size_t id, const int dest);
 /// device_free_exec.
 /// @param[out] ehp executor handle used for host-device offloading
 /// @param src source rank of incoming message
-void recv_exec_params(cq_exec** ehp, int src);
+void recv_exec_params(cq_exec** ehp, const int src);
 
 /// sends updated executor handle to the destination.
 /// @param[in] ehp executor handle used for host-device offloading
 /// @param dest destination rank of outgoing message
-void send_exec_params(cq_exec* ehp, int dest);
+void send_exec_params(cq_exec* ehp, const int dest);
 
 ///
 /// frees on-device memory pointed to by executor handle.
@@ -154,6 +154,6 @@ MPI_Comm get_quest_comm(void);
 /// validates the number of MPI processes to meet QuEST constraints.
 /// Exits program if check failed.
 /// @param nproc number of MPI processes
-void validate_nproc(int nproc);
+void validate_nproc(const int nproc);
 
 #endif
