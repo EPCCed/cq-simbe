@@ -42,13 +42,15 @@ struct cq_mpi_env {
   int rank;
   int subcomm_rank;
   unsigned int verbosity;
+  int world_size;
 };
 
 static cq_exec* executor_handles[__CQ_DEVICE_QUEUE_SIZE__];
 static size_t num_active_executors = 0;
 static struct cq_mpi_env mpi_env = {.rank = -1,
                                     .subcomm_rank = -1,
-                                    .verbosity = 0};
+                                    .verbosity = 0,
+                                    .world_size = 0};
 
 struct communicator {
   bool comm_busy;
@@ -67,6 +69,15 @@ static void cq_log(const char* format, ...) {
   va_start(args, format);
   vprintf(format, args);
 #endif
+}
+
+static bool cq_validate_mpi_rank(const int rank) {
+  if (rank < 0 || rank >= mpi_env.world_size) {
+    cq_log(
+        "passed incorrect mpi rank with value either < 0 or >= world_size\n");
+    return false;
+  }
+  return true;
 }
 
 int initialise_device(const unsigned int VERBOSITY) {
@@ -161,16 +172,14 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
     cq_log("Initialising MPI.\n");
   }
 
-  int nprocs;
-
   MPI_Init(NULL, NULL);
 
-  MPI_Comm_size(CQ_MPI_COMM_WORLD, &nprocs);
+  MPI_Comm_size(CQ_MPI_COMM_WORLD, &mpi_env.world_size);
   MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
 
   // TODO: for multi-device check that:
   // (nproc - 1) == n_device * power of 2
-  validate_nproc(nprocs);
+  validate_nproc(mpi_env.world_size);
 
 #if CQ_CONF_QUEST_WITH_MPI
   const int QUANTUM_WORKER = mpi_env.rank > 0;
@@ -551,6 +560,12 @@ void host_comm_params(const enum ctrl_code OP, void* params) {
 void recv_alloc_params(device_alloc_params* params, const int src) {
   cq_log("%s [recv_alloc_params]: receiving...\n", get_comm_source());
 
+  if (!cq_validate_mpi_rank(src)) {
+    cq_log("%s [recv_exec_params]: encountered input error\n",
+           get_comm_source());
+    return;
+  }
+
   const size_t params_size = sizeof(device_alloc_params);
   MPI_Status status;
 
@@ -593,6 +608,17 @@ void recv_alloc_params(device_alloc_params* params, const int src) {
 }
 
 void send_alloc_params(const device_alloc_params* params, const int dest) {
+  if (params == NULL) {
+    cq_log("%s [recv_exec_params]: passed null params\n", get_comm_source());
+    return;
+  }
+
+  if (!cq_validate_mpi_rank(dest)) {
+    cq_log("%s [recv_exec_params]: encountered input error\n",
+           get_comm_source());
+    return;
+  }
+
 #if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
@@ -613,6 +639,12 @@ void send_alloc_params(const device_alloc_params* params, const int dest) {
 
 size_t recv_exec_id(const int src) {
   cq_log("%s [recv_exec_id]: receiving...\n", get_comm_source());
+  if (!cq_validate_mpi_rank(src)) {
+    cq_log("%s [recv_exec_params]: encountered input error\n",
+           get_comm_source());
+    return -1;
+  }
+
   size_t id = -1;
   MPI_Status status;
 
@@ -655,6 +687,12 @@ size_t recv_exec_id(const int src) {
 }
 
 void send_exec_id(const size_t id, const int dest) {
+  if (!cq_validate_mpi_rank(dest)) {
+    cq_log("%s [recv_exec_params]: encountered input error\n",
+           get_comm_source());
+    return;
+  }
+
 #if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK ||
@@ -674,6 +712,18 @@ void send_exec_id(const size_t id, const int dest) {
 void recv_exec_params(cq_exec** ehp, const int src) {
   // TODO: do validation
   cq_log("%s [recv_exec_params]: receiving...\n", get_comm_source());
+
+  if (ehp == NULL) {
+    cq_log("%s [recv_exec_params]: passed null ehp\n", get_comm_source());
+    return;
+  }
+
+  if (!cq_validate_mpi_rank(src)) {
+    cq_log("%s [recv_exec_params]: encountered input error\n",
+           get_comm_source());
+    return;
+  }
+
   int msg_size;
   MPI_Status status;
 
@@ -824,6 +874,17 @@ void recv_exec_params(cq_exec** ehp, const int src) {
 }
 
 void send_exec_params(cq_exec* ehp, const int dest) {
+  if (ehp == NULL) {
+    cq_log("%s [recv_exec_params]: passed null ehp\n", get_comm_source());
+    return;
+  }
+
+  if (!cq_validate_mpi_rank(dest)) {
+    cq_log("%s [recv_exec_params]: encountered input error\n",
+           get_comm_source());
+    return;
+  }
+
 // if running with MPI QuEST, we don't need to communicate
 // with quantum workers because the results from QuEST
 // (e.g. measurements) should be already synchronised.
@@ -1073,6 +1134,9 @@ const char* op_to_str(const enum ctrl_code OP) {
 }
 
 void print_alloc_params(const device_alloc_params* params) {
+  if (params == NULL) {
+    return;
+  }
   cq_log("%s alloc params: NQUBITS: %zu, qreg_idx: %zu, STATUS: %d\n",
          get_comm_source(), params->NQUBITS, params->qregistry_idx,
          params->status);
