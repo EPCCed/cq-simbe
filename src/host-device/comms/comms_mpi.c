@@ -280,24 +280,6 @@ void* device_listen(void* args) {
       // rank 0 brodcast to rest of q-workers then all do the dispatch
     }
     cq_log("%s [device_listen]: Starting Bcast\n", get_comm_source());
-    // NOTE: doing custom bcast because I have MPI errors on my machine
-    // when calling MPICH Bcast!
-    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    // if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-    //  int subcomm_size = 0;
-    //  MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
-
-    //  for (size_t i = 1; i < subcomm_size; ++i) {
-    //    MPI_Ssend(&op_comm_buffer, 1, MPI_INT, i, CQ_MPI_SUBCOMMS_TAG,
-    //              CQ_MPI_SPLIT_COMM);
-    //  }
-    //} else {
-    //  MPI_Status status;
-    //  MPI_Recv(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
-    //           CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
-    //}
-    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
-
     MPI_Bcast(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
               CQ_MPI_SPLIT_COMM);
     cq_log("%s [device_listen]: Finished Bcast\n", get_comm_source());
@@ -406,8 +388,21 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       break;
     }
     case CQ_CTRL_RUN_PQKERNEL: {
-      // recv params
-      // insert_op
+      // Same logic as in CQ_CTRL_RUN_QKERNEL
+      if (num_active_executors >= __CQ_DEVICE_QUEUE_SIZE__) {
+        cq_log(
+            "%s [dispatch][RUN_QKERNEL]: You have oversubsribed the executor "
+            "queue. We allow up to %d "
+            "concurrent executors per device. Exiting",
+            get_comm_source(), __CQ_DEVICE_QUEUE_SIZE__);
+        exit(CQ_MPI_RUNTIME_ERROR);
+      }
+      const int host_rank = CQ_MPI_HOST_RANK;
+      cq_exec* tmp_exec = NULL;
+      recv_exec_params(&tmp_exec, host_rank);
+      executor_handles[tmp_exec->id] = tmp_exec;
+      insert_op(OP, executor_handles[tmp_exec->id]);
+      ++num_active_executors;
       break;
     }
     case CQ_CTRL_WAIT_EXEC: {
@@ -420,7 +415,7 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
             get_comm_source());
         exit(CQ_MPI_RUNTIME_ERROR);
       }
-      // NOTE: This is commented out as it can cause a deadlock
+      // NOTE: This part needs further tests to ensure no deadlock
       device_wait_all_ops();
       comms_exec_wait(executor_handles[executor_id]);
       send_exec_params(executor_handles[executor_id], host_rank);
@@ -582,22 +577,6 @@ void recv_alloc_params(device_alloc_params* params, const int src) {
   }
   // device-rank 0 brodcast params to rest of q-workers
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-    // NOTE: doing custom bcast because I have MPI errors on my machine
-    // when calling MPICH Bcast!
-    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    // if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-    //  int subcomm_size = 0;
-    //  MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
-
-    //  for (size_t i = 1; i < subcomm_size; ++i) {
-    //    MPI_Ssend(params, params_size, MPI_BYTE, i, CQ_MPI_SUBCOMMS_TAG,
-    //              CQ_MPI_SPLIT_COMM);
-    //  }
-    //} else {
-    //  MPI_Recv(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
-    //           CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
-    //}
-    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
     MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
               CQ_MPI_SPLIT_COMM);
   }
@@ -661,22 +640,6 @@ size_t recv_exec_id(const int src) {
   }
   // device-rank 0 brodcast params to rest of q-workers
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-    // NOTE: doing custom bcast because I have MPI errors on my machine
-    // when calling MPICH Bcast!
-    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
-    // if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-    //  int subcomm_size = 0;
-    //  MPI_Comm_size(CQ_MPI_SPLIT_COMM, &subcomm_size);
-
-    //  for (size_t i = 1; i < subcomm_size; ++i) {
-    //    MPI_Ssend(&id, 1, MPI_UINT64_T, i, CQ_MPI_SUBCOMMS_TAG,
-    //              CQ_MPI_SPLIT_COMM);
-    //  }
-    //} else {
-    //  MPI_Recv(&id, 1, MPI_UINT64_T, CQ_MPI_DEVICE_MASTER_RANK,
-    //           CQ_MPI_SUBCOMMS_TAG, CQ_MPI_SPLIT_COMM, &status);
-    //}
-    // MPI_Barrier(CQ_MPI_SPLIT_COMM);
     MPI_Bcast(&id, 1, MPI_UINT64_T, CQ_MPI_DEVICE_MASTER_RANK,
               CQ_MPI_SPLIT_COMM);
   }
@@ -710,7 +673,6 @@ void send_exec_id(const size_t id, const int dest) {
 }
 
 void recv_exec_params(cq_exec** ehp, const int src) {
-  // TODO: do validation
   cq_log("%s [recv_exec_params]: receiving...\n", get_comm_source());
 
   if (ehp == NULL) {
