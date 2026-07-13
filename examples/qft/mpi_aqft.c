@@ -55,7 +55,7 @@ int main(void) {
     CQ_PROG_END()
   }
 
-  if (rank < 3) {
+  if (rank <= 3) {
     printf("Hello from the host, pretend I'm doing something useful!\n");
     sleep(2);
     printf("Hello again, I'm done being 'useful' and will now wait for ");
