@@ -45,6 +45,12 @@ extern struct dev_link dev_ctrl;
 
 int initialise_device(const unsigned int VERBOSITY);
 
+#if CQ_WITH_MPI_COMMS
+#include <mpi.h>
+int initialise_device_with_custom_mpi_comm(MPI_Comm cq_comm,
+                                           const unsigned int VERBOSITY);
+#endif
+
 size_t host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params);
 
 size_t host_wait_all_ops(void);
