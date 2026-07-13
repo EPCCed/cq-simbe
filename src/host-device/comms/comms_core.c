@@ -116,7 +116,6 @@ void comms_exec_halt(cq_exec * const ehp) {
 // NOTE: aka host_wait_all_ops from OG comm.c
 size_t device_wait_all_ops(void) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
-    printf("dev ctrl %d\n", dev_ctrl.num_ops);
   while (dev_ctrl.num_ops > 0 || dev_ctrl.device_busy) {
     pthread_cond_wait(&dev_ctrl.cond_device_busy, &dev_ctrl.device_lock);
   }
@@ -224,10 +223,7 @@ size_t serial_host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params) {
       break;
     }
   }
-  //return insert_op(OP, ctrl_params);
-  size_t num_ops = insert_op(OP, ctrl_params);
-    printf("NUM_OPS After insert: %d\n", num_ops);
-  return num_ops;
+  return insert_op(OP, ctrl_params);
 }
 
 int serial_initialise_device(const unsigned int VERBOSITY) {

@@ -6,9 +6,9 @@
 #include "datatypes.h"
 #include "src/host/opcodes.h"
 
-// #ifndef CQ_CONF_QUEST_WITH_MPI
-// #include "quest/include/environment.h"
-// #endif
+#ifndef CQ_CONF_QUEST_WITH_MPI
+#include "quest/include/environment.h"
+#endif
 
 #if CQ_CONF_QUEST_WITH_MPI
 #include "quest/include/subcommunicator.h"
@@ -160,7 +160,7 @@ void host_device_sync_comms(void) {
 int finalise_device(const unsigned int VERBOSITY) {
   if (mpi_env.world_size == 1) {
     int res = serial_finalise_device(VERBOSITY);
-    // finalise_host_device_mpi(VERBOSITY);
+    finalise_host_device_mpi(VERBOSITY);
     return res;
   }
 
@@ -193,13 +193,12 @@ bool is_device(void) {
 }
 
 void init_quest_env(void) {
-//  if (mpi_env.world_size == 1) {
-//    initQuESTEnv();
-//    return;
-//  }
 #if CQ_WITH_MPI_COMMS && CQ_CONF_QUEST_WITH_MPI
-  if (is_quantum_worker()) {
+  if (mpi_env.world_size == 1) {
+    initCustomMpiQuESTEnv(0, 1, 0, 0);
+  } else if (is_quantum_worker()) {
     initCustomMpiCommQuESTEnv(CQ_MPI_SPLIT_COMM, 0, 0);
+  } else {
   }
 #endif
 #ifndef CQ_CONF_QUEST_WITH_MPI
@@ -246,11 +245,11 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
 
   if (mpi_env.world_size == 1) {
     MPI_Barrier(CQ_MPI_COMM_WORLD);
+    MPI_Comm_dup(CQ_MPI_COMM_WORLD, &CQ_MPI_SPLIT_COMM);
     return;
   }
 
 #if CQ_CONF_QUEST_WITH_MPI
-  // const int QUANTUM_WORKER = mpi_env.rank > 0;
   const int QUANTUM_WORKER = mpi_env.rank >= CQ_MPI_DEVICE_RANK;
   MPI_Barrier(CQ_MPI_COMM_WORLD);
   MPI_Comm_split(CQ_MPI_COMM_WORLD, QUANTUM_WORKER, mpi_env.rank,
@@ -1221,10 +1220,6 @@ void print_ehp(const cq_exec * ehp) {
 bool is_quantum_worker(void) {
   return mpi_env.rank > 0;
 }
-
-// MPI_Comm get_quest_comm(void) {
-//   return CQ_MPI_SPLIT_COMM;
-// }
 
 void validate_nproc(const int nproc) {
   const int device_nproc = nproc - 1;
