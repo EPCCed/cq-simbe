@@ -50,6 +50,7 @@ static int CQ_MPI_HOST_RANK = 0;
 static int CQ_MPI_DEVICE_RANK = 0;
 
 struct cq_mpi_env {
+  bool is_init;
   int rank;
   int subcomm_rank;
   unsigned int verbosity;
@@ -59,6 +60,7 @@ struct cq_mpi_env {
 static cq_exec * executor_handles[__CQ_DEVICE_QUEUE_SIZE__];
 static size_t num_active_executors = 0;
 static struct cq_mpi_env mpi_env = {
+  .is_init = false,
   .rank = -1,
   .subcomm_rank = -1,
   .verbosity = 0,
@@ -93,6 +95,10 @@ static bool cq_validate_mpi_rank(const int rank) {
   return true;
 }
 
+static bool is_serial() {
+  return mpi_env.world_size == 1 || !mpi_env.is_init;
+}
+
 int initialise_device_with_custom_mpi_comm(MPI_Comm cq_comm,
                                            const unsigned int VERBOSITY) {
   MPI_Comm_dup(cq_comm, &CQ_MPI_COMM_WORLD);
@@ -100,8 +106,12 @@ int initialise_device_with_custom_mpi_comm(MPI_Comm cq_comm,
 }
 
 int initialise_device(const unsigned int VERBOSITY) {
-  init_host_device_mpi(VERBOSITY);
-  if (mpi_env.world_size == 1) {
+  if (!mpi_env.is_init) {
+    init_host_device_mpi(VERBOSITY);
+    mpi_env.is_init = true;
+  }
+
+  if (is_serial()) {
     return serial_initialise_device(VERBOSITY);
   }
 
@@ -113,7 +123,7 @@ int initialise_device(const unsigned int VERBOSITY) {
 }
 
 size_t host_send_ctrl_op(const enum ctrl_code OP, void * params) {
-  if (mpi_env.world_size == 1) {
+  if (is_serial()) {
     return serial_host_send_ctrl_op(OP, params);
   }
 
@@ -130,7 +140,7 @@ size_t host_send_ctrl_op(const enum ctrl_code OP, void * params) {
 }
 
 size_t host_wait_all_ops(void) {
-  if (mpi_env.world_size == 1) {
+  if (is_serial()) {
     return serial_host_wait_all_ops();
   }
 
@@ -147,7 +157,7 @@ size_t host_wait_all_ops(void) {
 }
 
 void host_device_sync_comms(void) {
-  if (mpi_env.world_size == 1) {
+  if (is_serial()) {
     return serial_host_device_sync_comms();
   }
 
@@ -158,7 +168,7 @@ void host_device_sync_comms(void) {
 }
 
 int finalise_device(const unsigned int VERBOSITY) {
-  if (mpi_env.world_size == 1) {
+  if (is_serial()) {
     int res = serial_finalise_device(VERBOSITY);
     finalise_host_device_mpi(VERBOSITY);
     return res;
@@ -183,6 +193,10 @@ int finalise_device(const unsigned int VERBOSITY) {
 }
 
 bool is_device(void) {
+  if (!mpi_env.is_init) {
+    return false;
+  }
+
   if (mpi_env.rank < 0) {
     cq_log("%s [is_device]: rank is < 0 => MPI not initialised. Exiting!\n",
            get_comm_source());
@@ -194,7 +208,7 @@ bool is_device(void) {
 
 void init_quest_env(void) {
 #if CQ_WITH_MPI_COMMS && CQ_CONF_QUEST_WITH_MPI
-  if (mpi_env.world_size == 1) {
+  if (is_serial()) {
     initCustomMpiQuESTEnv(0, 1, 0, 0);
   } else if (is_quantum_worker()) {
     initCustomMpiCommQuESTEnv(CQ_MPI_SPLIT_COMM, 0, 0);
@@ -243,7 +257,7 @@ void init_host_device_mpi(const unsigned int VERBOSITY) {
   // (nproc - 1) == n_device * power of 2
   validate_nproc(mpi_env.world_size);
 
-  if (mpi_env.world_size == 1) {
+  if (is_serial()) {
     MPI_Barrier(CQ_MPI_COMM_WORLD);
     MPI_Comm_dup(CQ_MPI_COMM_WORLD, &CQ_MPI_SPLIT_COMM);
     return;
