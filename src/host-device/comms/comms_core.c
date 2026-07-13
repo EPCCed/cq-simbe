@@ -2,6 +2,7 @@
 
 #include "../comms.h"
 #include "src/device/control.h"
+#include "src/host/opcodes.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -53,7 +54,7 @@ int finalise_device_controls(const unsigned int VERBOSITY) {
 }
 
 // NOTE: aka host_send_ctrl_op from OG comm.c
-size_t insert_op(const enum ctrl_code OP, void* ctrl_params) {
+size_t insert_op(const enum ctrl_code OP, void * ctrl_params) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
 
   while (dev_ctrl.num_ops >= __CQ_DEVICE_QUEUE_SIZE__) {
@@ -77,7 +78,7 @@ size_t insert_op(const enum ctrl_code OP, void* ctrl_params) {
   return dev_ctrl.num_ops;
 }
 
-size_t comms_exec_sync(cq_exec* const ehp) {
+size_t comms_exec_sync(cq_exec * const ehp) {
   if (ehp == NULL) {
     return 0;
   }
@@ -88,7 +89,7 @@ size_t comms_exec_sync(cq_exec* const ehp) {
   return completed_shots;
 }
 
-size_t comms_exec_wait(cq_exec* const ehp) {
+size_t comms_exec_wait(cq_exec * const ehp) {
   if (ehp == NULL) {
     return 0;
   }
@@ -101,7 +102,7 @@ size_t comms_exec_wait(cq_exec* const ehp) {
   return ehp->completed_shots;
 }
 
-void comms_exec_halt(cq_exec* const ehp) {
+void comms_exec_halt(cq_exec * const ehp) {
   if (ehp == NULL) {
     return;
   }
@@ -123,9 +124,9 @@ size_t device_wait_all_ops(void) {
   return dev_ctrl.num_ops;
 }
 
-void* device_control_thread(void* par) {
+void * device_control_thread(void * par) {
   enum ctrl_code current_op = CQ_CTRL_IDLE;
-  void* current_op_params = NULL;
+  void * current_op_params = NULL;
 
   // run_device set to FALSE at cq_finalise
   while (dev_ctrl.run_device) {
@@ -166,8 +167,8 @@ void* device_control_thread(void* par) {
 
 size_t device_sync_exec(const cq_status STATUS,
                         const size_t SHOT,
-                        cstate const* const RESULT,
-                        cq_exec* ehp) {
+                        cstate const * const RESULT,
+                        cq_exec * ehp) {
   pthread_mutex_lock(&ehp->lock);
 
   if (STATUS == CQ_EARLY_SUCCESS) {
@@ -182,12 +183,12 @@ size_t device_sync_exec(const cq_status STATUS,
   ehp->completed_shots += 1;
 
   // copy local result register to exec
-  cstate* dest_creg = ehp->creg + SHOT * ehp->nmeasure;
+  cstate * dest_creg = ehp->creg + SHOT * ehp->nmeasure;
   memcpy(dest_creg, RESULT, ehp->nmeasure * sizeof(cstate));
 
   // check if the whole execution is done
-  if (ehp->completed_shots == ehp->expected_shots || STATUS != CQ_SUCCESS ||
-      ehp->halt) {
+  if (ehp->completed_shots == ehp->expected_shots || STATUS != CQ_SUCCESS
+      || ehp->halt) {
     ehp->complete = true;
     pthread_cond_signal(&(ehp->cond_exec_complete));
   }
@@ -201,4 +202,58 @@ size_t assign_exec_id(void) {
   ++global_exec_id_counter;
   global_exec_id_counter %= __CQ_DEVICE_QUEUE_SIZE__;
   return global_exec_id_counter;
+}
+
+size_t serial_host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params) {
+  switch (OP) {
+    case CQ_CTRL_SYNC_EXEC: {
+      return comms_exec_sync(ctrl_params);
+      break;
+    }
+    case CQ_CTRL_WAIT_EXEC: {
+      return comms_exec_wait(ctrl_params);
+      break;
+    }
+    case CQ_CTRL_ABORT: {
+      comms_exec_halt(ctrl_params);
+      return 0;
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+  return insert_op(OP, ctrl_params);
+}
+
+int serial_initialise_device(const unsigned int VERBOSITY) {
+  init_device_controls(VERBOSITY);
+  unsigned int verbosity = VERBOSITY;
+  host_send_ctrl_op(CQ_CTRL_INIT, &verbosity);
+  host_wait_all_ops();
+  return 0;
+}
+
+size_t serial_host_wait_all_ops(void) {
+  return device_wait_all_ops();
+}
+
+void serial_host_device_sync_comms(void) {}
+
+int serial_finalise_device(const unsigned int VERBOSITY) {
+  // Politely wait for the device to finish its current business
+  // otherwise setting dev_ctrl.run_device = false might break
+  // some stuff, and this should only be called in cq_finalise()
+  serial_host_wait_all_ops();
+
+  if (VERBOSITY > 0) {
+    printf("Finalising device.\n");
+  }
+
+  stop_device();
+  unsigned int verbosity = VERBOSITY;
+  serial_host_send_ctrl_op(CQ_CTRL_FINALISE, &verbosity);
+  finalise_device_controls(VERBOSITY);
+
+  return 0;
 }
