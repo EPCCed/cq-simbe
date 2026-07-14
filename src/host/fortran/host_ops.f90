@@ -11,9 +11,17 @@ contains
     status = fortran_cq_init(VERBOSITY)
   end procedure cq_init
 
+  module procedure cq_init_custom_mpi_comm !(cq_comm, VERBOSITY) result(status)
+    status = fortran_cq_init_custom_mpi_comm(cq_comm, VERBOSITY)
+  end procedure cq_init_custom_mpi_comm
+
   module procedure cq_finalise !(VERBOSITY) result(status)
     status = fortran_cq_finalise(VERBOSITY)
   end procedure cq_finalise
+
+  module procedure cq_is_device !() result(res)
+    res = is_device()
+  end procedure cq_is_device
 
   module procedure cq_alloc_qubit !(qhp) result(status)
     status = alloc_qubit(qhp%this)

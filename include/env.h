@@ -23,4 +23,8 @@ cq_status cq_init_custom_mpi_comm(MPI_Comm cq_comm,
 
 cq_status cq_finalise(const unsigned int VERBOSITY);
 
+// fortran helper -- just don't use it from C
+cq_status fort_init_custom_mpi_comm(int * cq_comm,
+                                    const unsigned int VERBOSITY);
+
 #endif

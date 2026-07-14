@@ -1,10 +1,12 @@
 #include "env.h"
+
+#include "datatypes.h"
+#include "src/host-device/comms.h"
+
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "datatypes.h"
-#include "opcodes.h"
-#include "src/host-device/comms.h"
+#include <stdlib.h>
 
 struct cq_environment cq_env = { .initialised = false, .finalised = false };
 
@@ -90,4 +92,16 @@ cq_status cq_finalise(const unsigned int VERBOSITY) {
   }
 
   return status;
+}
+
+// fortran helper -- just don't use it from C
+cq_status fort_init_custom_mpi_comm(int * cq_comm,
+                                    const unsigned int VERBOSITY) {
+#if CQ_WITH_MPI_COMMS
+  MPI_Comm c_cq_comm;
+  c_cq_comm = MPI_Comm_f2c(*cq_comm);
+  return cq_init_custom_mpi_comm(c_cq_comm, VERBOSITY);
+#endif
+
+  return cq_init(VERBOSITY);
 }

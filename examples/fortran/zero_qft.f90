@@ -15,9 +15,15 @@ NMEASURE = NQUBITS
 
 write(*,'(A)') 'before init'
 
-ireturn = cq_init(0)
+ireturn = cq_init(1)
 
 write(*,'(A,I4)') 'cq_init returned: ',ireturn
+
+reg_status = cq_register_qkern(zero_state_qft)
+
+write(*,'(A,I4)') 'after register_qkern: ', reg_status
+
+CQ_PROG_BEGIN()
 
 alloc_status = cq_alloc_qureg(qrc, NQUBITS)
 
@@ -28,11 +34,6 @@ allocate(cr(NMEASURE * NSHOTS))
 CALL cq_init_creg(NMEASURE * NSHOTS, -1, cr)
 
 write(*,'(A)') 'after init_creg'
-
-
-reg_status = cq_register_qkern(zero_state_qft)
-
-write(*,'(A,I4)') 'after register_qkern: ', reg_status
 
 qrun_status = cq_sm_qrun(zero_state_qft, qrc, NQUBITS, cr, NMEASURE, NSHOTS)
 
@@ -46,7 +47,9 @@ free_status = cq_free_qureg(qrc)
 
 write(*,'(A,I4)') 'free_status returned: ', free_status
 
-freturn = cq_finalise(0)
+CQ_PROG_END()
+
+freturn = cq_finalise(1)
 
 write(*,'(A,I4)') 'cq_finalise returned: ',freturn
 
