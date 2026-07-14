@@ -37,18 +37,43 @@ typedef struct hamiltonian {
 extern hamiltonian h2_hamil;
 
 void init_hf_state(qubit * qr, int num_spin_orbitals);
-cq_status ansatz(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, void * kernpar, pqkern_map * reg);
 
+cq_status ansatz(const size_t NQUBITS,
+                 qubit * qr,
+                 const size_t NMEASURE,
+                 cstate * cr,
+                 void * kernpar,
+                 pqkern_map * reg);
 
-static double get_term_expectation(int *histogram, int num_bins,
-		const size_t NMEASURE, const size_t NSHOTS, double coeff); 
+static double get_term_expectation(int * histogram,
+                                   int num_bins,
+                                   const size_t NMEASURE,
+                                   const size_t NSHOTS,
+                                   double coeff);
 
-void init_vqe_settings(vqe_settings *settings, qubit * qr, cstate * cr,
-		const size_t NQUBITS, const size_t NSHOTS); 
-void init_vqe_params(double *params, ptrdiff_t num_params);
-double vqe_iter(qubit * qr, cstate * cr, const size_t NQUBITS, const size_t NSHOTS, const double * x); 
-double vqe_iter_nlopt(unsigned int n, const double *x, double *grad, void *f_data); 
-double vqe_optimize(qubit * qr, cstate * cr, const size_t NQUBITS,
-		    const size_t NMEASURE, const size_t NSHOTS); 
+void init_vqe_settings(vqe_settings * settings,
+                       qubit * qr,
+                       cstate * cr,
+                       const size_t NQUBITS,
+                       const size_t NSHOTS);
+
+void init_vqe_params(double * params, ptrdiff_t num_params);
+
+double vqe_iter(qubit * qr,
+                cstate * cr,
+                const size_t NQUBITS,
+                const size_t NSHOTS,
+                const double * x);
+
+double vqe_iter_nlopt(unsigned int n,
+                      const double * x,
+                      double * grad,
+                      void * f_data);
+
+double vqe_optimize(qubit * qr,
+                    cstate * cr,
+                    const size_t NQUBITS,
+                    const size_t NMEASURE,
+                    const size_t NSHOTS);
 
 #endif
