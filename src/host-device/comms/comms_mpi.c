@@ -107,8 +107,8 @@ int initialise_device_with_custom_mpi_comm(MPI_Comm cq_comm,
 
 int initialise_device(const unsigned int VERBOSITY) {
   if (!mpi_env.is_init) {
-    init_host_device_mpi(VERBOSITY);
     mpi_env.is_init = true;
+    init_host_device_mpi(VERBOSITY);
   }
 
   if (is_serial()) {

@@ -17,7 +17,4 @@ void report_results(cstate const * const CR,
     }                                  \
   };
 
-#define CQ_PROG_BEGIN() if (!is_device()) {
-#define CQ_PROG_END() }
-
 #endif
