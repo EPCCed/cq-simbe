@@ -25,3 +25,19 @@ target_link_libraries(plus-qft
 )
 
 set_target_properties(plus-qft PROPERTIES Fortran_PREPROCESS ON)
+
+if (BUILD_WITH_MPI)
+    add_executable(mpi-plus-qft
+      mpi_plus_qft.f90
+      utils.f90
+    )
+
+    target_link_libraries(mpi-plus-qft
+      PRIVATE
+      CQ-SIMBE::cq-simbe
+      ${MATHS_LIBRARY}
+      ${MPI_Fortran_LIBRARIES}
+    )
+
+    set_target_properties(mpi-plus-qft PROPERTIES Fortran_PREPROCESS ON)
+endif()

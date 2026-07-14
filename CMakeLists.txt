@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.21)
 project(CQ-SIMBE
   VERSION 0.1.0
   DESCRIPTION "CQ compliant simulated backend."
-  LANGUAGES C)
+  LANGUAGES C Fortran)
 
 # User configure options
 
@@ -65,7 +65,7 @@ add_library(cq-simbe)
 add_library(CQ-SIMBE::cq-simbe ALIAS cq-simbe)
 
 if (BUILD_WITH_MPI)
-  find_package(MPI REQUIRED)
+  find_package(MPI COMPONENTS Fortran C REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
   target_compile_definitions(cq-simbe PUBLIC
     CQ_WITH_MPI_COMMS=1
