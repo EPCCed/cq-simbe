@@ -11,7 +11,7 @@
 #endif
 
 #if CQ_CONF_QUEST_WITH_MPI
-#include "quest/include/subcommunicator.h"
+#include "quest/include/experimental.h"
 #endif
 
 #include <mpi.h>
