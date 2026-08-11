@@ -1,9 +1,10 @@
 #ifndef CQ_ENV_H
 #define CQ_ENV_H
 
-#include <stdbool.h>
-#include <pthread.h>
 #include "datatypes.h"
+
+#include <pthread.h>
+#include <stdbool.h>
 
 struct cq_environment {
   bool initialised;
@@ -14,6 +15,16 @@ extern struct cq_environment cq_env;
 
 cq_status cq_init(const unsigned int VERBOSITY);
 
+#if CQ_WITH_MPI_COMMS
+#include <mpi.h>
+cq_status cq_init_custom_mpi_comm(MPI_Comm cq_comm,
+                                  const unsigned int VERBOSITY);
+#endif
+
 cq_status cq_finalise(const unsigned int VERBOSITY);
+
+// fortran helper -- just don't use it from C
+cq_status fort_init_custom_mpi_comm(int * cq_comm,
+                                    const unsigned int VERBOSITY);
 
 #endif

@@ -13,12 +13,25 @@ interface
     integer(c_int) :: fortran_cq_init
   end function fortran_cq_init
 
+  function fortran_cq_init_custom_mpi_comm(cq_comm, VERBOSITY) bind(C, name="fort_init_custom_mpi_comm")
+    use, intrinsic :: iso_c_binding, only: c_int
+    implicit none
+    integer(c_int) :: cq_comm
+    integer(c_int), value :: VERBOSITY ! passes integer
+    integer(c_int) :: fortran_cq_init_custom_mpi_comm
+  end function fortran_cq_init_custom_mpi_comm
+
   function fortran_cq_finalise(VERBOSITY) bind(C, name="cq_finalise")
     use, intrinsic :: iso_c_binding, only: c_int
     implicit none
     integer(c_int), value :: VERBOSITY ! passes integer
     integer(c_int) :: fortran_cq_finalise
   end function fortran_cq_finalise
+
+  function is_device() bind(C, name="is_device")
+    use, intrinsic :: iso_c_binding, only: c_bool
+    logical(c_bool) :: is_device
+  end function is_device
 
   !cq_status alloc_qubit(qubit ** qhp);
   function alloc_qubit(qhp) bind(C)

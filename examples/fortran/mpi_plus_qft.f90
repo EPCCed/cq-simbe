@@ -1,13 +1,28 @@
 program plus_qft
+use mpi
 use cq
 #include "cqf.h"
 use example_utils
 implicit none
 
-integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status
+integer :: ireturn, freturn, alloc_status, free_status, reg_status, qrun_status, ierr
 integer(kind=8) :: NQUBITS, NSHOTS, NMEASURE
 type(qubit) :: qrc
 integer(kind=2), allocatable, target :: cr(:)
+
+integer :: id, nproc, split_cond, cq_comm
+
+call MPI_Init(ierr)
+call MPI_Comm_size(MPI_COMM_WORLD, nproc, ierr)
+call MPI_Comm_rank(MPI_COMM_WORLD, id, ierr)
+
+if (id >= 3) then
+  split_cond = 1
+else 
+  split_cond = 0
+end if 
+
+call MPI_Comm_split(MPI_COMM_WORLD, split_cond, id, cq_comm, ierr)
 
 NQUBITS = 10
 NSHOTS = 10
@@ -15,7 +30,8 @@ NMEASURE = NQUBITS
 
 write(*,'(A)') 'before init'
 
-ireturn = cq_init(0)
+if (split_cond == 1) then
+ireturn = cq_init_custom_mpi_comm(cq_comm, 1)
 
 write(*,'(A,I4)') 'cq_init returned: ',ireturn
 
@@ -54,6 +70,15 @@ freturn = cq_finalise(0)
 write(*,'(A,I4)') 'cq_finalise returned: ',freturn
 
 write(*,'(A)') 'after finalise'
+
+end if
+
+if (split_cond ==  0) then
+  write(*,*) 'I am user-owned rank doing something unrelated to CQ'
+end if
+
+call MPI_Barrier(MPI_COMM_WORLD, ierr)
+call MPI_Finalize(ierr)
 
 contains
 

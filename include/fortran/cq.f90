@@ -50,11 +50,24 @@ interface
     integer :: status
   end function cq_init
 
+  module function cq_init_custom_mpi_comm(cq_comm, VERBOSITY) result(status)
+    implicit none
+    integer :: cq_comm
+    integer, value :: VERBOSITY
+    integer :: status
+  end function cq_init_custom_mpi_comm
+
   module function cq_finalise(VERBOSITY) result(status)
     implicit none
     integer, value :: VERBOSITY
     integer :: status
   end function cq_finalise
+
+  module function cq_is_device() result(res)
+    implicit none
+    logical :: res
+  end function cq_is_device
+
 
 ! Resource management
 
