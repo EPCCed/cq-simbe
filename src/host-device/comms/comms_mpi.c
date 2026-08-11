@@ -422,7 +422,7 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
     case CQ_CTRL_ALLOC: {
       // Alloc is blocking: we get params, run allocation and
       // send back the updated params.
-      // Also, because it's blocking I don't need to worry about
+      // Also, because it's blocking there is no need to worry about
       // params lifetime (from the worker perspective)
       const int host_rank = CQ_MPI_HOST_RANK;
       device_alloc_params params = { 0 };
@@ -455,22 +455,6 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
       const int host_rank = CQ_MPI_HOST_RANK;
       cq_exec * tmp_exec = NULL;
       recv_exec_params(&tmp_exec, host_rank);
-      // NOTE: this can be done here to free old one
-      // and allocate new one rather than in wait_exec
-      // device_free_exec(&executor_handles[tmp_exec->id]);
-      // actually if executor_handles[id] != NULL then it didn't finish and we
-      // should wait here until we are done.
-      //
-      // NOTE: 2
-      // Now the question is should we block?
-      // 1. if we block here and wait for all ops to complete then
-      // in situation if host submits N_exe > QUEUE_SIZE, we lock here
-      // indefinitely
-      // ex: a_qrun(...) x QUEUE_SIZE + 1 (and no wait_qrun...)
-      // => deadlock
-      // 2. alternative would be wait to set exec_queue_full flag
-      // and wait until it is released
-      // 3. we can just exit and fail! -- most reasonable:
       executor_handles[tmp_exec->id] = tmp_exec;
       insert_op(OP, executor_handles[tmp_exec->id]);
       ++num_active_executors;
@@ -504,12 +488,10 @@ void device_dispatch_ctrl_op(const enum ctrl_code OP) {
             get_comm_source());
         MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
       }
-      // NOTE: This part needs further tests to ensure no deadlock
       device_wait_all_ops();
       comms_exec_wait(executor_handles[executor_id]);
       send_exec_params(executor_handles[executor_id], host_rank);
-      // NOTE: This can be done when allocating new in offload
-      // i.e. clear old one and allocate new one
+
       device_free_exec(&executor_handles[executor_id]);
       --num_active_executors;
       if (num_active_executors < 0) {
@@ -942,7 +924,7 @@ void send_exec_params(cq_exec * ehp, const int dest) {
 
 // if running with MPI QuEST, we don't need to communicate
 // with quantum workers because the results from QuEST
-// (e.g. measurements) should be already synchronised.
+// (e.g. measurements) should already be synchronised.
 // so only device-master communicates its state to host.
 #if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
@@ -1268,8 +1250,8 @@ void validate_nproc(const int nproc) {
 
 // #undef CQ_MPI_HOST_RANK
 // #undef CQ_MPI_DEVICE_RANK
-// #undef CQ_MPI_DEVICE_MASTER_RANK
-// #undef CQ_MPI_WORLD_COMMS_TAG
-// #undef CQ_MPI_SUBCOMMS_TAG
-// #undef CQ_MPI_RUNTIME_ERROR
-// #undef CQ_MPI_MALLOC_ERROR
+#undef CQ_MPI_DEVICE_MASTER_RANK
+#undef CQ_MPI_WORLD_COMMS_TAG
+#undef CQ_MPI_SUBCOMMS_TAG
+#undef CQ_MPI_RUNTIME_ERROR
+#undef CQ_MPI_MALLOC_ERROR

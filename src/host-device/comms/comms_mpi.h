@@ -126,7 +126,7 @@ int get_rank(void);
 ///
 /// converts CQ control code to string.
 /// @param OP an enum argument specifying CQ_CTRL_OP
-/// @return string represntation of OP.
+/// @return string representation of OP.
 const char * op_to_str(const enum ctrl_code OP);
 
 ///
@@ -139,11 +139,10 @@ void print_alloc_params(const device_alloc_params * params);
 /// @param[in] ehp reference to executor
 void print_ehp(const cq_exec * ehp);
 
-//
 ///
 /// check if MPI process is a quantum worker (not resposible for host-device
 /// communication).
-/// @return
+/// @return true if the MPI process is assigned to QuEST simulation.
 bool is_quantum_worker(void);
 
 /// validates the number of MPI processes to meet QuEST constraints.
