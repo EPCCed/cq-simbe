@@ -7,34 +7,84 @@
 #include "comms.h"
 #include "src/host/opcodes.h"
 #include "src/device/control.h"
+#include "src/device/mpi_runtime.h"
+#include "quest/include/environment.h"
+
+static void destroy_device_sync(void) {
+  pthread_cond_destroy(&dev_ctrl.cond_queue_full);
+  pthread_cond_destroy(&dev_ctrl.cond_queue_empty);
+  pthread_cond_destroy(&dev_ctrl.cond_device_busy);
+  pthread_mutex_destroy(&dev_ctrl.device_lock);
+}
+
+static void stop_device(void) {
+  pthread_mutex_lock(&dev_ctrl.device_lock);
+  dev_ctrl.run_device = false;
+  pthread_cond_broadcast(&dev_ctrl.cond_queue_empty);
+  pthread_mutex_unlock(&dev_ctrl.device_lock);
+  pthread_join(dev_ctrl.device_thread, NULL);
+  dev_ctrl.worker_started = false;
+  destroy_device_sync();
+}
 
 int initialise_device(const unsigned int VERBOSITY) {
-  if (VERBOSITY > 0) {
+  if (dev_ctrl.worker_started)
+    return CQ_WARNING;
+  if (cq_mpi_preflight(!isQuESTEnvInit()) != CQ_SUCCESS)
+    return CQ_ERROR;
+  if (VERBOSITY > 0)
     printf("Initialising device.\n");
-  }
-  pthread_mutex_init(&dev_ctrl.device_lock, NULL);
-  pthread_cond_init(&dev_ctrl.cond_device_busy, NULL);
-  pthread_cond_init(&dev_ctrl.cond_queue_empty, NULL);
-  pthread_cond_init(&dev_ctrl.cond_queue_full, NULL);
+
+  /* Each error path destroys only primitives successfully initialised. */
+  if (pthread_mutex_init(&dev_ctrl.device_lock, NULL) != 0)
+    goto fail_preflight;
+  if (pthread_cond_init(&dev_ctrl.cond_device_busy, NULL) != 0)
+    goto fail_mutex;
+  if (pthread_cond_init(&dev_ctrl.cond_queue_empty, NULL) != 0)
+    goto fail_busy;
+  if (pthread_cond_init(&dev_ctrl.cond_queue_full, NULL) != 0)
+    goto fail_empty;
 
   dev_ctrl.run_device = true;
   dev_ctrl.device_busy = true;
+  dev_ctrl.lifecycle_status = CQ_ERROR;
   dev_ctrl.num_ops = 0;
   dev_ctrl.next_op_in = 0;
   dev_ctrl.next_op_out = 0;
-
   for (size_t i = 0; i < __CQ_DEVICE_QUEUE_SIZE__; ++i) {
     dev_ctrl.op_buffer[i] = CQ_CTRL_IDLE;
     dev_ctrl.op_params_buffer[i] = NULL;
   }
-
-  pthread_create(&dev_ctrl.device_thread, NULL, &device_control_thread, NULL);
-
+  if (pthread_create(&dev_ctrl.device_thread, NULL, &device_control_thread, NULL) != 0) {
+    dev_ctrl.run_device = false;
+    dev_ctrl.device_busy = false;
+    pthread_cond_destroy(&dev_ctrl.cond_queue_full);
+    goto fail_empty;
+  }
+  dev_ctrl.worker_started = true;
   unsigned int verbosity = VERBOSITY;
   host_send_ctrl_op(CQ_CTRL_INIT, &verbosity);
   host_wait_all_ops();
+  cq_status status = dev_ctrl.lifecycle_status;
+  if (status != CQ_SUCCESS) {
+    stop_device();
+    cq_mpi_cancel_preflight();
+  }
+  return status;
 
-  return 0;
+fail_empty:
+  pthread_cond_destroy(&dev_ctrl.cond_queue_empty);
+fail_busy:
+  pthread_cond_destroy(&dev_ctrl.cond_device_busy);
+fail_mutex:
+  pthread_mutex_destroy(&dev_ctrl.device_lock);
+fail_preflight:
+  /* Peers may already be preparing MPI on their workers. Join their readiness
+     agreement even when this rank could not create a worker. If MPI is owned,
+     this failure-only path initialises and finalises it on this caller. */
+  cq_mpi_prepare(0);
+  cq_mpi_cancel_preflight();
+  return CQ_ERROR;
 }
 
 size_t host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params) {
@@ -124,70 +174,50 @@ cstate const * const RESULT, cq_exec * ehp) {
 }
 
 void * device_control_thread(void * par) {
-  enum ctrl_code current_op = CQ_CTRL_IDLE;
-  void * current_op_params = NULL;
-
-  // run_device set to FALSE at cq_finalise
-  while (dev_ctrl.run_device) {
-    pthread_mutex_lock(&dev_ctrl.device_lock);
-
-    while(dev_ctrl.num_ops <= 0) {
-      // wait for a new op to be posted
+  pthread_mutex_lock(&dev_ctrl.device_lock);
+  for (;;) {
+    while (dev_ctrl.num_ops == 0 && dev_ctrl.run_device) {
       dev_ctrl.device_busy = false;
-      pthread_cond_signal(&dev_ctrl.cond_device_busy);
+      pthread_cond_broadcast(&dev_ctrl.cond_device_busy);
       pthread_cond_wait(&dev_ctrl.cond_queue_empty, &dev_ctrl.device_lock);
     }
-    
-    dev_ctrl.device_busy = true;
+    if (!dev_ctrl.run_device && dev_ctrl.num_ops == 0)
+      break;
 
-    // take the next op and params out of the dev_ctrl buffer, and then tidy up the dev_ctrl buffer
-    current_op = dev_ctrl.op_buffer[dev_ctrl.next_op_out];
-    current_op_params = dev_ctrl.op_params_buffer[dev_ctrl.next_op_out];
+    dev_ctrl.device_busy = true;
+    enum ctrl_code current_op = dev_ctrl.op_buffer[dev_ctrl.next_op_out];
+    void *current_op_params = dev_ctrl.op_params_buffer[dev_ctrl.next_op_out];
     dev_ctrl.op_buffer[dev_ctrl.next_op_out] = CQ_CTRL_IDLE;
     dev_ctrl.op_params_buffer[dev_ctrl.next_op_out] = NULL;
-
-    // decrease the number of queued operations and advance next_op_out
     --dev_ctrl.num_ops;
     ++dev_ctrl.next_op_out;
     dev_ctrl.next_op_out %= __CQ_DEVICE_QUEUE_SIZE__;
-
-    // signal that the queue is no longer full and then relinquish mutex
     pthread_cond_signal(&dev_ctrl.cond_queue_full);
     pthread_mutex_unlock(&dev_ctrl.device_lock);
 
-    control_registry[current_op](current_op_params);
-  }  
- 
-  pthread_mutex_unlock(&dev_ctrl.device_lock);
+    cq_status status = control_registry[current_op](current_op_params);
 
+    pthread_mutex_lock(&dev_ctrl.device_lock);
+    if (current_op == CQ_CTRL_INIT || current_op == CQ_CTRL_FINALISE)
+      dev_ctrl.lifecycle_status = status;
+  }
+  dev_ctrl.device_busy = false;
+  pthread_cond_broadcast(&dev_ctrl.cond_device_busy);
+  pthread_mutex_unlock(&dev_ctrl.device_lock);
   return NULL;
 }
 
 int finalise_device(const unsigned int VERBOSITY) {
-  // Politely wait for the device to finish its current business
-  // otherwise setting dev_ctrl.run_device = false might break
-  // some stuff, and this should only be called in cq_finalise()
+  if (!dev_ctrl.worker_started)
+    return CQ_WARNING;
   host_wait_all_ops();
-
-  if (VERBOSITY > 0) {
+  if (VERBOSITY > 0)
     printf("Finalising device.\n");
-  }
-
-  pthread_mutex_lock(&dev_ctrl.device_lock);
-  dev_ctrl.run_device = false;
-  pthread_mutex_unlock(&dev_ctrl.device_lock);
 
   unsigned int verbosity = VERBOSITY;
   host_send_ctrl_op(CQ_CTRL_FINALISE, &verbosity);
-
-  pthread_join(dev_ctrl.device_thread, NULL);
-
-  dev_ctrl.device_busy = false;
-
-  pthread_cond_destroy(&dev_ctrl.cond_device_busy);
-  pthread_cond_destroy(&dev_ctrl.cond_queue_empty);
-  pthread_cond_destroy(&dev_ctrl.cond_queue_full);
-  pthread_mutex_destroy(&dev_ctrl.device_lock);
-
-  return 0;
+  host_wait_all_ops();
+  cq_status status = dev_ctrl.lifecycle_status;
+  stop_device();
+  return status;
 }

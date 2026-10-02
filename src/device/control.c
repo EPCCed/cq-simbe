@@ -7,6 +7,13 @@
 #include "kernel_utils.h"
 #include "resources.h"
 #include "quest/include/environment.h"
+#include "quest/include/config.h"
+#include "mpi_runtime.h"
+#if QUEST_COMPILE_MPI
+#include "quest/include/experimental.h"
+#endif
+
+static bool simulator_owned;
 
 cq_status (*control_registry[8])(void *) =  {
   initialise_simulator,
@@ -20,30 +27,31 @@ cq_status (*control_registry[8])(void *) =  {
 };
 
 cq_status initialise_simulator(void * par) {
-  cq_status status = CQ_WARNING;
-  
-  // isQuESTEnvInit returns 1 for true, 0 for false
+  if (simulator_owned)
+    return CQ_WARNING;
+  if (cq_mpi_prepare(!isQuESTEnvInit()) != CQ_SUCCESS)
+    return CQ_ERROR;
+
+  const unsigned int verbosity = *(const unsigned int *) par;
+  if (verbosity > 0)
+    printf("Initialising QuEST.\n");
+
+#if QUEST_COMPILE_MPI
+  initCustomMpiCommQuESTEnv(MPI_COMM_WORLD, -1, -1);
+#else
+  initQuESTEnv();
+#endif
   if (!isQuESTEnvInit()) {
-    const unsigned int * pVERBOSITY = (const unsigned int *) par;
-
-    if (*pVERBOSITY > 0) {
-      printf("Initialising QuEST.\n");
-    }
-
-    initQuESTEnv();
-
-    if (*pVERBOSITY > 0) {
-      reportQuESTEnv();
-    
-      printf("Initialising quantum resource registry.\n");
-    }
-
-    init_qregistry();
-  
-    status = isQuESTEnvInit() - 1;
+    cq_mpi_finish();
+    return CQ_ERROR;
   }
-
-  return status;
+  simulator_owned = true;
+  if (verbosity > 0) {
+    reportQuESTEnv();
+    printf("Initialising quantum resource registry.\n");
+  }
+  init_qregistry();
+  return CQ_SUCCESS;
 }
 
 cq_status abort_current_kernel(void * par) {
@@ -51,26 +59,18 @@ cq_status abort_current_kernel(void * par) {
 }
 
 cq_status finalise_simulator(void * par) {
-  cq_status status = CQ_WARNING;
+  if (!simulator_owned)
+    return CQ_WARNING;
 
-  if (isQuESTEnvInit()) {
-    const unsigned int * pVERBOSITY = (const unsigned int *) par;
-    
-    if (*pVERBOSITY > 0) {
-      printf("Finalising QuEST\n");
-    }
+  const unsigned int verbosity = *(const unsigned int *) par;
+  if (verbosity > 0)
+    printf("Finalising QuEST\n");
 
-    clear_qregistry();
-
-    finalizeQuESTEnv();
-
-    // isQuESTEnvInit returns 1 for true, 0 for false
-    if (!isQuESTEnvInit()) {
-      status = CQ_SUCCESS;
-    }
-  }
-
-  return status;
+  clear_qregistry();
+  finalizeQuESTEnv();
+  simulator_owned = false;
+  cq_status status = cq_mpi_finish();
+  return isQuESTEnvInit() ? CQ_ERROR : status;
 }
 
 cq_status run_qkernel(void * par) {

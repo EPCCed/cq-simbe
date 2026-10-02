@@ -1,6 +1,7 @@
 target_sources(cq-simbe
   PRIVATE
   control.c
+  mpi_runtime.c
   device_ops.c
   qasm_gates.c
   resources.c

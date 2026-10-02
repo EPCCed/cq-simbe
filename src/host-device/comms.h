@@ -10,6 +10,8 @@
 
 struct dev_link {
   bool run_device;
+  bool worker_started;
+  cq_status lifecycle_status;
   pthread_t device_thread;
   pthread_mutex_t device_lock;
 

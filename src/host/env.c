@@ -22,9 +22,8 @@ cq_status cq_init(const unsigned int VERBOSITY) {
         printf("Initialising CQ Simulated Backend library. QuEST environment report to follow.\n\n");
       }
 
-      initialise_device(VERBOSITY);
-
-      cq_env.initialised = true;
+      status = initialise_device(VERBOSITY);
+      cq_env.initialised = status == CQ_SUCCESS;
     } else {
       if (VERBOSITY > 0) {
         printf("CQ-SimBE is already initialised. No need to do it again.\n");
@@ -46,8 +45,10 @@ cq_status cq_finalise(const unsigned int VERBOSITY) {
     if (VERBOSITY > 0)
       printf("Host finalising\n");
 
-    finalise_device(VERBOSITY);
-    cq_env.finalised = true;
+    if (!cq_env.initialised)
+      return CQ_WARNING;
+    status = finalise_device(VERBOSITY);
+    cq_env.finalised = status == CQ_SUCCESS;
   } else {
     if (VERBOSITY > 0) {
       printf("CQ-SimBE is already finalised. No need to do it again.\n");

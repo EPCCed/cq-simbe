@@ -3,12 +3,11 @@ add_executable(sqft
   qft-utils.c
 )
 
-find_library(MATHS_LIBRARY m REQUIRED)
 
 target_link_libraries(sqft 
   PRIVATE
   CQ-SIMBE::cq-simbe
-  ${MATHS_LIBRARY}
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
 
 add_executable(aqft
@@ -16,10 +15,9 @@ add_executable(aqft
   qft-utils.c
 )
 
-find_library(MATHS_LIBRARY m REQUIRED)
 
 target_link_libraries(aqft 
   PRIVATE
   CQ-SIMBE::cq-simbe
-  ${MATHS_LIBRARY}
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
