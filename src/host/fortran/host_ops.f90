@@ -64,5 +64,3 @@ contains
   end procedure cq_free_exec_handle
 
 end submodule host_ops
-
-

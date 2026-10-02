@@ -93,14 +93,14 @@ cq_status init_pulse(pulse *pulse, double duration) {
 		"From: %s\n", __func__);
 	return CQ_ERROR;
     }
- 
+
     pulse->detuning = malloc(num_samples * sizeof(double));
     if (!pulse->detuning) {
         printf("Error: Failed to allocate detuning array in pulse. "
 		"From: %s\n", __func__);
 	return CQ_ERROR;
     }
- 
+
     for (ptrdiff_t i = 0; i < num_samples; ++i) {
         pulse->freq[i] = 0.0;
         pulse->phase[i] = 0.0;
@@ -224,5 +224,3 @@ cq_status barrier(channel **ch, int num_channels) {
     }
     return CQ_SUCCESS;
 }
-
-

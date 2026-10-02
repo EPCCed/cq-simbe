@@ -1,9 +1,6 @@
-if(BUILD_FORTRAN_INTERFACE)
-  target_sources(cq-simbe
-    PRIVATE
-    device_int.f90
-    device_ops.f90
-    qasm_gates.f90
-    utils.f90
-  )
-endif()
+target_sources(cq-simbe-fortran PRIVATE
+  device_int.f90
+  device_ops.f90
+  qasm_gates.f90
+  utils.f90
+)

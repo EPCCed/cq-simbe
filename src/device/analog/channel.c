@@ -80,7 +80,7 @@ cq_status retarget_channel(channel *ch, ptrdiff_t new_target) {
     assert(new_target > -2);
     assert(new_target < __CQ_ANALOG_MAX_NUM_QUBITS__);
     assert(ch->params != NULL);
- 
+
     ch->target = new_target;
     ch->time += ((channel_params *)ch->params)->retarget_delay;
     return CQ_SUCCESS;
@@ -170,5 +170,3 @@ void print_channel(channel *ch) {
             get_addressing_str(params->addressing)
     );
 }
-
-

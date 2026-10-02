@@ -3,12 +3,11 @@ add_executable(sqft
   qft-utils.c
 )
 
-find_library(MATHS_LIBRARY m REQUIRED)
 
-target_link_libraries(sqft 
+target_link_libraries(sqft
   PRIVATE
   CQ-SIMBE::cq-simbe
-  ${MATHS_LIBRARY}
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
 
 add_executable(aqft
@@ -16,26 +15,14 @@ add_executable(aqft
   qft-utils.c
 )
 
-find_library(MATHS_LIBRARY m REQUIRED)
 
-target_link_libraries(aqft 
+target_link_libraries(aqft
   PRIVATE
   CQ-SIMBE::cq-simbe
-  ${MATHS_LIBRARY}
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
 
-if (BUILD_WITH_MPI)
-  add_executable(mpi_aqft
-    mpi_aqft.c
-    qft-utils.c
-  )
-  
-  find_library(MATHS_LIBRARY m REQUIRED)
-  
-  target_link_libraries(mpi_aqft 
-    PRIVATE
-    CQ-SIMBE::cq-simbe
-    ${MATHS_LIBRARY}
-    ${MPI_C_LIBRARIES}
-  )
+if(CQ_SIMBE_ENABLE_MPI)
+  add_executable(mpi_aqft mpi_aqft.c qft-utils.c)
+  target_link_libraries(mpi_aqft PRIVATE CQ-SIMBE::cq-simbe ${CQ_SIMBE_MATH_LIBRARY})
 endif()

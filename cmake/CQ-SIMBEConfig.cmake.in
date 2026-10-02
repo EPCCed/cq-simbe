@@ -1,0 +1,33 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Threads)
+if(@CQ_SIMBE_STATIC_PACKAGE@)
+  find_dependency(QuEST 4.3 CONFIG)
+endif()
+if("@CQ_SIMBE_ENABLE_MPI@" OR ("@CQ_SIMBE_STATIC_PACKAGE@" AND "@CQ_SIMBE_HAS_MPI@"))
+  find_dependency(MPI COMPONENTS C)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/CQ-SIMBETargets.cmake")
+foreach(_cq_component IN LISTS CQ-SIMBE_FIND_COMPONENTS)
+  set(CQ-SIMBE_${_cq_component}_FOUND FALSE)
+  if(_cq_component STREQUAL "Fortran")
+    if(NOT @CQ_SIMBE_BUILD_FORTRAN@)
+      set(CQ-SIMBE_NOT_FOUND_MESSAGE "This CQ-SIMBE installation does not include Fortran bindings")
+    elseif(NOT CMAKE_Fortran_COMPILER_LOADED)
+      set(CQ-SIMBE_NOT_FOUND_MESSAGE "Enable the Fortran language before requesting CQ-SIMBE's Fortran component")
+    elseif(NOT CMAKE_Fortran_COMPILER_ID STREQUAL "@CQ_SIMBE_FORTRAN_COMPILER_ID@"
+        OR NOT CMAKE_Fortran_COMPILER_VERSION VERSION_EQUAL "@CQ_SIMBE_FORTRAN_COMPILER_VERSION@")
+      set(CQ-SIMBE_NOT_FOUND_MESSAGE
+        "CQ-SIMBE Fortran modules require @CQ_SIMBE_FORTRAN_COMPILER_ID@ @CQ_SIMBE_FORTRAN_COMPILER_VERSION@; selected ${CMAKE_Fortran_COMPILER_ID} ${CMAKE_Fortran_COMPILER_VERSION}")
+    else()
+      include("${CMAKE_CURRENT_LIST_DIR}/CQ-SIMBEFortranTargets.cmake")
+      set(CQ-SIMBE_Fortran_FOUND TRUE)
+    endif()
+  else()
+    set(CQ-SIMBE_NOT_FOUND_MESSAGE "Unknown CQ-SIMBE component: ${_cq_component}")
+  endif()
+endforeach()
+unset(_cq_component)
+check_required_components(CQ-SIMBE)

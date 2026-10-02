@@ -40,7 +40,7 @@ interface
     implicit none
     type(c_ptr), value :: qr
     integer(c_size_t), value :: N
-    integer(c_short), intent(inout) :: CR(0:N)
+    integer(c_short), intent(inout) :: CR(0:N-1)
     integer(c_int) :: set_qureg_cstate
   end function
 
@@ -67,19 +67,19 @@ interface
     implicit none
     integer(c_size_t), value :: NQUBITS
     type(c_ptr), value :: qr
-    integer(c_short), intent(inout) :: cr(0:NQUBITS)
+    integer(c_short), intent(inout) :: cr(0:NQUBITS-1)
     integer(c_int) :: dmeasure_qureg
   end function dmeasure_qureg
 
-  !cq_status dmeasure(qubit * qr, const size_t NQUBITS, size_t const * const TARGETS, 
+  !cq_status dmeasure(qubit * qr, const size_t NQUBITS, size_t const * const TARGETS,
   !  const size_t NTARGETS, cstate * cr);
   function dmeasure(qr, NQUBITS, TARGETS, NTARGETS, cr) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t, c_short
     implicit none
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NTARGETS
-    integer(c_short), intent(inout) :: cr(0:NTARGETS)
-    integer(c_size_t), intent(in) :: TARGETS(0:NTARGETS)
+    integer(c_short), intent(inout) :: cr(0:NTARGETS-1)
+    integer(c_size_t), intent(in) :: TARGETS(0:NTARGETS-1)
     type(c_ptr), value :: qr
     integer(c_int) :: dmeasure
   end function dmeasure
@@ -99,26 +99,26 @@ interface
     implicit none
     type(c_ptr), value :: qr
     integer(c_size_t), value :: NQUBITS
-    integer(c_short), intent(inout) :: cr(0:NQUBITS)
+    integer(c_short), intent(inout) :: cr(0:NQUBITS-1)
     integer(c_int) :: measure_qureg
   end function measure_qureg
 
-  !cq_status measure(qubit * qr, const size_t NQUBITS, size_t const * const TARGETS, 
+  !cq_status measure(qubit * qr, const size_t NQUBITS, size_t const * const TARGETS,
   !  const size_t NTARGETS, cstate * cr);
   function measure(qr, NQUBITS, TARGETS, NTARGETS, cr) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_size_t, c_short
     implicit none
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NTARGETS
-    integer(c_short), intent(inout) :: cr(0:NTARGETS)
-    integer(c_size_t), intent(in) :: TARGETS(0:NTARGETS)
+    integer(c_short), intent(inout) :: cr(0:NTARGETS-1)
+    integer(c_size_t), intent(in) :: TARGETS(0:NTARGETS-1)
     type(c_ptr), value :: qr
     integer(c_int) :: measure
   end function measure
 
 ! -------------------------------- QASM Gates --------------------------------
 
-  !cq_status unitary(qubit * qh, const double THETA, const double PHI, 
+  !cq_status unitary(qubit * qh, const double THETA, const double PHI,
   !  const double LAMBDA);
   function unitary(qh, THETA, PHI, LAMBDA) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
@@ -241,7 +241,7 @@ interface
     real(c_double), value :: THETA
     integer(c_int) :: roty
   end function roty
- 
+
   !cq_status rotz(qubit * qh, const double THETA);
   function rotz(qh, THETA) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double
@@ -329,7 +329,7 @@ interface
   end function chadamard
 
 
-  !cq_status cunitary(qubit * ctrl, qubit * target, const double THETA, 
+  !cq_status cunitary(qubit * ctrl, qubit * target, const double THETA,
   !  const double PHI, const double LAMBDA);
   function cunitary(ctrl, qtarget, THETA, PHI, LAMBDA) bind(C)
     use, intrinsic :: iso_c_binding, only: c_int, c_ptr, c_double

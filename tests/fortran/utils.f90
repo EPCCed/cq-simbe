@@ -5,7 +5,7 @@ integer, parameter :: SUCCESS = 0
 integer, parameter :: WARNING = 1
 integer, parameter :: EARLY_SUCCESS = 2
 
-integer :: test_case_number
+integer :: test_case_number = 0
 
 contains
   subroutine test_header(str)
@@ -23,9 +23,9 @@ contains
     test_case_number = test_case_number + 1
     if (condition) then
       write(*, *) 'Test case: ', test_case_number, ' succeded'
-    else 
+    else
       write(*, *) 'Test case: ', test_case_number, ' failed'
-      stop "Aborting!"
+      error stop 1
     end if
   end subroutine assert
 

@@ -4,7 +4,3 @@ target_sources(cq-simbe
   host_ops.c
   utils.c
 )
-
-if(BUILD_FORTRAN_INTERFACE)
-add_subdirectory(fortran)
-endif()

@@ -19,6 +19,8 @@
 
 struct dev_link {
   bool run_device;
+  bool worker_started;
+  cq_status lifecycle_status;
   pthread_t device_thread;
   pthread_mutex_t device_lock;
 
@@ -103,6 +105,12 @@ size_t assign_exec_id(void);
 
 ///
 /// initialises correct QuEST environment depending on the build opotions.
-void init_quest_env(void);
+cq_status init_quest_env(void);
+cq_status finish_quest_env(void);
+cq_status agree_kernel_registration(const char *name, cq_status status, int parameterized);
+cq_status agree_kernel_shot(cq_exec *exec, cq_status status);
+void complete_failed_exec(cq_exec *exec, cq_status status);
+cq_status submit_exec(enum ctrl_code op, cq_exec *exec);
+bool exec_is_live(const cq_exec *exec);
 
 #endif

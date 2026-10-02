@@ -11,68 +11,71 @@
 struct qkern_registry qk_reg;
 struct pqkern_registry pqk_reg;
 
+static pthread_mutex_t registry_lock = PTHREAD_MUTEX_INITIALIZER;
+
 cq_status register_qkern(qkern kernel) {
+  qkern_map candidate = {0};
   cq_status status = CQ_ERROR;
-  char * fname;
-  
-  if (kernel != NULL && qk_reg.next_available_slot < __CQ_MAX_NUM_QKERN__) {
-    status = find_qkern_name(kernel, &fname);
-    if (status == CQ_SUCCESS) {
-      // This kernel has already been registered!
-      status = CQ_WARNING;
-    } else {
-      qkern_map * pkmap = &qk_reg.qkernels[qk_reg.next_available_slot];
-      kernel(0, NULL, 0, NULL, pkmap);
-      if (pkmap->fname[0] != '\0') {
-        pkmap->fn = kernel;
-        ++qk_reg.next_available_slot;
-        status = CQ_SUCCESS;
-      } else {
+  if (kernel && kernel(0, NULL, 0, NULL, &candidate) == CQ_SUCCESS && candidate.fname[0]) {
+    candidate.fn = kernel;
+    status = CQ_SUCCESS;
+  }
+  pthread_mutex_lock(&registry_lock);
+  if (status == CQ_SUCCESS) {
+    for (size_t i=0; i<qk_reg.next_available_slot; ++i) {
+      if (qk_reg.qkernels[i].fn == kernel) {
+        status = CQ_WARNING;
+        break;
+      }
+      if (!strcmp(qk_reg.qkernels[i].fname, candidate.fname)) {
         status = CQ_ERROR;
+        break;
       }
     }
   }
-
-  //host_device_sync_comms();
-  RUN_HOST_ONLY();
-  host_wait_all_ops();
-  return status;
+  if (status == CQ_SUCCESS && qk_reg.next_available_slot == __CQ_MAX_NUM_QKERN__)
+    status = CQ_ERROR;
+  cq_status agreed = agree_kernel_registration(candidate.fname, status, 0);
+  if (agreed != CQ_ERROR && status == CQ_SUCCESS)
+    qk_reg.qkernels[qk_reg.next_available_slot++] = candidate;
+  pthread_mutex_unlock(&registry_lock);
+  return agreed;
 }
 
 cq_status register_pqkern(pqkern kernel) {
+  pqkern_map candidate = {0};
   cq_status status = CQ_ERROR;
-  char * fname;
-  
-  if (kernel != NULL && pqk_reg.next_available_slot < __CQ_MAX_NUM_QKERN__) {
-    status = find_pqkern_name(kernel, &fname);
-    if (status == CQ_SUCCESS) {
-      // This kernel has already been registered!
-      status = CQ_WARNING;
-    } else {
-      pqkern_map * pqkmap = &pqk_reg.pqkernels[pqk_reg.next_available_slot];
-      kernel(0, NULL, 0, NULL, NULL, pqkmap);
-      if (pqkmap->fname[0] != '\0') {
-        pqkmap->fn = kernel;
-        ++pqk_reg.next_available_slot;
-        status = CQ_SUCCESS;
-      } else {
+  if (kernel && kernel(0, NULL, 0, NULL, NULL, &candidate) == CQ_SUCCESS && candidate.fname[0]) {
+    candidate.fn = kernel;
+    status = CQ_SUCCESS;
+  }
+  pthread_mutex_lock(&registry_lock);
+  if (status == CQ_SUCCESS) {
+    for (size_t i=0; i<pqk_reg.next_available_slot; ++i) {
+      if (pqk_reg.pqkernels[i].fn == kernel) {
+        status = CQ_WARNING;
+        break;
+      }
+      if (!strcmp(pqk_reg.pqkernels[i].fname, candidate.fname)) {
         status = CQ_ERROR;
+        break;
       }
     }
   }
-
-  //host_device_sync_comms();
-  RUN_HOST_ONLY();
-  host_wait_all_ops();
-  return status;
-
-  return CQ_ERROR;
+  if (status == CQ_SUCCESS && pqk_reg.next_available_slot == __CQ_MAX_NUM_QKERN__)
+    status = CQ_ERROR;
+  cq_status agreed = agree_kernel_registration(candidate.fname, status, 1);
+  if (agreed != CQ_ERROR && status == CQ_SUCCESS)
+    pqk_reg.pqkernels[pqk_reg.next_available_slot++] = candidate;
+  pthread_mutex_unlock(&registry_lock);
+  return agreed;
 }
 
 cq_status find_qkern_pointer(char const * const FNAME, qkern * qk) {
+  pthread_mutex_lock(&registry_lock);
   *qk = NULL;
   cq_status status = CQ_SUCCESS;
-  
+
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     if (!strcmp(FNAME, qk_reg.qkernels[i].fname)) {
       // We found it!
@@ -83,10 +86,12 @@ cq_status find_qkern_pointer(char const * const FNAME, qkern * qk) {
 
   if (*qk == NULL) status = CQ_ERROR;
 
+  pthread_mutex_unlock(&registry_lock);
   return status;
 }
 
 cq_status find_qkern_name(const qkern QK, char ** fname) {
+  pthread_mutex_lock(&registry_lock);
   *fname = NULL;
   cq_status status = CQ_SUCCESS;
 
@@ -100,13 +105,15 @@ cq_status find_qkern_name(const qkern QK, char ** fname) {
 
   if (*fname == NULL) status = CQ_ERROR;
 
+  pthread_mutex_unlock(&registry_lock);
   return status;
 }
 
 cq_status find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
+  pthread_mutex_lock(&registry_lock);
   *pqk = NULL;
   int status = CQ_SUCCESS;
-  
+
   for (size_t i = 0; i < pqk_reg.next_available_slot; ++i) {
     if (!strcmp(FNAME, pqk_reg.pqkernels[i].fname)) {
       // We found it!
@@ -117,10 +124,12 @@ cq_status find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
 
   if (*pqk == NULL) status = CQ_ERROR;
 
+  pthread_mutex_unlock(&registry_lock);
   return status;
 }
 
 cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
+  pthread_mutex_lock(&registry_lock);
   *fname = NULL;
   int status = CQ_SUCCESS;
 
@@ -134,6 +143,7 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
 
   if (*fname == NULL) status = CQ_ERROR;
 
+  pthread_mutex_unlock(&registry_lock);
   return status;
 }
 
@@ -171,7 +181,7 @@ void finalise_exec_handle(cq_exec * ehp) {
 // fortran helpers -- just don't call them from C
 cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
   if (reg != NULL) {
-    size_t strsz = sizeof(FNAME);
+    size_t strsz = strlen(FNAME) + 1;
     if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {
       strcpy(reg->fname, FNAME);
       return CQ_SUCCESS;
@@ -183,17 +193,20 @@ cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
   return CQ_ERROR;
 }
 
-cq_status fort_create_exec_handle(cq_exec ** ehp) {
-  cq_status status = CQ_ERROR;
-  if (*ehp == NULL) {
-    *ehp = (cq_exec *) malloc(sizeof(cq_exec));
-    // check malloc
-    if (*ehp != NULL) status = CQ_SUCCESS;
-  }
-  return status;
+cq_status fort_create_exec_handle(cq_exec **ehp) {
+  if (!ehp || *ehp) return CQ_ERROR;
+  *ehp = calloc(1, sizeof(**ehp));
+  if (!*ehp) return CQ_ERROR;
+  /* No pthread primitives exist yet. Distinguish an empty handle from a
+     successfully submitted zero-shot execution, which wait accepts. */
+  (*ehp)->id = (size_t)-1;
+  (*ehp)->expected_shots = (size_t)-1;
+  (*ehp)->status = CQ_ERROR;
+  return CQ_SUCCESS;
 }
 
 cq_status fort_free_exec_handle(cq_exec ** ehp) {
+  if (!ehp || exec_is_live(*ehp)) return CQ_ERROR;
   free(*ehp);
   *ehp = NULL;
   return CQ_SUCCESS;

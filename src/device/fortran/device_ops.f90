@@ -7,7 +7,7 @@ contains
 ! ----------------------------- DEVICE OPERATIONS -----------------------------
 
   module procedure cq_register_fort_kernel !(func_name, reg) result(status)
-    status = insert_to_qkern_map(func_name, reg%map)
+    status = insert_to_qkern_map(func_name // c_null_char, reg%map)
   end procedure cq_register_fort_kernel
 
   module procedure cq_set_qubit !(qh, qidx, cs) result(status)
@@ -51,4 +51,3 @@ contains
   end procedure cq_measure
 
 end submodule device_ops
-

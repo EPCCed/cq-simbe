@@ -86,7 +86,7 @@ void test_cq_disable_analog_mode(void) {
 
 void test_cq_get_channel(void) {
     channel ch0 = {0};
-		  
+
     // Getting channel on uninitialised qreg.
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
 		    cq_get_channel(&ch0, CQ_ADDR_LOCAL, qr, &qr[0]));
@@ -103,7 +103,7 @@ void test_cq_get_channel(void) {
     // NULL channel
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
 		    cq_get_channel(NULL, CQ_ADDR_LOCAL, qr, &qr[0]));
-    
+
     // NULL qr
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
 		    cq_get_channel(&ch0, CQ_ADDR_LOCAL, NULL, &qr[0]));
@@ -168,7 +168,7 @@ void test_cq_free_pulse(void) {
 
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS,
                           cq_free_pulse(&p));
-    	
+
     // Freeing the same pulse twice should fail
     TEST_ASSERT_EQUAL_INT(CQ_ERROR,
                           cq_free_pulse(&p));
@@ -284,7 +284,7 @@ void test_cq_delay(void) {
 
     // uninitialised channel fails to delay
     TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_delay(&ch, dt));
- 
+
     cq_get_channel(&ch, CQ_ADDR_GLOBAL, qr, NULL);
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_delay(&ch, dt));
     TEST_ASSERT(ch.time - dt < epsilon);
@@ -316,7 +316,7 @@ void test_cq_barrier(void) {
     TEST_ASSERT_EQUAL_INT(CQ_ERROR, cq_barrier(channels, num_qubits));
 
     for (ptrdiff_t i = 0; i < num_qubits; ++i) {
-    	cq_get_channel(channels[i], CQ_ADDR_LOCAL, qr, &qr[i]);
+        cq_get_channel(channels[i], CQ_ADDR_LOCAL, qr, &qr[i]);
     }
     TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, cq_barrier(channels, num_qubits));
     TEST_ASSERT(channels[0]->time - channels[1]->time < epsilon &&

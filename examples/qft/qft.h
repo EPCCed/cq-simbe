@@ -3,12 +3,12 @@
 
 #include "cq.h"
 
-void report_results(cstate const * const CR, const size_t NMEASURE, 
+void report_results(cstate const * const CR, const size_t NMEASURE,
   const size_t NSHOTS);
 void full_qft_circuit(const size_t NQUBITS, qubit * qr);
 cq_status zero_init_full_qft(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr,
   qkern_map * reg);
-cq_status plus_init_full_qft(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, 
+cq_status plus_init_full_qft(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr,
   qkern_map * reg);
 
 #endif

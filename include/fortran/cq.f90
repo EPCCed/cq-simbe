@@ -37,7 +37,7 @@ abstract interface
     integer(c_size_t), value :: NQUBITS
     type(qubit), value :: qr
     integer(c_size_t), value :: NMEASURE
-    integer(c_short), intent(inout) :: cr(0:NMEASURE)
+    integer(c_short), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(c_int) :: status
   end function qkern
@@ -100,7 +100,7 @@ interface
     implicit none
     integer(kind=8), value :: LENGTH
     integer, value :: INIT_VAL
-    integer(c_short), intent(inout) :: cr(0:LENGTH)
+    integer(c_short), intent(inout) :: cr(0:LENGTH-1)
   end subroutine cq_init_creg
 
 ! Synchronisation
@@ -145,7 +145,7 @@ end interface
 interface
   module function cq_register_fort_kernel(func_name, reg) result(status)
     implicit none
-    character(*), intent(in) :: func_name(*)
+    character(kind=c_char, len=*), intent(in) :: func_name
     type(qkern_map), value :: reg
     integer :: status
   end function cq_register_fort_kernel
@@ -171,7 +171,7 @@ interface
     implicit none
     integer(kind=8), value :: N
     type(qubit), value :: qr
-    integer(kind=2), intent(inout) :: CR(0:N)
+    integer(kind=2), intent(inout) :: CR(0:N-1)
     integer :: status
   end function cq_set_qureg_cstate
 
@@ -196,7 +196,7 @@ interface
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     ! this is slice to possibly larger cr so inout?
-    integer(kind=2), intent(inout) :: cr(0:NQUBITS)
+    integer(kind=2), intent(inout) :: cr(0:NQUBITS-1)
     integer :: status
   end function cq_dmeasure_qureg
 
@@ -204,8 +204,8 @@ interface
     implicit none
     integer(kind=8), value :: NQUBITS
     integer(kind=8), value :: NTARGETS
-    integer(kind=2), intent(inout) :: cr(0:NTARGETS)
-    integer(kind=8), intent(in) :: TARGETS(0:NTARGETS)
+    integer(kind=2), intent(inout) :: cr(0:NTARGETS-1)
+    integer(kind=8), intent(in) :: TARGETS(0:NTARGETS-1)
     type(qubit), value :: qr
     integer :: status
   end function cq_dmeasure
@@ -222,7 +222,7 @@ interface
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
-    integer(kind=2), intent(inout) :: cr(0:NQUBITS)
+    integer(kind=2), intent(inout) :: cr(0:NQUBITS-1)
     integer :: status
   end function cq_measure_qureg
 
@@ -230,8 +230,8 @@ interface
     implicit none
     integer(kind=8), value :: NQUBITS
     integer(kind=8), value :: NTARGETS
-    integer(kind=2), intent(inout) :: cr(0:NTARGETS)
-    integer(kind=8), intent(in) :: TARGETS(0:NTARGETS)
+    integer(kind=2), intent(inout) :: cr(0:NTARGETS-1)
+    integer(kind=8), intent(in) :: TARGETS(0:NTARGETS-1)
     type(qubit), value :: qr
     integer :: status
   end function cq_measure
@@ -268,21 +268,21 @@ interface
     integer :: status
   end function cq_phase
 
-  module function cq_paulix(qh, qubit_idx) result(status) 
+  module function cq_paulix(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(c_size_t), value :: qubit_idx
     integer :: status
   end function cq_paulix
 
-  module function cq_pauliy(qh, qubit_idx) result(status) 
+  module function cq_pauliy(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
     integer :: status
   end function cq_pauliy
 
-  module function cq_pauliz(qh, qubit_idx) result(status) 
+  module function cq_pauliz(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
@@ -296,42 +296,42 @@ interface
     integer :: status
   end function cq_hadamard
 
-  module function cq_sqrtz(qh, qubit_idx) result(status) 
+  module function cq_sqrtz(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
     integer :: status
   end function cq_sqrtz
 
-  module function cq_sqrtzhc(qh, qubit_idx) result(status) 
+  module function cq_sqrtzhc(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
     integer :: status
   end function cq_sqrtzhc
 
-  module function cq_sqrts(qh, qubit_idx) result(status) 
+  module function cq_sqrts(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
     integer :: status
   end function cq_sqrts
 
-  module function cq_sqrtshc(qh, qubit_idx) result(status) 
+  module function cq_sqrtshc(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
     integer :: status
   end function cq_sqrtshc
 
-  module function cq_sqrtx(qh, qubit_idx) result(status) 
+  module function cq_sqrtx(qh, qubit_idx) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
     integer :: status
   end function cq_sqrtx
 
-  module function cq_rotx(qh, qubit_idx, THETA) result(status) 
+  module function cq_rotx(qh, qubit_idx, THETA) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
@@ -339,7 +339,7 @@ interface
     integer :: status
   end function cq_rotx
 
-  module function cq_roty(qh, qubit_idx, THETA) result(status) 
+  module function cq_roty(qh, qubit_idx, THETA) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
@@ -347,15 +347,15 @@ interface
     integer :: status
   end function cq_roty
 
-  module function cq_rotz(qh, qubit_idx, THETA) result(status) 
+  module function cq_rotz(qh, qubit_idx, THETA) result(status)
     implicit none
     type(qubit), value :: qh
     integer(kind=8), value :: qubit_idx
     real(c_double), value :: THETA
     integer :: status
   end function cq_rotz
- 
-  module function cq_cpaulix(qr, ctrl, qtarget) result(status) 
+
+  module function cq_cpaulix(qr, ctrl, qtarget) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -363,7 +363,7 @@ interface
     integer :: status
   end function cq_cpaulix
 
-  module function cq_cpauliy(qr, ctrl, qtarget) result(status) 
+  module function cq_cpauliy(qr, ctrl, qtarget) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -371,7 +371,7 @@ interface
     integer :: status
   end function cq_cpauliy
 
-  module function cq_cpauliz(qr, ctrl, qtarget) result(status) 
+  module function cq_cpauliz(qr, ctrl, qtarget) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -379,7 +379,7 @@ interface
     integer :: status
   end function cq_cpauliz
 
-  module function cq_cphase(qr, ctrl, qtarget, THETA) result(status) 
+  module function cq_cphase(qr, ctrl, qtarget, THETA) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -388,7 +388,7 @@ interface
     integer :: status
   end function cq_cphase
 
-  module function cq_crotx(qr, ctrl, qtarget, THETA) result(status) 
+  module function cq_crotx(qr, ctrl, qtarget, THETA) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -397,7 +397,7 @@ interface
     integer :: status
   end function cq_crotx
 
-  module function cq_croty(qr, ctrl, qtarget, THETA) result(status) 
+  module function cq_croty(qr, ctrl, qtarget, THETA) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -407,7 +407,7 @@ interface
 
   end function cq_croty
 
-  module function cq_crotz(qr, ctrl, qtarget, THETA) result(status) 
+  module function cq_crotz(qr, ctrl, qtarget, THETA) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -415,8 +415,8 @@ interface
     real(c_double), value :: THETA
     integer :: status
   end function cq_crotz
-  
-  module function cq_chadamard(qr, ctrl, qtarget) result(status) 
+
+  module function cq_chadamard(qr, ctrl, qtarget) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -424,7 +424,7 @@ interface
     integer :: status
   end function cq_chadamard
 
-  module function cq_cunitary(qr, ctrl, qtarget, THETA, PHI, LAMBDA) result(status) 
+  module function cq_cunitary(qr, ctrl, qtarget, THETA, PHI, LAMBDA) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -435,7 +435,7 @@ interface
     integer :: status
   end function cq_cunitary
 
-  module function cq_swap(qr, a, b) result(status) 
+  module function cq_swap(qr, a, b) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: a
@@ -443,7 +443,7 @@ interface
     integer :: status
   end function cq_swap
 
-  module function cq_ccpaulix(qr, ctrl_a, ctrl_b, qtarget) result(status) 
+  module function cq_ccpaulix(qr, ctrl_a, ctrl_b, qtarget) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl_a
@@ -452,7 +452,7 @@ interface
     integer :: status
   end function cq_ccpaulix
 
-  module function cq_cswap(qr, ctrl, a, b) result(status) 
+  module function cq_cswap(qr, ctrl, a, b) result(status)
     implicit none
     type(qubit), value :: qr
     integer(kind=8), value :: ctrl
@@ -470,7 +470,7 @@ contains
     use c_host_interface
     implicit none
     procedure(qkern) :: kernel
-    integer(c_int) :: status 
+    integer(c_int) :: status
     status = register_qkern(c_funloc(kernel))
   end function cq_register_qkern
 
@@ -481,7 +481,7 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
-    integer(c_short), intent(inout) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE-1)
     integer :: status
     status = s_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE)
   end function
@@ -493,7 +493,7 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
-    integer(c_short), intent(inout) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE-1)
     type(cq_exec), value :: ehp
     integer :: status
     status = a_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, ehp%this)
@@ -507,7 +507,7 @@ contains
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
     integer(kind=8), value :: NSHOTS
-    integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE-1)
     integer :: status
     status = sm_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS)
    end function
@@ -520,7 +520,7 @@ contains
     type(qubit), value :: qrp
     integer(kind=8), value :: NMEASURE
     integer(kind=8), value :: NSHOTS
-    integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE-1)
     type(cq_exec), value :: ehp
     integer :: status
     status = am_qrun(c_funloc(kernel), qrp%this, NQUBITS, crp, NMEASURE, NSHOTS, ehp%this)

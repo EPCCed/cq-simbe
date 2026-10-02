@@ -86,7 +86,7 @@ typedef struct analog_qreg {
 // TODO: Device could have func ptr to coupling function
 // this could be provided by the user and later used for calculating
 // interaction
-typedef double (*coupling_func)(double *q0, double *q1); 
+typedef double (*coupling_func)(double *q0, double *q1);
 typedef struct analog_device {
     double sample_rate;                 // GHz i.e 1/ns
     double min_pulse_duration;          // ns
@@ -106,4 +106,3 @@ typedef struct analog_device {
 #define __CQ_ANALOG_EPSILON__ 0.0000000001
 
 #endif // CQ_ANALOG_DATATYPES_H
-

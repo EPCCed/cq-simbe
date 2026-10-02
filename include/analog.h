@@ -90,4 +90,3 @@ cq_status cq_set_device_max_num_shots(int shots);
 cq_status cq_set_device_coupling_func(double(*coupler)(double *q0, double *q1));
 
 #endif
-

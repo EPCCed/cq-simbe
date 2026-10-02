@@ -1,579 +1,391 @@
 #include "comms_mpi.h"
-#include <quest/include/environment.h>
 #include "comms_core.h"
-#include "src/host-device/comms.h"
-
-#include "datatypes.h"
-#include "src/host/opcodes.h"
-
-#ifndef CQ_CONF_QUEST_WITH_MPI
+#include "kernel_utils.h"
+#include "quest/include/config.h"
 #include "quest/include/environment.h"
-#endif
-
-#if CQ_CONF_QUEST_WITH_MPI
+#if QUEST_COMPILE_MPI
 #include "quest/include/experimental.h"
+#if !QUEST_COMPILE_SUBCOMM
+#error "MPI QuEST requires SUBCOMM support"
 #endif
-
-#include <mpi.h>
-
+#endif
+#include <limits.h>
+#include <stdint.h>
 #include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// ----------------------------------------------------------------------------
-// Macros
-// ----------------------------------------------------------------------------
-// TODO: change these to be variables rather than macros
-// i.e. CQ_MPI_HOST_RANK is the one specified by user
-// CQ_MPI_DEVICE RANK is also specified by user or CQ_MPI_HOST_RANK + 1 or
-// CQ_MPI_HOST_RANK if running with only 1 proc
-//
-// so default values for host_rank = 0, device_rank = host_rank + 1
-// but user can pass as args
-// #define CQ_MPI_HOST_RANK 0
-// #define CQ_MPI_DEVICE_RANK 1
+/* The listener always broadcasts within a device group, including the
+   one-device case with a serial QuEST build. QuEST duplicates its input. */
 #define CQ_MPI_DEVICE_MASTER_RANK 0
 #define CQ_MPI_WORLD_COMMS_TAG 0
-#define CQ_MPI_SUBCOMMS_TAG 0
-
 #define CQ_MPI_RUNTIME_ERROR -4
 #define CQ_MPI_MALLOC_ERROR -5
-
 static MPI_Comm CQ_MPI_COMM_WORLD = MPI_COMM_NULL;
 static MPI_Comm CQ_MPI_SPLIT_COMM = MPI_COMM_NULL;
-static bool owns_mpi_comm = false;
-
-static int CQ_MPI_HOST_RANK = 0;
-static int CQ_MPI_DEVICE_RANK = 0;
-
-struct cq_mpi_env {
+static MPI_Comm registration_comm = MPI_COMM_NULL;
+static MPI_Comm worker_control_comm = MPI_COMM_NULL;
+static bool owns_mpi_comm;
+static int CQ_MPI_HOST_RANK;
+static int CQ_MPI_DEVICE_RANK;
+static struct {
   bool is_init;
-  int rank;
-  int subcomm_rank;
+  int rank, subcomm_rank, world_size;
   unsigned int verbosity;
-  int world_size;
-};
-
-static cq_exec * executor_handles[__CQ_DEVICE_QUEUE_SIZE__];
-static size_t num_active_executors = 0;
-static struct cq_mpi_env mpi_env = {
-  .is_init = false,
-  .rank = -1,
-  .subcomm_rank = -1,
-  .verbosity = 0,
-  .world_size = 0,
-};
-
-struct communicator {
-  bool comm_busy;
+} mpi_env = {0, -1, -1, 0, 0};
+static cq_exec *executor_handles[__CQ_DEVICE_QUEUE_SIZE__];
+static cq_exec *host_handles[__CQ_DEVICE_QUEUE_SIZE__];
+static size_t num_active_executors;
+static char debug_worker_name[64];
+static struct {
   pthread_t device_comm_thread;
-  pthread_cond_t cond_comm_busy;
   pthread_mutex_t comm_lock;
-};
+  pthread_cond_t cond_comm_busy;
+  bool sync_init, started, release, cancel;
+  cq_status status;
+} dev_comm;
 
-static struct communicator dev_comm = { 0 };
-
-static char debug_worker_name[64] = { 0 };
-
-static void cq_log(const char * format, ...) {
+static void cq_log(const char *format, ...) {
 #ifdef DEBUG_MODE
-  va_list(args);
+  va_list args;
   va_start(args, format);
   vprintf(format, args);
+  va_end(args);
 #endif
 }
-
-static bool cq_validate_mpi_rank(const int rank) {
-  if (rank < 0 || rank >= mpi_env.world_size) {
-    cq_log(
-        "passed incorrect mpi rank with value either < 0 or >= world_size\n");
-    return false;
-  }
-  return true;
+static bool cq_validate_mpi_rank(int rank) {
+  return rank >= 0 && rank < mpi_env.world_size;
 }
-
-static bool is_serial() {
-  return mpi_env.world_size == 1 || !mpi_env.is_init;
+static bool is_serial(void) { return mpi_env.world_size == 1; }
+bool is_device(void) { return mpi_env.is_init && !is_serial() && mpi_env.rank != 0; }
+static int agree_ready(int ready) {
+  int result = 0;
+  if (MPI_Allreduce(&ready, &result, 1, MPI_INT, MPI_MIN, registration_comm) != MPI_SUCCESS)
+    return 0;
+  return result;
 }
-
-int initialise_device_with_custom_mpi_comm(MPI_Comm cq_comm,
-                                           const unsigned int VERBOSITY) {
-  MPI_Comm_dup(cq_comm, &CQ_MPI_COMM_WORLD);
-  return initialise_device(VERBOSITY);
+static void release_listener(bool cancel) {
+  if (!dev_comm.started) return;
+  pthread_mutex_lock(&dev_comm.comm_lock);
+  dev_comm.cancel = cancel;
+  dev_comm.release = true;
+  pthread_cond_broadcast(&dev_comm.cond_comm_busy);
+  pthread_mutex_unlock(&dev_comm.comm_lock);
 }
-
-int initialise_device(const unsigned int VERBOSITY) {
-  if (!mpi_env.is_init) {
-    mpi_env.is_init = true;
-    init_host_device_mpi(VERBOSITY);
+void device_finalise_comms(const unsigned int verbosity) {
+  if (dev_comm.started) {
+    pthread_join(dev_comm.device_comm_thread, NULL);
+    dev_comm.started = false;
   }
-
-  if (is_serial()) {
-    return serial_initialise_device(VERBOSITY);
-  }
-
-  RUN_HOST_ONLY();
-  unsigned int verbosity = VERBOSITY;
-  host_send_ctrl_op(CQ_CTRL_INIT, &verbosity);
-  host_wait_all_ops();
-  return 0;
-}
-
-size_t host_send_ctrl_op(const enum ctrl_code OP, void * params) {
-  if (is_serial()) {
-    return serial_host_send_ctrl_op(OP, params);
-  }
-
-  const int device_rank = CQ_MPI_DEVICE_RANK;
-  cq_log("%s [send_ctrl_op]: sending %s...\n", get_comm_source(),
-         op_to_str(OP));
-  int op_comm_buffer = (int)OP;
-  MPI_Ssend(&op_comm_buffer, 1, MPI_INT, device_rank, CQ_MPI_WORLD_COMMS_TAG,
-            CQ_MPI_COMM_WORLD);
-  // send params based on OP
-  host_comm_params(OP, params);
-  cq_log("%s [send_ctrl_op]: sent %s\n", get_comm_source(), op_to_str(OP));
-  return 0;
-}
-
-size_t host_wait_all_ops(void) {
-  if (is_serial()) {
-    return serial_host_wait_all_ops();
-  }
-
-  cq_log("%s [wait_all_ops]: waiting...\n", get_comm_source());
-  host_send_ctrl_op(CQ_CTRL_WAIT, NULL);
-  size_t num_ops;
-  const int device_rank = CQ_MPI_DEVICE_RANK;
-  MPI_Status status;
-  MPI_Recv(&num_ops, 1, MPI_UINT64_T, device_rank, CQ_MPI_WORLD_COMMS_TAG,
-           CQ_MPI_COMM_WORLD, &status);
-  cq_log("%s [wait_all_ops]: all ops completed (num_ops: %zu)\n",
-         get_comm_source(), num_ops);
-  return 0;
-}
-
-void host_device_sync_comms(void) {
-  if (is_serial()) {
-    return serial_host_device_sync_comms();
-  }
-
-  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-    cq_log("%s [final_sync]: simply waiting\n", get_comm_source());
-    device_wait_comms();
+  if (dev_comm.sync_init) {
+    pthread_cond_destroy(&dev_comm.cond_comm_busy);
+    pthread_mutex_destroy(&dev_comm.comm_lock);
+    dev_comm.sync_init = false;
   }
 }
-
-int finalise_device(const unsigned int VERBOSITY) {
-  if (is_serial()) {
-    int res = serial_finalise_device(VERBOSITY);
-    finalise_host_device_mpi(VERBOSITY);
-    return res;
+static cq_status cleanup_mpi(void) {
+  cq_status status = CQ_SUCCESS;
+  if (worker_control_comm != MPI_COMM_NULL) MPI_Comm_free(&worker_control_comm);
+  if (CQ_MPI_SPLIT_COMM != MPI_COMM_NULL) MPI_Comm_free(&CQ_MPI_SPLIT_COMM);
+  if (registration_comm != MPI_COMM_NULL) MPI_Comm_free(&registration_comm);
+  if (CQ_MPI_COMM_WORLD != MPI_COMM_NULL) MPI_Comm_free(&CQ_MPI_COMM_WORLD);
+  mpi_env.is_init = false;
+  if (owns_mpi_comm) {
+    if (MPI_Finalize() != MPI_SUCCESS) status = CQ_ERROR;
+    owns_mpi_comm = false;
   }
-
-  host_device_sync_comms();
-
-  if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-    host_wait_all_ops();
-
-    if (VERBOSITY > 0) {
-      printf("Finalising device.\n");
-    }
-
-    unsigned int verbosity = VERBOSITY;
-    host_send_ctrl_op(CQ_CTRL_FINALISE, &verbosity);
-  }
-
-  finalise_host_device_mpi(VERBOSITY);
-
-  return 0;
+  return status;
 }
 
-bool is_device(void) {
-  if (!mpi_env.is_init) {
-    return false;
-  }
-
-  if (mpi_env.rank < 0) {
-    cq_log("%s [is_device]: rank is < 0 => MPI not initialised. Exiting!\n",
-           get_comm_source());
-    MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-  }
-
-  return mpi_env.rank != CQ_MPI_HOST_RANK;
-}
-
-void init_quest_env(void) {
-#if CQ_WITH_MPI_COMMS && CQ_CONF_QUEST_WITH_MPI
-  if (is_serial()) {
-    initCustomMpiQuESTEnv(0, 1, 0, 0);
-  } else if (is_quantum_worker()) {
-    initCustomMpiCommQuESTEnv(CQ_MPI_SPLIT_COMM, 0, 0);
+static cq_status start_transport(MPI_Comm supplied, bool custom, unsigned int verbosity) {
+  if (mpi_env.is_init) return CQ_WARNING;
+  int initialized = 0, finalized = 0, provided = MPI_THREAD_SINGLE;
+  if (MPI_Finalized(&finalized) != MPI_SUCCESS || finalized ||
+      MPI_Initialized(&initialized) != MPI_SUCCESS) return CQ_ERROR;
+  if (custom && (!initialized || supplied == MPI_COMM_NULL)) return CQ_ERROR;
+  if (initialized) {
+    /* Before duplicating anything or starting a thread, use the caller. */
+    if (MPI_Query_thread(&provided) != MPI_SUCCESS) return CQ_ERROR;
   } else {
+    if (MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided) != MPI_SUCCESS)
+      return CQ_ERROR;
+    owns_mpi_comm = true;
   }
+  MPI_Comm input = custom ? supplied : MPI_COMM_WORLD;
+  int intercommunicator = 0;
+  if (MPI_Comm_test_inter(input, &intercommunicator) != MPI_SUCCESS || intercommunicator) {
+    if (owns_mpi_comm) { MPI_Finalize(); owns_mpi_comm = false; }
+    return CQ_ERROR;
+  }
+  int local_ready = provided >= MPI_THREAD_MULTIPLE && !isQuESTEnvInit();
+  int all_ready = 0;
+  MPI_Allreduce(&local_ready, &all_ready, 1, MPI_INT, MPI_MIN, input);
+  if (!all_ready) {
+    if (owns_mpi_comm) { MPI_Finalize(); owns_mpi_comm = false; }
+    return CQ_ERROR;
+  }
+  MPI_Comm_dup(input, &CQ_MPI_COMM_WORLD);
+  MPI_Comm_dup(input, &registration_comm);
+  MPI_Comm_size(input, &mpi_env.world_size);
+  MPI_Comm_rank(input, &mpi_env.rank);
+  mpi_env.verbosity = verbosity;
+  int devices = mpi_env.world_size - 1;
+#if QUEST_COMPILE_MPI
+  local_ready = is_serial() || (devices > 0 && !(devices & (devices - 1)));
+#else
+  local_ready = is_serial() || devices == 1;
 #endif
-#ifndef CQ_CONF_QUEST_WITH_MPI
+  if (!agree_ready(local_ready)) { cleanup_mpi(); return CQ_ERROR; }
+  CQ_MPI_DEVICE_RANK = is_serial() ? 0 : 1;
+  bool quantum = is_serial() || mpi_env.rank != 0;
+  MPI_Comm_split(input, quantum ? 1 : MPI_UNDEFINED, mpi_env.rank, &CQ_MPI_SPLIT_COMM);
+  if (quantum) {
+    MPI_Comm_rank(CQ_MPI_SPLIT_COMM, &mpi_env.subcomm_rank);
+    MPI_Comm_dup(CQ_MPI_SPLIT_COMM, &worker_control_comm);
+  }
+  /* Every rank joins readiness before a worker can enter QuEST collectives. */
+  local_ready = !quantum || init_device_controls(verbosity) == CQ_SUCCESS;
+  if (!agree_ready(local_ready)) {
+    if (dev_ctrl.worker_started) { stop_device(); finalise_device_controls(verbosity); }
+    cleanup_mpi();
+    return CQ_ERROR;
+  }
+  local_ready = 1;
+  if (quantum && !is_serial()) {
+    memset(&dev_comm, 0, sizeof(dev_comm));
+    dev_comm.status = CQ_SUCCESS;
+    if (pthread_mutex_init(&dev_comm.comm_lock, NULL) != 0) local_ready = 0;
+    else if (pthread_cond_init(&dev_comm.cond_comm_busy, NULL) != 0) {
+      pthread_mutex_destroy(&dev_comm.comm_lock); local_ready = 0;
+    } else {
+      dev_comm.sync_init = true;
+      if (pthread_create(&dev_comm.device_comm_thread, NULL, device_listen, NULL) != 0)
+        local_ready = 0;
+      else dev_comm.started = true;
+    }
+  }
+  if (!agree_ready(local_ready)) {
+    release_listener(true);
+    device_finalise_comms(verbosity);
+    if (quantum) {
+      stop_device(); finalise_device_controls(verbosity);
+    }
+    cleanup_mpi(); return CQ_ERROR;
+  }
+  cq_status init_status = CQ_SUCCESS;
+  if (quantum) {
+    insert_op(CQ_CTRL_INIT, &verbosity);
+    device_wait_all_ops();
+    init_status = dev_ctrl.lifecycle_status;
+  }
+  if (!agree_ready(init_status == CQ_SUCCESS)) {
+    release_listener(true);
+    device_finalise_comms(verbosity);
+    if (quantum) {
+      if (init_status == CQ_SUCCESS) {
+        insert_op(CQ_CTRL_FINALISE, &verbosity);
+        device_wait_all_ops();
+      }
+      stop_device(); finalise_device_controls(verbosity);
+    }
+    cleanup_mpi(); return CQ_ERROR;
+  }
+  mpi_env.is_init = true;
+  release_listener(false);
+  return CQ_SUCCESS;
+}
+int initialise_device(unsigned int verbosity) {
+  return start_transport(MPI_COMM_WORLD, false, verbosity);
+}
+int initialise_device_with_custom_mpi_comm(MPI_Comm comm, unsigned int verbosity) {
+  return start_transport(comm, true, verbosity);
+}
+cq_status init_quest_env(void) {
+  if (isQuESTEnvInit() || CQ_MPI_SPLIT_COMM == MPI_COMM_NULL) return CQ_ERROR;
+#if QUEST_COMPILE_MPI
+  initCustomMpiCommQuESTEnv(CQ_MPI_SPLIT_COMM, -1, -1);
+#else
   initQuESTEnv();
 #endif
+  return isQuESTEnvInit() ? CQ_SUCCESS : CQ_ERROR;
 }
+cq_status finish_quest_env(void) { return CQ_SUCCESS; }
 
-// ----------------------------------------------------------------------------
-// Device Comm Ops
-// ----------------------------------------------------------------------------
-
-void init_host_device_mpi(const unsigned int VERBOSITY) {
-  mpi_env.verbosity = VERBOSITY;
-  if (VERBOSITY > 0) {
-    cq_log("Initialising MPI.\n");
-  }
-
-  if (CQ_MPI_COMM_WORLD == MPI_COMM_NULL) {
-    owns_mpi_comm = true;
-
-    int provided;
-    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
-
-    if (provided != MPI_THREAD_MULTIPLE) {
-      cq_log(
-          "Failed setting up multithreading with MPI. Requested "
-          "MPI_THREAD_MULTIPLE, given: %d\n",
-          provided);
-      MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-    }
-
-    MPI_Comm_dup(MPI_COMM_WORLD, &CQ_MPI_COMM_WORLD);
-  }
-
-  MPI_Comm_size(CQ_MPI_COMM_WORLD, &mpi_env.world_size);
-  MPI_Comm_rank(CQ_MPI_COMM_WORLD, &mpi_env.rank);
-
-  cq_log("CQ comm size: %d\n", mpi_env.world_size);
-  cq_log("%s in CQ subcomm I'm rank %d\n", get_comm_source(), mpi_env.rank);
-
-  // TODO: for multi-device check that:
-  // (nproc - 1) == n_device * power of 2
-  validate_nproc(mpi_env.world_size);
-
+size_t host_send_ctrl_op(enum ctrl_code op, void *params) {
   if (is_serial()) {
-    MPI_Barrier(CQ_MPI_COMM_WORLD);
-    MPI_Comm_dup(CQ_MPI_COMM_WORLD, &CQ_MPI_SPLIT_COMM);
-    return;
+    size_t result = serial_host_send_ctrl_op(op, params);
+    if (op == CQ_CTRL_WAIT_EXEC) {
+      cq_exec *exec = params;
+      if (exec->id < __CQ_DEVICE_QUEUE_SIZE__ && host_handles[exec->id] == exec)
+        host_handles[exec->id] = NULL;
+    }
+    return result;
   }
+  int code = op;
+  MPI_Ssend(&code, 1, MPI_INT, CQ_MPI_DEVICE_RANK, CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD);
+  host_comm_params(op, params);
+  return 0;
+}
+size_t host_wait_all_ops(void) {
+  if (is_serial()) return device_wait_all_ops();
+  host_send_ctrl_op(CQ_CTRL_WAIT, NULL);
+  uint64_t pending;
+  MPI_Recv(&pending, 1, MPI_UINT64_T, CQ_MPI_DEVICE_RANK,
+           CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  return pending;
+}
+void host_device_sync_comms(void) { /* Shutdown uses explicit listener joins. */ }
+void device_wait_comms(void) { device_finalise_comms(mpi_env.verbosity); }
 
-#if CQ_CONF_QUEST_WITH_MPI
-  const int QUANTUM_WORKER = mpi_env.rank >= CQ_MPI_DEVICE_RANK;
-  MPI_Barrier(CQ_MPI_COMM_WORLD);
-  MPI_Comm_split(CQ_MPI_COMM_WORLD, QUANTUM_WORKER, mpi_env.rank,
-                 &CQ_MPI_SPLIT_COMM);
-  MPI_Comm_rank(CQ_MPI_SPLIT_COMM, &mpi_env.subcomm_rank);
-
-  int quest_size;
-  MPI_Comm_size(CQ_MPI_SPLIT_COMM, &quest_size);
-  cq_log("QuEST comm size: %d\n", quest_size);
-
-  cq_log("%s in subcomm I'm rank %d\n", get_comm_source(),
-         mpi_env.subcomm_rank);
-
-  sprintf(debug_worker_name, "Quantum Worker [%d]:\t\t", mpi_env.subcomm_rank);
-#endif
-
-  if (VERBOSITY > 0) {
-    cq_log("Initialised MPI.\n");
-  }
-
-  if (mpi_env.rank != CQ_MPI_HOST_RANK) {
-    device_init_comms(VERBOSITY);
-    for (size_t i = 0; i < __CQ_DEVICE_QUEUE_SIZE__; ++i) {
-      executor_handles[i] = NULL;
+bool exec_is_live(const cq_exec *exec) {
+  if (!exec) return false;
+  for (size_t id=0; id<__CQ_DEVICE_QUEUE_SIZE__; ++id)
+    if (host_handles[id] == exec) return true;
+  return false;
+}
+cq_status submit_exec(enum ctrl_code op, cq_exec *exec) {
+  if (!mpi_env.is_init || exec_is_live(exec)) return CQ_ERROR;
+  size_t id;
+  for (id = 0; id < __CQ_DEVICE_QUEUE_SIZE__; ++id) if (!host_handles[id]) break;
+  if (id == __CQ_DEVICE_QUEUE_SIZE__) return CQ_ERROR;
+  exec->id = id;
+  host_handles[id] = exec;
+  host_send_ctrl_op(op, exec);
+  return CQ_SUCCESS;
+}
+int finalise_device(unsigned int verbosity) {
+  if (!mpi_env.is_init) return CQ_WARNING;
+  cq_status status = CQ_SUCCESS;
+  if (is_serial() || mpi_env.rank == 0) {
+    for (size_t id = 0; id < __CQ_DEVICE_QUEUE_SIZE__; ++id) {
+      cq_exec *exec = host_handles[id];
+      if (exec) {
+        host_send_ctrl_op(CQ_CTRL_WAIT_EXEC, exec);
+        if (exec->status != CQ_SUCCESS) status = CQ_ERROR;
+        finalise_exec_handle(exec);
+      }
     }
   }
+  if (is_serial()) {
+    cq_status lifecycle = serial_finalise_device(verbosity);
+    if (lifecycle != CQ_SUCCESS) status = lifecycle;
+  } else if (mpi_env.rank == 0) {
+    host_send_ctrl_op(CQ_CTRL_FINALISE, NULL);
+    int remote_status;
+    MPI_Recv(&remote_status, 1, MPI_INT, CQ_MPI_DEVICE_RANK,
+             CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    if (remote_status != CQ_SUCCESS) status = remote_status;
+  } else {
+    device_finalise_comms(verbosity);
+    status = dev_comm.status;
+  }
+  if (!agree_ready(status == CQ_SUCCESS)) status = CQ_ERROR;
+  cq_status mpi_status = cleanup_mpi();
+  return status == CQ_SUCCESS ? mpi_status : status;
 }
 
-void finalise_host_device_mpi(const unsigned int VERBOSITY) {
-  if (VERBOSITY > 0) {
-    cq_log("%s Finalising MPI.\n", get_comm_source());
-  }
-  if (owns_mpi_comm) {
-    MPI_Barrier(CQ_MPI_COMM_WORLD);
-    MPI_Finalize();
-  }
-  if (VERBOSITY > 0) {
-    cq_log("%s Finalised MPI.\n", get_comm_source());
-  }
+cq_status agree_kernel_registration(const char *name, cq_status status, int parameterized) {
+  if (!mpi_env.is_init) return status;
+  char reference[__CQ_MAX_QKERN_NAME_LENGTH__] = {0};
+  if (mpi_env.rank == 0 && name) snprintf(reference, sizeof(reference), "%s", name);
+  int kind = parameterized;
+  MPI_Bcast(reference, sizeof(reference), MPI_CHAR, 0, registration_comm);
+  MPI_Bcast(&kind, 1, MPI_INT, 0, registration_comm);
+  int ready = status != CQ_ERROR && name && !strcmp(reference, name) && kind == parameterized;
+  if (!agree_ready(ready)) return CQ_ERROR;
+  int all_warning = status == CQ_WARNING, result;
+  MPI_Allreduce(&all_warning, &result, 1, MPI_INT, MPI_MIN, registration_comm);
+  return result ? CQ_WARNING : CQ_SUCCESS;
 }
 
-void device_init_comms(const unsigned int VERBOSITY) {
-  if (VERBOSITY > 0) {
-    cq_log(
-        "%s [device_init_comms]: setting up on-device communication thread.\n",
-        get_comm_source());
+cq_status agree_kernel_shot(cq_exec *exec, cq_status status) {
+  pthread_mutex_lock(&exec->lock);
+  int halt = exec->halt;
+  pthread_mutex_unlock(&exec->lock);
+  /* Error has precedence, then early stop. Identical continuation on every
+     worker prevents a halted rank stranding peers in a QuEST collective. */
+  int classification = status != CQ_SUCCESS && status != CQ_EARLY_SUCCESS ? 2 :
+                       (halt || status == CQ_EARLY_SUCCESS ? 1 : 0);
+  int agreed = classification;
+  if (worker_control_comm != MPI_COMM_NULL)
+    MPI_Allreduce(&classification, &agreed, 1, MPI_INT, MPI_MAX, worker_control_comm);
+  if (agreed == 2) {
+    int error = classification == 2 ? (int)status : INT_MAX, result = error;
+    if (worker_control_comm != MPI_COMM_NULL)
+      MPI_Allreduce(&error, &result, 1, MPI_INT, MPI_MIN, worker_control_comm);
+    return result;
   }
-  dev_ctrl.run_device = true;
-  dev_comm.comm_busy = true;
-
-  pthread_mutex_init(&dev_comm.comm_lock, NULL);
-  pthread_cond_init(&dev_comm.cond_comm_busy, NULL);
-  pthread_create(&dev_comm.device_comm_thread, NULL, &device_listen, NULL);
-
-  if (VERBOSITY > 0) {
-    cq_log("%s [device_init_comms]: on-device communication thread set up.\n",
-           get_comm_source());
-  }
+  return agreed == 1 ? CQ_EARLY_SUCCESS : CQ_SUCCESS;
 }
 
-void device_finalise_comms(const unsigned int VERBOSITY) {
-  if (VERBOSITY > 0) {
-    cq_log(
-        "%s [device_finalise_comms]: finalising on-device communication "
-        "thread.\n",
-        get_comm_source());
+void *device_listen(void *unused) {
+  pthread_mutex_lock(&dev_comm.comm_lock);
+  while (!dev_comm.release) pthread_cond_wait(&dev_comm.cond_comm_busy, &dev_comm.comm_lock);
+  bool cancel = dev_comm.cancel;
+  pthread_mutex_unlock(&dev_comm.comm_lock);
+  if (cancel) return NULL;
+  for (;;) {
+    int code;
+    if (mpi_env.subcomm_rank == 0)
+      MPI_Recv(&code, 1, MPI_INT, 0, CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Bcast(&code, 1, MPI_INT, 0, CQ_MPI_SPLIT_COMM);
+    device_dispatch_ctrl_op(code);
+    if (code == CQ_CTRL_FINALISE) break;
   }
-
-  pthread_join(dev_comm.device_comm_thread, NULL);
-  dev_comm.comm_busy = false;
-  pthread_cond_destroy(&dev_comm.cond_comm_busy);
-  pthread_mutex_destroy(&dev_comm.comm_lock);
-  if (VERBOSITY > 0) {
-    cq_log(
-        "%s [device_finalise_comms]: on-device communication thread closed.\n",
-        get_comm_source());
-  }
-}
-
-void * device_listen(void * args) {
-  // run_device set to FALSE when OP == CQ_CTRL_FINALISE
-  cq_log("%s started listening...\n", get_comm_source());
-  while (dev_ctrl.run_device) {
-    pthread_mutex_lock(&dev_comm.comm_lock);
-    dev_comm.comm_busy = true;
-    pthread_cond_signal(&dev_comm.cond_comm_busy);
-    pthread_mutex_unlock(&dev_comm.comm_lock);
-
-    enum ctrl_code OP;
-    int op_comm_buffer;
-
-    cq_log("%s [device_listen]: receiving OP...\n", get_comm_source());
-#if CQ_CONF_QUEST_WITH_MPI
-    // device master (rank 0) gets from host from different comm
-    if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-#endif
-
-      const int host_rank = CQ_MPI_HOST_RANK;
-      MPI_Status status;
-      MPI_Recv(&op_comm_buffer, 1, MPI_INT, host_rank, CQ_MPI_WORLD_COMMS_TAG,
-               CQ_MPI_COMM_WORLD, &status);
-#if CQ_CONF_QUEST_WITH_MPI
-      // rank 0 brodcast to rest of q-workers then all do the dispatch
-    }
-    cq_log("%s [device_listen]: Starting Bcast\n", get_comm_source());
-    MPI_Bcast(&op_comm_buffer, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
-              CQ_MPI_SPLIT_COMM);
-    cq_log("%s [device_listen]: Finished Bcast\n", get_comm_source());
-#endif
-
-    OP = (enum ctrl_code)op_comm_buffer;
-    cq_log("%s [device_listen]: received %s\n", get_comm_source(),
-           op_to_str(OP));
-
-    device_dispatch_ctrl_op(OP);
-
-    pthread_mutex_lock(&dev_comm.comm_lock);
-    dev_comm.comm_busy = false;
-    pthread_cond_signal(&dev_comm.cond_comm_busy);
-    pthread_mutex_unlock(&dev_comm.comm_lock);
-  }
-  cq_log("%s closing connection.\n", get_comm_source());
-
-  device_wait_all_ops();
-  finalise_device_controls(mpi_env.verbosity);
-
   return NULL;
 }
-
-void device_dispatch_ctrl_op(const enum ctrl_code OP) {
-  switch (OP) {
-    case CQ_CTRL_INIT: {
-      init_device_controls(mpi_env.verbosity);
-      insert_op(OP, &mpi_env.verbosity);
-      device_wait_all_ops();
-      break;
-    }
+void device_dispatch_ctrl_op(enum ctrl_code op) {
+  switch (op) {
     case CQ_CTRL_FINALISE: {
-      // we wait until worker is done and cleanup.
       device_wait_all_ops();
-      for (size_t i = 0; i < __CQ_DEVICE_QUEUE_SIZE__; ++i) {
-        if (executor_handles[i] != NULL) {
-          cq_log(
-              "%s [dispatch][FINALISE]: executor handle with id: %zu is still "
-              "active. Something went wrong!\n",
-              get_comm_source(), i);
-        }
-      }
-
-      // this is like finalise_device in original comms.c
-      insert_op(OP, &mpi_env.verbosity);
-      device_wait_all_ops();
-      stop_device();
+      for (size_t i=0; i<__CQ_DEVICE_QUEUE_SIZE__; ++i)
+        if (executor_handles[i]) device_free_exec(&executor_handles[i]);
+      insert_op(op, &mpi_env.verbosity); device_wait_all_ops();
+      dev_comm.status = dev_ctrl.lifecycle_status;
+      stop_device(); finalise_device_controls(mpi_env.verbosity);
+      int local = dev_comm.status, result;
+      MPI_Allreduce(&local, &result, 1, MPI_INT, MPI_MIN, CQ_MPI_SPLIT_COMM);
+      dev_comm.status = result;
+      if (mpi_env.subcomm_rank == 0)
+        MPI_Ssend(&result, 1, MPI_INT, 0, CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD);
       break;
     }
-    case CQ_CTRL_ALLOC: {
-      // Alloc is blocking: we get params, run allocation and
-      // send back the updated params.
-      // Also, because it's blocking there is no need to worry about
-      // params lifetime (from the worker perspective)
-      const int host_rank = CQ_MPI_HOST_RANK;
-      device_alloc_params params = { 0 };
-      recv_alloc_params(&params, host_rank);
-      insert_op(OP, &params);
-      cq_log("%s [dispatch][ALLOC]: inserted op\n", get_comm_source());
-      device_wait_all_ops();
-      send_alloc_params(&params, host_rank);
-      break;
+    case CQ_CTRL_ALLOC: case CQ_CTRL_DEALLOC: {
+      device_alloc_params params = {0};
+      recv_alloc_params(&params, 0); insert_op(op, &params); device_wait_all_ops();
+      send_alloc_params(&params, 0); break;
     }
-    case CQ_CTRL_DEALLOC: {
-      // Same as Alloc
-      const int host_rank = CQ_MPI_HOST_RANK;
-      device_alloc_params params = { 0 };
-      recv_alloc_params(&params, host_rank);
-      insert_op(OP, &params);
-      device_wait_all_ops();
-      send_alloc_params(&params, host_rank);
-      break;
-    }
-    case CQ_CTRL_RUN_QKERNEL: {
-      if (num_active_executors >= __CQ_DEVICE_QUEUE_SIZE__) {
-        cq_log(
-            "%s [dispatch][RUN_QKERNEL]: You have oversubsribed the executor "
-            "queue. We allow up to %d "
-            "concurrent executors per device. Exiting",
-            get_comm_source(), __CQ_DEVICE_QUEUE_SIZE__);
+    case CQ_CTRL_RUN_QKERNEL: case CQ_CTRL_RUN_PQKERNEL: {
+      cq_exec *exec = NULL;
+      recv_exec_params(&exec, 0);
+      if (exec->id >= __CQ_DEVICE_QUEUE_SIZE__ || executor_handles[exec->id])
         MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-      }
-      const int host_rank = CQ_MPI_HOST_RANK;
-      cq_exec * tmp_exec = NULL;
-      recv_exec_params(&tmp_exec, host_rank);
-      executor_handles[tmp_exec->id] = tmp_exec;
-      insert_op(OP, executor_handles[tmp_exec->id]);
+      executor_handles[exec->id] = exec;
       ++num_active_executors;
-      break;
+      insert_op(op, exec); break;
     }
-    case CQ_CTRL_RUN_PQKERNEL: {
-      // Same logic as in CQ_CTRL_RUN_QKERNEL
-      if (num_active_executors >= __CQ_DEVICE_QUEUE_SIZE__) {
-        cq_log(
-            "%s [dispatch][RUN_PQKERNEL]: You have oversubsribed the executor "
-            "queue. We allow up to %d "
-            "concurrent executors per device. Exiting",
-            get_comm_source(), __CQ_DEVICE_QUEUE_SIZE__);
+    case CQ_CTRL_WAIT_EXEC: case CQ_CTRL_SYNC_EXEC: case CQ_CTRL_ABORT: {
+      size_t id = recv_exec_id(0);
+      if (id >= __CQ_DEVICE_QUEUE_SIZE__ || !executor_handles[id])
         MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
+      if (op == CQ_CTRL_ABORT) { comms_exec_halt(executor_handles[id]); break; }
+      if (op == CQ_CTRL_WAIT_EXEC) comms_exec_wait(executor_handles[id]);
+      send_exec_params(executor_handles[id], 0);
+      if (op == CQ_CTRL_WAIT_EXEC) {
+        device_free_exec(&executor_handles[id]); --num_active_executors;
       }
-      const int host_rank = CQ_MPI_HOST_RANK;
-      cq_exec * tmp_exec = NULL;
-      recv_exec_params(&tmp_exec, host_rank);
-      executor_handles[tmp_exec->id] = tmp_exec;
-      insert_op(OP, executor_handles[tmp_exec->id]);
-      ++num_active_executors;
-      break;
-    }
-    case CQ_CTRL_WAIT_EXEC: {
-      const int host_rank = CQ_MPI_HOST_RANK;
-      const size_t executor_id = recv_exec_id(host_rank);
-      if (executor_handles[executor_id] == NULL) {
-        cq_log(
-            "%s [dispatch][WAIT_EXEC]: device ehp is NULL. Returning. "
-            "Exiting\n",
-            get_comm_source());
-        MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-      }
-      device_wait_all_ops();
-      comms_exec_wait(executor_handles[executor_id]);
-      send_exec_params(executor_handles[executor_id], host_rank);
-
-      device_free_exec(&executor_handles[executor_id]);
-      --num_active_executors;
-      if (num_active_executors < 0) {
-        cq_log(
-            "%s [dispatch][WAIT_EXEC]: The number of active executors is < 0! "
-            "Should not happen. Exiting",
-            get_comm_source());
-        MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-      }
-      break;
-    }
-    case CQ_CTRL_SYNC_EXEC: {
-      const int host_rank = CQ_MPI_HOST_RANK;
-      const size_t executor_id = recv_exec_id(host_rank);
-      if (executor_handles[executor_id] == NULL) {
-        cq_log(
-            "%s [dispatch][SYNC_EXEC]: device ehp is NULL. Returning. "
-            "Exiting\n",
-            get_comm_source());
-        MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-      }
-      comms_exec_sync(executor_handles[executor_id]);
-      cq_log("%s [dispatch][SYNC_EXEC]: executor synced\n", get_comm_source());
-      send_exec_params(executor_handles[executor_id], host_rank);
-      cq_log("%s [dispatch][SYNC_EXEC]: sent executor\n", get_comm_source());
       break;
     }
     case CQ_CTRL_WAIT: {
-      // wait for worker and send info to the host
-      // (which is blocked and waiting).
-      cq_log("%s [dispatch][WAIT]: Started waiting\n", get_comm_source());
-      size_t num_ops = device_wait_all_ops();
-      cq_log("%s [dispatch][WAIT]: Finished waiting\n", get_comm_source());
-#if CQ_CONF_QUEST_WITH_MPI
-      if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK) {
-#endif
-        const int host_rank = CQ_MPI_HOST_RANK;
-        cq_log("%s [dispatch]: sending num ops: %zu...\n", get_comm_source(),
-               num_ops);
-        MPI_Ssend(&num_ops, 1, MPI_UINT64_T, host_rank, CQ_MPI_WORLD_COMMS_TAG,
-                  CQ_MPI_COMM_WORLD);
-        cq_log("%s [dispatch]: sent num ops.\n", get_comm_source());
-#if CQ_CONF_QUEST_WITH_MPI
-      }
-#endif
+      uint64_t pending = device_wait_all_ops();
+      if (mpi_env.subcomm_rank == 0)
+        MPI_Ssend(&pending, 1, MPI_UINT64_T, 0, CQ_MPI_WORLD_COMMS_TAG, CQ_MPI_COMM_WORLD);
       break;
     }
-    case CQ_CTRL_ABORT: {
-      const int host_rank = CQ_MPI_HOST_RANK;
-      const size_t executor_id = recv_exec_id(host_rank);
-      if (executor_handles[executor_id] == NULL) {
-        cq_log(
-            "%s [dispatch][ABORT]: device ehp is NULL. Returning. "
-            "Exiting\n",
-            get_comm_source());
-        MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-      }
-      comms_exec_halt(executor_handles[executor_id]);
-      cq_log("%s [dispatch][ABORT]: executor halted\n", get_comm_source());
-      break;
-    }
-    case CQ_CTRL_IDLE: {
-      break;
-    }
-    case CQ_CTRL_TEST: {
-      cq_log("%s [dispatch][TEST]: called test op\n", get_comm_source());
-      break;
-    }
-    default: {
-      break;
-    }
+    default: break;
   }
 }
-
-void device_wait_comms(void) {
-  pthread_mutex_lock(&dev_comm.comm_lock);
-  while (dev_comm.comm_busy) {
-    pthread_cond_wait(&dev_comm.cond_comm_busy, &dev_comm.comm_lock);
-  }
-  pthread_mutex_unlock(&dev_comm.comm_lock);
-}
-
 // ----------------------------------------------------------------------------
 // Device Control Paramaters Comms
 // ----------------------------------------------------------------------------
@@ -609,6 +421,7 @@ void host_comm_params(const enum ctrl_code OP, void * params) {
       cq_exec * exec_params = (cq_exec *)params;
       send_exec_id(((cq_exec *)params)->id, device_rank);
       recv_exec_params(&exec_params, device_rank);
+      host_handles[exec_params->id] = NULL;
       break;
     }
     case CQ_CTRL_SYNC_EXEC: {
@@ -639,23 +452,19 @@ void recv_alloc_params(device_alloc_params * params, const int src) {
   const size_t params_size = sizeof(device_alloc_params);
   MPI_Status status;
 
-#if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK
       || mpi_env.rank == CQ_MPI_HOST_RANK) {
-#endif
 
     MPI_Recv(params, params_size, MPI_BYTE, src, CQ_MPI_WORLD_COMMS_TAG,
              CQ_MPI_COMM_WORLD, &status);
 
-#if CQ_CONF_QUEST_WITH_MPI
   }
   // device-rank 0 brodcast params to rest of q-workers
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     MPI_Bcast(params, params_size, MPI_BYTE, CQ_MPI_DEVICE_MASTER_RANK,
               CQ_MPI_SPLIT_COMM);
   }
-#endif
 
   cq_log("%s [recv_alloc_params]: received.\n", get_comm_source());
   print_alloc_params(params);
@@ -673,11 +482,9 @@ void send_alloc_params(const device_alloc_params * params, const int dest) {
     return;
   }
 
-#if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK
       || mpi_env.rank == CQ_MPI_HOST_RANK) {
-#endif
 
     cq_log("%s [send_alloc_params]: sending...\n", get_comm_source());
     const size_t params_size = sizeof(device_alloc_params);
@@ -686,9 +493,7 @@ void send_alloc_params(const device_alloc_params * params, const int dest) {
               CQ_MPI_COMM_WORLD);
     cq_log("%s [send_alloc_params]: sent.\n", get_comm_source());
 
-#if CQ_CONF_QUEST_WITH_MPI
   }
-#endif
 }
 
 size_t recv_exec_id(const int src) {
@@ -702,23 +507,19 @@ size_t recv_exec_id(const int src) {
   size_t id = -1;
   MPI_Status status;
 
-#if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK
       || mpi_env.rank == CQ_MPI_HOST_RANK) {
-#endif
 
     MPI_Recv(&id, 1, MPI_UINT64_T, src, CQ_MPI_WORLD_COMMS_TAG,
              CQ_MPI_COMM_WORLD, &status);
 
-#if CQ_CONF_QUEST_WITH_MPI
   }
   // device-rank 0 brodcast params to rest of q-workers
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
     MPI_Bcast(&id, 1, MPI_UINT64_T, CQ_MPI_DEVICE_MASTER_RANK,
               CQ_MPI_SPLIT_COMM);
   }
-#endif
 
   cq_log("%s [recv_exec_id]: received id: %zu\n", get_comm_source(), id);
   return id;
@@ -731,20 +532,16 @@ void send_exec_id(const size_t id, const int dest) {
     return;
   }
 
-#if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK
       || mpi_env.rank == CQ_MPI_HOST_RANK) {
-#endif
 
     cq_log("%s [send_exec_id]: sending id: %zu...\n", get_comm_source(), id);
     MPI_Ssend(&id, 1, MPI_UINT64_T, dest, CQ_MPI_WORLD_COMMS_TAG,
               CQ_MPI_COMM_WORLD);
     cq_log("%s [send_exec_id]: sent\n", get_comm_source());
 
-#if CQ_CONF_QUEST_WITH_MPI
   }
-#endif
 }
 
 void recv_exec_params(cq_exec ** ehp, const int src) {
@@ -764,17 +561,14 @@ void recv_exec_params(cq_exec ** ehp, const int src) {
   int msg_size;
   MPI_Status status;
 
-#if CQ_CONF_QUEST_WITH_MPI
   // device-master (rank 0) gets from host from world comm
   // or host gets from device-master
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK
       || mpi_env.rank == CQ_MPI_HOST_RANK) {
-#endif
 
     MPI_Recv(&msg_size, 1, MPI_INT, src, CQ_MPI_WORLD_COMMS_TAG,
              CQ_MPI_COMM_WORLD, &status);
 
-#if CQ_CONF_QUEST_WITH_MPI
   }
   // device-rank 0 brodcast params to rest of q-workers
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
@@ -782,7 +576,6 @@ void recv_exec_params(cq_exec ** ehp, const int src) {
     MPI_Bcast(&msg_size, 1, MPI_INT, CQ_MPI_DEVICE_MASTER_RANK,
               CQ_MPI_SPLIT_COMM);
   }
-#endif
 
   void * recv_buffer = malloc(msg_size);
 
@@ -791,7 +584,8 @@ void recv_exec_params(cq_exec ** ehp, const int src) {
     cq_log("%s [recv_exec_params]: *ehp is NULL. Allocating on device.\n",
            get_comm_source());
 
-    *ehp = (cq_exec *)malloc(sizeof(cq_exec));
+    *ehp = (cq_exec *)calloc(1, sizeof(cq_exec));
+    if (!*ehp) MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_MALLOC_ERROR);
     pthread_mutex_init(&(*ehp)->lock, NULL);
     pthread_cond_init(&(*ehp)->cond_exec_complete, NULL);
   } else {
@@ -808,17 +602,14 @@ void recv_exec_params(cq_exec ** ehp, const int src) {
     MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_MALLOC_ERROR);
   }
 
-#if CQ_CONF_QUEST_WITH_MPI
   // device-master (rank 0) gets from host from world comm
   // or host gets from device-master
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK
       || mpi_env.rank == CQ_MPI_HOST_RANK) {
-#endif
 
     MPI_Recv(recv_buffer, msg_size, MPI_PACKED, src, CQ_MPI_WORLD_COMMS_TAG,
              CQ_MPI_COMM_WORLD, &status);
 
-#if CQ_CONF_QUEST_WITH_MPI
   }
   // device-rank 0 brodcast params to rest of q-workers
   if (mpi_env.rank != CQ_MPI_HOST_RANK) {
@@ -826,7 +617,6 @@ void recv_exec_params(cq_exec ** ehp, const int src) {
     MPI_Bcast(recv_buffer, msg_size, MPI_PACKED, CQ_MPI_DEVICE_MASTER_RANK,
               CQ_MPI_SPLIT_COMM);
   }
-#endif
 
   const size_t bool_size = sizeof(bool);
   const size_t cq_status_size = sizeof(cq_status);
@@ -879,14 +669,14 @@ void recv_exec_params(cq_exec ** ehp, const int src) {
       MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_MALLOC_ERROR);
     }
 
-    (*ehp)->creg = (cstate *)malloc(creg_size);
+    (*ehp)->creg = (cstate *)malloc(creg_size ? creg_size : 1);
     if ((*ehp)->creg == NULL) {
       cq_log("%s [recv_exec_params]: malloc *ehp->creg failed. Exiting\n",
              get_comm_source());
       MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_MALLOC_ERROR);
     }
 
-    (*ehp)->params = malloc(params_size);
+    (*ehp)->params = malloc(params_size ? params_size : 1);
     if ((*ehp)->params == NULL) {
       cq_log("%s [recv_exec_params]: malloc *ehp->params failed. Exiting\n",
              get_comm_source());
@@ -926,11 +716,9 @@ void send_exec_params(cq_exec * ehp, const int dest) {
 // with quantum workers because the results from QuEST
 // (e.g. measurements) should already be synchronised.
 // so only device-master communicates its state to host.
-#if CQ_CONF_QUEST_WITH_MPI
   // device master (rank 0) gets from host from world comm
   if (mpi_env.subcomm_rank == CQ_MPI_DEVICE_MASTER_RANK
       || mpi_env.rank == CQ_MPI_HOST_RANK) {
-#endif
 
     pthread_mutex_lock(&ehp->lock);
     cq_log("%s [send_exec_params]: sending...\n", get_comm_source());
@@ -1048,9 +836,7 @@ void send_exec_params(cq_exec * ehp, const int dest) {
     free(send_buffer);
     cq_log("%s [send_exec_params]: sent.\n", get_comm_source());
     pthread_mutex_unlock(&ehp->lock);
-#if CQ_CONF_QUEST_WITH_MPI
   }
-#endif
 }
 
 void device_free_exec(cq_exec ** ehp) {
@@ -1216,42 +1002,3 @@ void print_ehp(const cq_exec * ehp) {
 bool is_quantum_worker(void) {
   return mpi_env.rank > 0;
 }
-
-void validate_nproc(const int nproc) {
-  const int device_nproc = nproc - 1;
-  if (nproc == 1) {
-    cq_log("Initialising CQ MPI with 1 process. Running serial job.\n");
-    CQ_MPI_DEVICE_RANK = CQ_MPI_HOST_RANK;
-    return;
-  }
-#if CQ_CONF_QUEST_WITH_MPI
-  if (!((device_nproc > 0) && ((device_nproc & (device_nproc - 1)) == 0))) {
-    if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-      cq_log(
-          "Incorrect number of MPI processes. The (N - 1) should be power of "
-          "2!\n");
-    }
-    MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-  }
-#endif
-#ifndef CQ_CONF_QUEST_WITH_MPI
-  if (device_nproc != 1) {
-    if (mpi_env.rank == CQ_MPI_HOST_RANK) {
-      cq_log(
-          "Incorrect number of MPI processes. If QuEST uses multi-threading "
-          "only, there should be only 2 MPI processes used for CQ!\n");
-    }
-    MPI_Abort(CQ_MPI_COMM_WORLD, CQ_MPI_RUNTIME_ERROR);
-  }
-#endif
-  // default setup
-  CQ_MPI_DEVICE_RANK = CQ_MPI_HOST_RANK + 1;
-}
-
-// #undef CQ_MPI_HOST_RANK
-// #undef CQ_MPI_DEVICE_RANK
-#undef CQ_MPI_DEVICE_MASTER_RANK
-#undef CQ_MPI_WORLD_COMMS_TAG
-#undef CQ_MPI_SUBCOMMS_TAG
-#undef CQ_MPI_RUNTIME_ERROR
-#undef CQ_MPI_MALLOC_ERROR

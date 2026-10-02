@@ -1,38 +1,24 @@
-program test_device_ops
+module test_device_ops_cases
 use cq
 #include "cqf.h"
 
 use test_utils
 implicit none
-
-integer :: status
-status = cq_init(0)
-
-call test_registering_kernel()
-call test_setting_quantum_res()
-call test_device_control()
-call test_measurements()
-
-status = cq_finalise(0)
-
 contains
-
-  subroutine test_registering_kernel()
-  end subroutine
 
   function qureg_setter_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX
     integer(kind=8) :: measured_state
     integer(kind=8) :: i, j
     integer :: status
     CQ_REGISTER_KERNEL("qureg_setter_kernel", reg)
-    
+
     do i = 0, 32
       measured_state = 0
       STATE_IDX = i
@@ -50,14 +36,15 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2) :: cr_setter(0:NMEASURE)
-    integer(kind=2), intent(inout) :: cr_res(0:NMEASURE)
+    integer(kind=2) :: cr_setter(0:NMEASURE-1)
+    integer(kind=2), intent(inout) :: cr_res(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: i
     integer :: status
     CQ_REGISTER_KERNEL("set_qureg_with_creg_kernel", reg)
 
-    cr_setter = (/0, 0, 1, 1, 0, 1/)
+    cr_setter = 0
+    cr_setter(0:5) = (/0, 0, 1, 1, 0, 1/)
     status = cq_set_qureg_cstate(qr, cr_setter, NQUBITS)
     status = cq_measure_qureg(qr, NQUBITS, cr_res)
     do i = 0, NQUBITS - 1
@@ -71,7 +58,7 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: qubit_idx = 0
@@ -96,9 +83,9 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     integer(kind=8), parameter :: NTARGETS = 10
-    integer(kind=8) :: TARGETS(0:NTARGETS)
+    integer(kind=8) :: TARGETS(0:NTARGETS-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: qubit_idx = 0
@@ -134,9 +121,9 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     integer(kind=8), parameter :: NTARGETS = 10
-    integer(kind=8) :: TARGETS(0:NTARGETS)
+    integer(kind=8) :: TARGETS(0:NTARGETS-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: qubit_idx = 0
@@ -173,7 +160,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     integer(kind=2), allocatable, target :: cr(:)
@@ -181,22 +168,20 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
 
     call test_header('Test setting quantum resources')
     write(*, *) 'Test setting the qureg to different states: '
-    status = cq_register_qkern(qureg_setter_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(qureg_setter_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(qureg_setter_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
     write(*, *) 'Test setting the qureg based on classical register: '
     call cq_init_creg(NMEASURE, 0, cr)
-    status = cq_register_qkern(set_qureg_with_creg_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(set_qureg_with_creg_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(set_qureg_with_creg_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
   end subroutine
 
   subroutine test_device_control()
@@ -204,7 +189,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     integer(kind=2), allocatable, target :: cr(:)
@@ -212,14 +197,13 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
     call cq_init_creg(NMEASURE, 0, cr)
     call test_header('Test quantum kernel controls')
-    status = cq_register_qkern(abort_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(abort_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(abort_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
   end subroutine
 
@@ -241,18 +225,37 @@ contains
     call test_header('Test quantum measurements')
 
     write(*, *) 'Test device (not-sync with host) measurements: '
-    status = cq_register_qkern(device_measurement_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(device_measurement_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(device_measurement_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
     write(*, *) 'Test host-synchronised measurements: '
-    status = cq_register_qkern(host_measurement_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(host_measurement_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(host_measurement_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
   end subroutine
 
 
-end program
+end module test_device_ops_cases
+
+program test_device_ops
+use test_device_ops_cases
+implicit none
+call assert(cq_init(0) == SUCCESS)
+
+! Kernel registration is collective; only the host submits work.
+call assert(cq_register_qkern(qureg_setter_kernel) == SUCCESS)
+call assert(cq_register_qkern(set_qureg_with_creg_kernel) == SUCCESS)
+call assert(cq_register_qkern(abort_kernel) == SUCCESS)
+call assert(cq_register_qkern(device_measurement_kernel) == SUCCESS)
+call assert(cq_register_qkern(host_measurement_kernel) == SUCCESS)
+
+CQ_PROG_BEGIN()
+call test_setting_quantum_res()
+call test_device_control()
+call test_measurements()
+CQ_PROG_END()
+
+call assert(cq_finalise(0) == SUCCESS)
+end program test_device_ops

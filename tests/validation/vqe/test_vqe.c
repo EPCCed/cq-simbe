@@ -49,14 +49,14 @@ static cq_status ansatz(const size_t NQUBITS, qubit * qr, const size_t NMEASURE,
         if (pauli == 'X') {
           hadamard(&qr[j]);
           measure_qubit(&qr[j], &cr[j]);
-        
+
         } else if (pauli == 'Y') {
           rotx(&qr[j], M_PI / 2.0);
           measure_qubit(&qr[j], &cr[j]);
-        
+
         } else if (pauli == 'Z') {
           measure_qubit(&qr[j], &cr[j]);
-        
+
         } else {
           // On I -- do nothing
         }
@@ -100,6 +100,3 @@ void test_ansatz(void) {
   TEST_ASSERT_EQUAL_INT(CQ_SUCCESS, wait_qrun(&eh));
   TEST_ASSERT_INT16_ARRAY_WITHIN(0, expected, cr, NMEASURE * NSHOTS);
 }
-
-
-

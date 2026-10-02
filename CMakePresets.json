@@ -1,0 +1,128 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 0,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CQ_SIMBE_BUILD_TESTS": true,
+        "CQ_SIMBE_BUILD_EXAMPLES": true,
+        "BUILD_TESTING": true
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug with environment toolchain",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release with environment toolchain",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "full-debug",
+      "displayName": "Full Debug with Fortran and VQE",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CQ_SIMBE_BUILD_FORTRAN": true,
+        "CQ_SIMBE_BUILD_VQE": true
+      }
+    },
+    {
+      "name": "full-release",
+      "displayName": "Full Release with Fortran and VQE",
+      "inherits": "release",
+      "cacheVariables": {
+        "CQ_SIMBE_BUILD_FORTRAN": true,
+        "CQ_SIMBE_BUILD_VQE": true
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "jobs": 2
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 2
+    },
+    {
+      "name": "full-debug",
+      "configurePreset": "full-debug",
+      "jobs": 2
+    },
+    {
+      "name": "full-release",
+      "configurePreset": "full-release",
+      "jobs": 2
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1,
+        "timeout": 120,
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1,
+        "timeout": 120,
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "full-debug",
+      "configurePreset": "full-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1,
+        "timeout": 120,
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "full-release",
+      "configurePreset": "full-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1,
+        "timeout": 120,
+        "noTestsAction": "error"
+      }
+    }
+  ]
+}

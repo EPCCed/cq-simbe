@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <math.h>
+#include <string.h>
 #include "vqe.h"
 
 #include "nlopt.h"
@@ -17,40 +19,44 @@ cq_status ansatz(const size_t NQUBITS,
                  pqkern_map * reg) {
   CQ_REGISTER_KERNEL(reg)
 
-  double * params = (double *)kernpar;
+  if (!kernpar || NQUBITS > MAX_NQUBITS || NMEASURE < NQUBITS) return CQ_ERROR;
+  const vqe_kernel_params *payload = kernpar;
+  const double *params = payload->angles;
 
   HANDLE_CQ_ERROR(set_qureg(qr, 0, NQUBITS));
   // HF init state. For H2 we set NQUBITS/2 to 1
-  init_hf_state(qr, NQUBITS / 2);
+  for (ptrdiff_t i = 0; i < NQUBITS / 2; ++i) {
+    HANDLE_CQ_ERROR(paulix(&qr[i]));
+  }
 
   // preparing RYCZ ansatz
   for (ptrdiff_t i = 0; i < NLAYERS; ++i) {
     for (ptrdiff_t j = 0; j < NQUBITS; ++j) {
       ptrdiff_t param_idx = j + i * (NQUBITS * 2);
-      roty(&qr[j], params[param_idx]);
+      HANDLE_CQ_ERROR(roty(&qr[j], params[param_idx]));
 
       if (j < NQUBITS - 1) {
         int control = j;
         int target = j + 1;
-        cpauliz(&qr[control], &qr[target]);
+        HANDLE_CQ_ERROR(cpauliz(&qr[control], &qr[target]));
       }
 
       // Changing basis to get expectation value
       if (i == NLAYERS - 1) {
-        char pauli = h2_hamil.paulis[h2_hamil.term_start_idx + j];
+        char pauli = payload->paulis[j];
         if (pauli == 'X') {
-          hadamard(&qr[j]);
-          measure_qubit(&qr[j], &cr[j]);
+          HANDLE_CQ_ERROR(hadamard(&qr[j]));
+          HANDLE_CQ_ERROR(measure_qubit(&qr[j], &cr[j]));
 
         } else if (pauli == 'Y') {
-          rotx(&qr[j], M_PI / 2.0);
-          measure_qubit(&qr[j], &cr[j]);
+          HANDLE_CQ_ERROR(rotx(&qr[j], M_PI / 2.0));
+          HANDLE_CQ_ERROR(measure_qubit(&qr[j], &cr[j]));
 
         } else if (pauli == 'Z') {
-          measure_qubit(&qr[j], &cr[j]);
+          HANDLE_CQ_ERROR(measure_qubit(&qr[j], &cr[j]));
 
         } else {
-          // On I -- do nothing
+          cr[j] = 0; /* Identity contributes +1 to the product. */
         }
       }
     }
@@ -133,26 +139,29 @@ double vqe_iter(qubit * qr,
                 const size_t NSHOTS,
                 const double * x) {
   int histogram[MAX_BINS] = { 0 };
-  const ptrdiff_t num_bins = (ptrdiff_t)1 << NQUBITS;
   double expectation = 0.0;
   const size_t NMEASURE = NQUBITS;
-  h2_hamil.term_start_idx = 0;
+  if (NQUBITS != MAX_NQUBITS || NSHOTS == 0 || !x || !qr || !cr) return NAN;
+  const ptrdiff_t num_bins = (ptrdiff_t)1 << NQUBITS;
+  vqe_kernel_params payload;
+  memcpy(payload.angles, x, sizeof(payload.angles));
 
   for (ptrdiff_t i = 0; i < NTERMS; ++i) {
     ptrdiff_t paulis_start = i * NQUBITS;
-
-    smp_qrun(ansatz, x, NPARAMS * sizeof(double), qr, NQUBITS, cr, NMEASURE,
-             NSHOTS);
+    memcpy(payload.paulis, &h2_hamil.paulis[paulis_start], NQUBITS);
+    if (smp_qrun(ansatz, &payload, sizeof(payload), qr, NQUBITS, cr, NMEASURE,
+                 NSHOTS) != CQ_SUCCESS) return NAN;
 
     for (ptrdiff_t j = 0; j < NSHOTS; ++j) {
       ptrdiff_t cr_start = j * NQUBITS;
+      for (size_t k = 0; k < NQUBITS; ++k)
+        if (cr[cr_start+k] != 0 && cr[cr_start+k] != 1) return NAN;
       ++histogram[result_to_int(&cr[cr_start], NQUBITS)];
     }
 
     double coeff = h2_hamil.coeffs[i];
     expectation
         += get_term_expectation(histogram, num_bins, NMEASURE, NSHOTS, coeff);
-    h2_hamil.term_start_idx += NQUBITS;
   }
   return expectation;
 }
@@ -164,9 +173,14 @@ double vqe_iter_nlopt(unsigned int n,
                       double * grad,
                       void * f_data) {
   vqe_settings * settings = (vqe_settings *)(f_data);
+  if (!settings || n != NPARAMS || settings->failed) return NAN;
 
   double energy = vqe_iter(settings->qr, settings->cr, settings->NQUBITS,
                            settings->NSHOTS, x);
+  if (!isfinite(energy)) {
+    settings->failed = 1;
+    return NAN;
+  }
 
   printf("Iter: %td -- Expectation: %f\n", settings->iter, energy);
   ++settings->iter;
@@ -202,20 +216,26 @@ double vqe_optimize(qubit * qr,
   // nlopt_opt opt = nlopt_create(NLOPT_LD_LBFGS, NPARAMS);
   // nlopt_opt opt = nlopt_create(NLOPT_LD_SLSQP, NPARAMS);
 
-  nlopt_set_maxeval(opt, 200);
+  if (!opt) return NAN;
+  if (nlopt_set_maxeval(opt, 200) < 0) goto failed;
   double ftol = 0.0001;
-  nlopt_set_ftol_rel(opt, ftol);
+  if (nlopt_set_ftol_rel(opt, ftol) < 0) goto failed;
 
   nlopt_result res
       = nlopt_set_min_objective(opt, vqe_iter_nlopt, (void *)&settings);
-  nlopt_set_lower_bounds1(opt, PARAM_MIN);
-  nlopt_set_upper_bounds1(opt, PARAM_MAX);
+  if (res < 0 || nlopt_set_lower_bounds1(opt, PARAM_MIN) < 0 ||
+      nlopt_set_upper_bounds1(opt, PARAM_MAX) < 0) goto failed;
 
   double best_expectation = 0.0;
   res = nlopt_optimize(opt, settings.params, &best_expectation);
+  if (res < 0 || settings.failed || !isfinite(best_expectation)) goto failed;
 
   printf("The final expectation: %f\n", best_expectation);
 
   nlopt_destroy(opt);
   return best_expectation;
+
+failed:
+  nlopt_destroy(opt);
+  return NAN;
 }

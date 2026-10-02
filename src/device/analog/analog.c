@@ -214,7 +214,7 @@ static cq_status validate_freq(double freq) {
 }
 //========================== ANALOG DEVICE OPS ================================
 cq_status cq_enable_analog_mode(int mode) {
-    device_mode mode_ = (device_mode)mode;    
+    device_mode mode_ = (device_mode)mode;
     return enable_analog_mode(mode_);
 }
 
@@ -244,7 +244,7 @@ cq_status cq_get_channel(channel *ch, int type, qubit *qr, qubit *target) {
     HANDLE_CQ_ERROR(validate_qreg_id(qreg_id));
 
     addressing mode = (addressing)type;
- 
+
     switch (mode) {
         case CQ_ADDR_LOCAL: {
 	    if (!target) {
@@ -272,7 +272,7 @@ cq_status cq_retarget_channel(channel *ch, qubit *new_target) {
     HANDLE_CQ_ERROR(validate_channel(ch));
     HANDLE_CQ_ERROR(validate_channel_type(ch->type, CQ_ADDR_LOCAL));
     if (!new_target) {
-    	printf("Error: New target is nullptr. From %s\n", __func__);
+        printf("Error: New target is nullptr. From %s\n", __func__);
 	return CQ_ERROR;
     }
     ptrdiff_t new_target_ = new_target->offset;
@@ -311,7 +311,7 @@ cq_status cq_set_qubit_pos(const double *new_positions, qubit *qr) {
     qpos new_positions_[__CQ_ANALOG_MAX_NUM_QUBITS__] = {0};
 
     for (ptrdiff_t i = 0; i < num_qubits; ++i) {
-        ptrdiff_t start = 3 * i;	
+        ptrdiff_t start = 3 * i;
         new_positions_[i].x = new_positions[start];
         new_positions_[i].y = new_positions[start + 1];
         new_positions_[i].z = new_positions[start + 2];

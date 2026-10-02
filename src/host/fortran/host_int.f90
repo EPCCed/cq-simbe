@@ -68,11 +68,11 @@ interface
 
   !void init_creg(const size_t LENGTH, const cstate INIT_VAL, cstate * cr)
   subroutine init_creg(LENGTH, INIT_VAL, cr) bind(C)
-     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
+     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short, c_funptr
      implicit none
      integer(c_size_t), value :: LENGTH
      integer(c_int), value :: INIT_VAL
-     integer(c_short), intent(inout) :: cr(0:LENGTH)
+     integer(c_short), intent(inout) :: cr(0:LENGTH-1)
   end subroutine init_creg
 
   !cq_status register_qkern(qkern kernel)
@@ -86,26 +86,26 @@ interface
   !cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
   !  const size_t NMEASURE);
   function s_qrun(kernel, qrp, NQUBITS, crp, NMEASURE) result(status) bind(C)
-    use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
+    use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short, c_funptr
     implicit none
-    type(c_ptr), value :: kernel
+    type(c_funptr), value :: kernel
     type(c_ptr), value :: qrp
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NMEASURE
-    integer(c_short), intent(inout) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE-1)
     integer(c_int) :: status
   end function s_qrun
 
   !cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
   !  const size_t NMEASURE, cq_exec * const ehp);
   function a_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, ehp) result(status) bind(C)
-    use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
+    use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short, c_funptr
     implicit none
-    type(c_ptr), value :: kernel
+    type(c_funptr), value :: kernel
     type(c_ptr), value :: qrp
     integer(c_size_t), value :: NQUBITS
     integer(c_size_t), value :: NMEASURE
-    integer(c_short), intent(inout) :: crp(0:NMEASURE)
+    integer(c_short), intent(inout) :: crp(0:NMEASURE-1)
     type(c_ptr), value :: ehp
     integer(c_int) :: status
   end function a_qrun
@@ -113,29 +113,29 @@ interface
   !cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
   ! cstate * const crp, const size_t NMEASURE, const size_t NSHOTS)
   function sm_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS) bind(C)
-     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
+     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short, c_funptr
      implicit none
-     type(c_ptr), value :: kernel
+     type(c_funptr), value :: kernel
      type(c_ptr), value :: qrp
      integer(c_size_t), value :: NQUBITS
      integer(c_size_t), value :: NMEASURE
      integer(c_size_t), value :: NSHOTS
-     integer(c_short), intent(inout) :: crp(0, NSHOTS*NMEASURE)
+     integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE-1)
      integer(c_int) :: sm_qrun
    end function sm_qrun
 
-  !cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
+  !cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
   !  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS,
   !  cq_exec * const ehp);
   function am_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, NSHOTS, ehp) bind(C)
-     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short
+     use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_ptr, c_short, c_funptr
      implicit none
-     type(c_ptr), value :: kernel
+     type(c_funptr), value :: kernel
      type(c_ptr), value :: qrp
      integer(c_size_t), value :: NQUBITS
      integer(c_size_t), value :: NMEASURE
      integer(c_size_t), value :: NSHOTS
-     integer(c_short), intent(inout) :: crp(0, NSHOTS*NMEASURE)
+     integer(c_short), intent(inout) :: crp(0:NSHOTS*NMEASURE-1)
      type(c_ptr), value :: ehp
      integer(c_int) :: am_qrun
    end function am_qrun

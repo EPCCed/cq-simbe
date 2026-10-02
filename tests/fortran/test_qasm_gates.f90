@@ -1,21 +1,9 @@
-program test_qasm_gates
+module test_qasm_gates_cases
 use cq
 #include "cqf.h"
 
 use test_utils
 implicit none
-
-integer :: status
-status = cq_init(0)
-
-call test_simple_gates()
-call test_rotation_gates()
-call test_control_gates()
-call test_control_rotation_gates()
-call test_multi_control_gates()
-
-status = cq_finalise(0)
-
 contains
 
   function simple_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
@@ -23,12 +11,12 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
     integer(kind=8) :: i, j
-    integer(kind=8) :: q = 1 
+    integer(kind=8) :: q = 1
     integer :: status
     CQ_REGISTER_KERNEL("simple_gates_kernel", reg)
     status = cq_set_qureg(qr, STATE_IDX, NQUBITS)
@@ -50,7 +38,7 @@ contains
 
     status = cq_sqrtzhc(qr, q)
     call assert(status == SUCCESS)
-        
+
     status = cq_sqrts(qr, q)
     call assert(status == SUCCESS)
 
@@ -59,7 +47,7 @@ contains
 
     status = cq_sqrtx(qr, q)
     call assert(status == SUCCESS)
- 
+
   end function
 
   function rotation_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
@@ -67,12 +55,12 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
     integer(kind=8) :: i, j
-    integer(kind=8) :: q = 1 
+    integer(kind=8) :: q = 1
     real(kind=8) :: THETA = 3.14
     integer :: status
     CQ_REGISTER_KERNEL("rotation_gates_kernel", reg)
@@ -92,7 +80,7 @@ contains
 
     status = cq_phase(qr, q, THETA)
     call assert(status == SUCCESS)
- 
+
   end function
 
   function control_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
@@ -100,13 +88,13 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
     integer(kind=8) :: i, j
-    integer(kind=8) :: c = 1 
-    integer(kind=8) :: t = 2 
+    integer(kind=8) :: c = 1
+    integer(kind=8) :: t = 2
     integer :: status
     CQ_REGISTER_KERNEL("control_gates_kernel", reg)
     status = cq_set_qureg(qr, STATE_IDX, NQUBITS)
@@ -125,7 +113,7 @@ contains
 
     status = cq_swap(qr, c, t)
     call assert(status == SUCCESS)
- 
+
   end function
 
   function control_rotation_gates(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
@@ -133,13 +121,13 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
     integer(kind=8) :: i, j
-    integer(kind=8) :: c = 1 
-    integer(kind=8) :: t = 2 
+    integer(kind=8) :: c = 1
+    integer(kind=8) :: t = 2
     real(kind=8) :: THETA = 3.14
     integer :: status
 
@@ -157,7 +145,7 @@ contains
 
     status = cq_cphase(qr, c, t, THETA)
     call assert(status == SUCCESS)
- 
+
   end function
 
   function multi_control_gates_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
@@ -165,13 +153,13 @@ contains
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NMEASURE)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
     integer(kind=8) :: measured_state
     integer(kind=8) :: i, j
-    integer(kind=8) :: c1 = 1 
-    integer(kind=8) :: c2 = 2 
+    integer(kind=8) :: c1 = 1
+    integer(kind=8) :: c2 = 2
     integer(kind=8) :: t = 4
     integer(kind=8) :: a = 2
     integer(kind=8) :: b = 4
@@ -184,7 +172,7 @@ contains
 
     status = cq_cswap(qr, c1, a, b)
     call assert(status == SUCCESS)
- 
+
   end function
 
   subroutine test_simple_gates()
@@ -192,7 +180,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     integer(kind=2), allocatable, target :: cr(:)
@@ -200,14 +188,13 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
 
     call test_header('Test simple (1 qubit) quantum gates')
-    status = cq_register_qkern(simple_gates_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(simple_gates_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(simple_gates_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
   end subroutine
 
@@ -216,7 +203,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     integer(kind=2), allocatable, target :: cr(:)
@@ -224,14 +211,13 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
 
     call test_header('Test rotation quantum gates')
-    status = cq_register_qkern(rotation_gates_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(rotation_gates_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(rotation_gates_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
   end subroutine
 
@@ -240,7 +226,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     integer(kind=2), allocatable, target :: cr(:)
@@ -248,14 +234,13 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
 
     call test_header('Test controlled quantum gates')
-    status = cq_register_qkern(control_gates_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(control_gates_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(control_gates_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
   end subroutine
 
@@ -264,7 +249,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     integer(kind=2), allocatable, target :: cr(:)
@@ -272,14 +257,13 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
 
     call test_header('Test controlled rotation quantum gates')
-    status = cq_register_qkern(control_rotation_gates)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(control_rotation_gates, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(control_rotation_gates, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
 
   end subroutine
@@ -289,7 +273,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     integer(kind=2), allocatable, target :: cr(:)
@@ -297,15 +281,37 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
 
     call test_header('Test simple (1 qubit) quantum gates')
-    status = cq_register_qkern(multi_control_gates_kernel)
-    status = cq_alloc_qureg(qr, NQUBITS)
-    status = cq_s_qrun(multi_control_gates_kernel, qr, NQUBITS, cr, NMEASURE)
-    status = cq_free_qureg(qr)
+    call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
+    call assert(cq_s_qrun(multi_control_gates_kernel, qr, NQUBITS, cr, NMEASURE) == SUCCESS)
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
   end subroutine
 
-end
+end module test_qasm_gates_cases
+
+program test_qasm_gates
+use test_qasm_gates_cases
+implicit none
+call assert(cq_init(0) == SUCCESS)
+
+! Kernel registration is collective; only the host submits work.
+call assert(cq_register_qkern(simple_gates_kernel) == SUCCESS)
+call assert(cq_register_qkern(rotation_gates_kernel) == SUCCESS)
+call assert(cq_register_qkern(control_gates_kernel) == SUCCESS)
+call assert(cq_register_qkern(control_rotation_gates) == SUCCESS)
+call assert(cq_register_qkern(multi_control_gates_kernel) == SUCCESS)
+
+CQ_PROG_BEGIN()
+call test_simple_gates()
+call test_rotation_gates()
+call test_control_gates()
+call test_control_rotation_gates()
+call test_multi_control_gates()
+CQ_PROG_END()
+
+call assert(cq_finalise(0) == SUCCESS)
+end program test_qasm_gates

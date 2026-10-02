@@ -1,16 +1,15 @@
 # Need maths library
-find_library(MATHS_LIBRARY m REQUIRED)
 
 add_executable(test_host_env
   test_host_env_runner.c
   test_host_env.c
 )
 
-target_link_libraries(test_host_env PRIVATE CQ-SIMBE::cq-simbe unity::framework)
+target_link_libraries(test_host_env PRIVATE cq-simbe-test-support)
 
 add_test(
   NAME test_host_env 
-  COMMAND ./test_host_env
+  COMMAND test_host_env
 )
 
 add_executable(test_host_resource_management
@@ -20,13 +19,12 @@ add_executable(test_host_resource_management
 
 target_link_libraries(test_host_resource_management 
   PRIVATE 
-  CQ-SIMBE::cq-simbe 
-  unity::framework
+  cq-simbe-test-support
 )
 
 add_test(
   NAME test_host_resource_management
-  COMMAND ./test_host_resource_management
+  COMMAND test_host_resource_management
 )
 
 add_executable(test_executors
@@ -37,14 +35,13 @@ add_executable(test_executors
 
 target_link_libraries(test_executors 
   PRIVATE
-  CQ-SIMBE::cq-simbe
-  unity::framework
-  ${MATHS_LIBRARY}
+  cq-simbe-test-support
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
 
 add_test(
   NAME test_executors
-  COMMAND ./test_executors
+  COMMAND test_executors
 )
 
 add_executable(test_host_utils
@@ -54,11 +51,10 @@ add_executable(test_host_utils
 
 target_link_libraries(test_host_utils
   PRIVATE
-  CQ-SIMBE::cq-simbe
-  unity::framework
+  cq-simbe-test-support
 )
 
 add_test(
   NAME test_host_utils
-  COMMAND ./test_host_utils
+  COMMAND test_host_utils
 )

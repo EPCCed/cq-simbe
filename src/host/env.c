@@ -23,9 +23,8 @@ cq_status cq_init(const unsigned int VERBOSITY) {
             "report to follow.\n\n");
       }
 
-      initialise_device(VERBOSITY);
-
-      cq_env.initialised = true;
+      status = initialise_device(VERBOSITY);
+      cq_env.initialised = status == CQ_SUCCESS;
     } else {
       if (VERBOSITY > 0) {
         printf("CQ-SimBE is already initialised. No need to do it again.\n");
@@ -55,9 +54,8 @@ cq_status cq_init_custom_mpi_comm(MPI_Comm cq_comm,
             "report to follow.\n\n");
       }
 
-      initialise_device_with_custom_mpi_comm(cq_comm, VERBOSITY);
-
-      cq_env.initialised = true;
+      status = initialise_device_with_custom_mpi_comm(cq_comm, VERBOSITY);
+      cq_env.initialised = status == CQ_SUCCESS;
     } else {
       if (VERBOSITY > 0) {
         printf("CQ-SimBE is already initialised. No need to do it again.\n");
@@ -82,7 +80,9 @@ cq_status cq_finalise(const unsigned int VERBOSITY) {
   if (!cq_env.finalised) {
     if (VERBOSITY > 0) printf("Host finalising\n");
 
-    finalise_device(VERBOSITY);
+    if (!cq_env.initialised) return CQ_WARNING;
+    status = finalise_device(VERBOSITY);
+    /* Shutdown tears down the backend even when drained work failed. */
     cq_env.finalised = true;
   } else {
     if (VERBOSITY > 0) {

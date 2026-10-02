@@ -298,6 +298,6 @@ void print_analog_device(void) {
             device.max_pulse_duration       ,
             device.max_num_shots            ,
 	    get_device_interaction_coeff()  ,
-            device.min_qubit_dist    
+            device.min_qubit_dist
     );
 }

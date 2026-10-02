@@ -1,23 +1,20 @@
 # These tests require using QuEST directly
-find_package(QuEST 4.0 REQUIRED)
 
-find_library(MATHS_LIBRARY m REQUIRED)
 
 add_executable(test_device_resource_management
   test_device_resource_management_runner.c
   test_device_resource_management.c
 )
 
-target_link_libraries(test_device_resource_management 
-  PRIVATE 
-  CQ-SIMBE::cq-simbe 
-  unity::framework
+target_link_libraries(test_device_resource_management
+  PRIVATE
+  cq-simbe-test-support
   QuEST::QuEST
 )
 
 add_test(
   NAME test_device_resource_management
-  COMMAND ./test_device_resource_management
+  COMMAND test_device_resource_management
 )
 
 add_executable(test_device_utils
@@ -27,14 +24,13 @@ add_executable(test_device_utils
 
 target_link_libraries(test_device_utils
   PRIVATE
-  CQ-SIMBE::cq-simbe
-  unity::framework
+  cq-simbe-test-support
   QuEST::QuEST
 )
 
 add_test(
   NAME test_device_utils
-  COMMAND ./test_device_utils
+  COMMAND test_device_utils
 )
 
 add_executable(test_device_control
@@ -45,15 +41,14 @@ add_executable(test_device_control
 
 target_link_libraries(test_device_control
   PRIVATE
-  CQ-SIMBE::cq-simbe
-  unity::framework
+  cq-simbe-test-support
   QuEST::QuEST
-  ${MATHS_LIBRARY}
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
 
 add_test(
   NAME test_device_control
-  COMMAND ./test_device_control
+  COMMAND test_device_control
 )
 
 add_executable(test_device_ops
@@ -61,18 +56,16 @@ add_executable(test_device_ops
   test_device_ops.c
 )
 
-target_compile_definitions(test_device_ops PRIVATE UNITY_INCLUDE_DOUBLE)
 
 target_link_libraries(test_device_ops
   PRIVATE
-  CQ-SIMBE::cq-simbe
-  unity::framework
+  cq-simbe-test-support
   QuEST::QuEST
 )
 
 add_test(
   NAME test_device_ops
-  COMMAND ./test_device_ops
+  COMMAND test_device_ops
 )
 
 add_executable(test_qasm_gates
@@ -82,17 +75,15 @@ add_executable(test_qasm_gates
 
 target_link_libraries(test_qasm_gates
   PRIVATE
-  CQ-SIMBE::cq-simbe
-  unity::framework
+  cq-simbe-test-support
   QuEST::QuEST
-  ${MATHS_LIBRARY}
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
 
-target_compile_definitions(test_qasm_gates PRIVATE UNITY_INCLUDE_DOUBLE)
 
 add_test(
   NAME test_qasm_gates
-  COMMAND ./test_qasm_gates
+  COMMAND test_qasm_gates
 )
 
 add_subdirectory(analog)

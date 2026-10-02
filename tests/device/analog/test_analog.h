@@ -23,4 +23,3 @@ void test_cq_set_device_max_num_shots(void);
 void test_cq_set_device_coupling_func(void);
 
 #endif
-

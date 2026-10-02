@@ -3,7 +3,7 @@ target_sources(cq-simbe
   comms_core.c
 )
 
-if (BUILD_WITH_MPI)
+if(CQ_SIMBE_ENABLE_MPI)
     target_sources(cq-simbe
       PRIVATE
       comms_mpi.c

@@ -4,213 +4,69 @@ on:
   push:
     branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "develop", "mpi" ]
 
-env:
-  DEPENDENCY_DIR: ${{ github.workspace }}/Dependencies
-  DEPENDENCY_INSTALL_DIR: ${{ github.workspace }}/Dependencies/install
+permissions:
+  contents: read
 
 jobs:
-  checkout-dependencies:
+  native:
     runs-on: ubuntu-latest
-    steps:
-      - name: Create dependency directories
-        run: |
-          mkdir ${{ env.DEPENDENCY_DIR }}
-          mkdir ${{ env.DEPENDENCY_INSTALL_DIR }}
-        
-      - name: Checkout QuEST
-        run: |
-          cd ${{ env.DEPENDENCY_DIR }}
-          git clone https://github.com/otbrown/QuEST.git
-          cd QuEST
-          git fetch
-          git checkout -b cq-simbe origin/cq-simbe
-        
-      - name: Checkout Unity
-        run: |
-          cd ${{ env.DEPENDENCY_DIR }}
-          git clone https://github.com/ThrowTheSwitch/Unity.git
-          cd Unity
-          git fetch
-          git checkout -b v2.6.1 tags/v2.6.1
-
-      - name: Checkout NLopt
-        run: |
-          cd ${{ env.DEPENDENCY_DIR }}
-          git clone https://github.com/stevengj/nlopt.git
-          cd nlopt
-          git fetch
-          git checkout -b v2.10.0 tags/v2.10.0
-
-      - name: Upload QuEST Source
-        uses: actions/upload-artifact@v4
-        with:
-          name: QuEST-Source
-          path: ${{ env.DEPENDENCY_DIR }}/QuEST/
-          if-no-files-found: error
-
-      - name: Upload Unity Source
-        uses: actions/upload-artifact@v4
-        with:
-          name: Unity-Source
-          path: ${{ env.DEPENDENCY_DIR }}/Unity/
-          if-no-files-found: error
-
-      - name: Upload NLopt Source
-        uses: actions/upload-artifact@v4
-        with:
-          name: NLopt-Source
-          path: ${{ env.DEPENDENCY_DIR }}/nlopt/
-          if-no-files-found: error
-
-  build-dependencies:
-    runs-on: ubuntu-latest
-    needs: checkout-dependencies
-    steps:
-      - name: Download QuEST Source
-        uses: actions/download-artifact@v4
-        with:
-          name: QuEST-Source
-          path: ${{ env.DEPENDENCY_DIR }}/QuEST
-
-      - name: Download Unity Source
-        uses: actions/download-artifact@v4
-        with:
-          name: Unity-Source
-          path: ${{ env.DEPENDENCY_DIR }}/Unity
-
-      - name: Download NLopt Source
-        uses: actions/download-artifact@v4
-        with:
-          name: NLopt-Source
-          path: ${{ env.DEPENDENCY_DIR }}/nlopt
-
-      - name: Configure QuEST
-        run:
-          cmake
-            -B ${DEPENDENCY_DIR}/QuEST/build
-            -S ${DEPENDENCY_DIR}/QuEST
-            -DCMAKE_BUILD_TYPE=Release
-            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/quest
-
-      - name: Configure Unity
-        run:
-          cmake
-            -B ${DEPENDENCY_DIR}/Unity/build
-            -S ${DEPENDENCY_DIR}/Unity
-            -DCMAKE_BUILD_TYPE=Release
-            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/Unity
-            -DCMAKE_C_FLAGS="-DUNITY_INCLUDE_DOUBLE"
-
-      - name: Configure NLopt
-        run:
-          cmake
-            -B ${DEPENDENCY_DIR}/nlopt/build
-            -S ${DEPENDENCY_DIR}/nlopt
-            -DCMAKE_BUILD_TYPE=Release
-            -DCMAKE_INSTALL_PREFIX=${DEPENDENCY_INSTALL_DIR}/nlopt
-
-      - name: Build QuEST
-        run: cmake --build ${DEPENDENCY_DIR}/QuEST/build
-
-      - name: Build Unity
-        run: cmake --build ${DEPENDENCY_DIR}/Unity/build
-
-      - name: Build NLopt
-        run: cmake --build ${DEPENDENCY_DIR}/nlopt/build
-
-      - name: Install QuEST
-        run: cmake --install ${DEPENDENCY_DIR}/QuEST/build
-
-      - name: Install Unity
-        run: cmake --install ${DEPENDENCY_DIR}/Unity/build
-
-      - name: Install NLopt
-        run: cmake --install ${DEPENDENCY_DIR}/nlopt/build
-
-      - name: Upload QuEST install
-        uses: actions/upload-artifact@v4
-        with:
-          name: QuEST-Install
-          path: ${{ env.DEPENDENCY_INSTALL_DIR }}/quest/
-          if-no-files-found: error
-
-      - name: Upload Unity install
-        uses: actions/upload-artifact@v4
-        with:
-          name: Unity-Install
-          path: ${{ env.DEPENDENCY_INSTALL_DIR }}/Unity/
-          if-no-files-found: error
-
-      - name: Upload NLopt install
-        uses: actions/upload-artifact@v4
-        with:
-          name: NLopt-Install
-          path: ${{ env.DEPENDENCY_INSTALL_DIR }}/nlopt/
-          if-no-files-found: error
-
-  build:
-    runs-on: ubuntu-latest
-    needs: build-dependencies
-
     strategy:
-      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
-
       matrix:
-        c_compiler: [gcc, clang]
-
+        shell: [ gcc, clang ]
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Download QuEST install
-      uses: actions/download-artifact@v4
-      with:
-        name: QuEST-Install
-        path: ${{ env.DEPENDENCY_INSTALL_DIR }}/quest
-
-    - name: Download Unity install
-      uses: actions/download-artifact@v4
-      with:
-        name: Unity-Install
-        path: ${{ env.DEPENDENCY_INSTALL_DIR }}/Unity
-
-    - name: Download NLopt install
-      uses: actions/download-artifact@v4
-      with:
-        name: NLopt-Install
-        path: ${{ env.DEPENDENCY_INSTALL_DIR }}/nlopt
-
-    - name: Set reusable strings
-      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=Release
-        -S ${{ github.workspace }}
-        -DENABLE_TESTING=On
-        -DBUILD_EXAMPLES=On
-        -DFORCE_BUILD_VQE=On
-        -DBUILD_FORTRAN_INTERFACE=On
-        -DQuEST_DIR=${DEPENDENCY_INSTALL_DIR}/quest/lib/cmake/QuEST
-        -Dunity_DIR=${DEPENDENCY_INSTALL_DIR}/Unity/lib/cmake/unity
-        -DNLopt_DIR=${DEPENDENCY_INSTALL_DIR}/nlopt/lib/cmake/nlopt
-
-    - name: Build
-      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release
-
-    - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest --build-config Release --output-on-failure
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Check environment policy
+        run: nix build .#checks.x86_64-linux.environment-policy --no-link --no-update-lock-file
+      - name: Build and test full Debug and Release
+        run: |
+          nix develop .#${{ matrix.shell }} --no-update-lock-file --max-jobs 2 --cores 2 --command bash -euc '
+            for preset in full-debug full-release; do
+              cmake --preset "$preset"
+              cmake --build --preset "$preset" --parallel 2
+              ctest --preset "$preset" --output-on-failure
+            done
+            sed -n "/IMPLICIT_LINK_DIRECTORIES/p" out/build/full-debug/CMakeFiles/*/CMake{C,CXX}Compiler.cmake
+            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -DCQ_SIMBE_BUILD_FORTRAN=ON -P tests/packaging/check-package.cmake
+          '
+  static-quest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Validate shared and static CQ-SimBE against static QuEST
+        run: |
+          nix develop .#static-quest --no-update-lock-file --max-jobs 2 --cores 2 --command bash -euc '
+            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -DCQ_SIMBE_BUILD_FORTRAN=ON -P tests/packaging/check-package.cmake
+          '
+  transport:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pthread with MPI QuEST
+            shell: default
+            mpi: "OFF"
+          - name: MPI transport with serial QuEST
+            shell: serial-quest
+            mpi: "ON"
+          - name: no MPI
+            shell: non-mpi
+            mpi: "OFF"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build and test ${{ matrix.name }}
+        run: |
+          nix develop .#${{ matrix.shell }} --no-update-lock-file --max-jobs 2 --cores 2 --command bash -euc '
+            for preset in full-debug full-release; do
+              cmake --preset "$preset" -DCQ_SIMBE_ENABLE_MPI=${{ matrix.mpi }}
+              cmake --build --preset "$preset" --parallel 2
+              ctest --preset "$preset" --output-on-failure
+            done
+            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -DCQ_SIMBE_ENABLE_MPI=${{ matrix.mpi }} -P tests/packaging/check-package.cmake
+          '

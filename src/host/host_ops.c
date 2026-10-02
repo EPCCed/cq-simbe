@@ -120,7 +120,7 @@ cq_status a_qrun(qkern kernel,
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
-  if (ehp == NULL) return status;
+  if (ehp == NULL || exec_is_live(ehp)) return status;
   init_exec_handle(NQUBITS, 1, NMEASURE, ehp);
 
   if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
@@ -131,7 +131,8 @@ cq_status a_qrun(qkern kernel,
       ehp->qreg = qrp;
       ehp->creg = crp;
 
-      host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, ehp);
+      status = submit_exec(CQ_CTRL_RUN_QKERNEL, ehp);
+      if (status != CQ_SUCCESS) finalise_exec_handle(ehp);
     } else {
       finalise_exec_handle(ehp);
     }
@@ -148,6 +149,7 @@ cq_status sm_qrun(qkern kernel,
                   cstate * const crp,
                   const size_t NMEASURE,
                   const size_t NSHOTS) {
+  RUN_HOST_ONLY();
   cq_exec exec_handle;
   cq_status status = CQ_ERROR;
 
@@ -175,7 +177,7 @@ cq_status am_qrun(qkern kernel,
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
-  if (ehp == NULL) return status;
+  if (ehp == NULL || exec_is_live(ehp)) return status;
   // init_exec_handle will malloc qkern_param array
   init_exec_handle(NQUBITS, NSHOTS, NMEASURE, ehp);
 
@@ -189,7 +191,8 @@ cq_status am_qrun(qkern kernel,
       ehp->fname = fname;
       ehp->qreg = qrp;
       ehp->creg = crp;
-      host_send_ctrl_op(CQ_CTRL_RUN_QKERNEL, ehp);
+      status = submit_exec(CQ_CTRL_RUN_QKERNEL, ehp);
+      if (status != CQ_SUCCESS) finalise_exec_handle(ehp);
     } else {
       finalise_exec_handle(ehp);
     }
@@ -238,10 +241,10 @@ cq_status ap_qrun(pqkern kernel,
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
-  if (ehp == NULL) return status;
+  if (ehp == NULL || exec_is_live(ehp)) return status;
   init_exec_handle(NQUBITS, 1, NMEASURE, ehp);
 
-  if (KERNPAR_SIZE < 0) return status;
+  if (KERNPAR_SIZE && !kernpar) { finalise_exec_handle(ehp); return CQ_ERROR; }
   ehp->params = kernpar;
   ehp->params_size = KERNPAR_SIZE;
 
@@ -253,7 +256,8 @@ cq_status ap_qrun(pqkern kernel,
       ehp->qreg = qrp;
       ehp->creg = crp;
 
-      host_send_ctrl_op(CQ_CTRL_RUN_PQKERNEL, ehp);
+      status = submit_exec(CQ_CTRL_RUN_PQKERNEL, ehp);
+      if (status != CQ_SUCCESS) finalise_exec_handle(ehp);
     } else {
       finalise_exec_handle(ehp);
     }
@@ -272,6 +276,7 @@ cq_status smp_qrun(pqkern kernel,
                    cstate * const crp,
                    const size_t NMEASURE,
                    const size_t NSHOTS) {
+  RUN_HOST_ONLY();
   cq_exec exec_handle;
   cq_status status = CQ_ERROR;
 
@@ -302,10 +307,10 @@ cq_status amp_qrun(pqkern kernel,
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
-  if (ehp == NULL) return status;
+  if (ehp == NULL || exec_is_live(ehp)) return status;
   init_exec_handle(NQUBITS, NSHOTS, NMEASURE, ehp);
 
-  if (KERNPAR_SIZE < 0) return status;
+  if (KERNPAR_SIZE && !kernpar) { finalise_exec_handle(ehp); return CQ_ERROR; }
   ehp->params = kernpar;
   ehp->params_size = KERNPAR_SIZE;
 
@@ -319,7 +324,8 @@ cq_status amp_qrun(pqkern kernel,
       ehp->fname = fname;
       ehp->qreg = qrp;
       ehp->creg = crp;
-      host_send_ctrl_op(CQ_CTRL_RUN_PQKERNEL, ehp);
+      status = submit_exec(CQ_CTRL_RUN_PQKERNEL, ehp);
+      if (status != CQ_SUCCESS) finalise_exec_handle(ehp);
     } else {
       finalise_exec_handle(ehp);
     }

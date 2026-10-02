@@ -1,55 +1,16 @@
-find_library(MATHS_LIBRARY m REQUIRED)
-
-add_executable(zero-qft
-  zero_qft.f90
-  utils.f90
-)
-
-target_link_libraries(zero-qft
-  PRIVATE
-  CQ-SIMBE::cq-simbe
-  ${MATHS_LIBRARY}
-)
-
-set_target_properties(zero-qft
-  PROPERTIES
-  Fortran_PREPROCESS ON
-  Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod/zero-qft"
-)
-
-add_executable(plus-qft
-  plus_qft.f90
-  utils.f90
-)
-
-target_link_libraries(plus-qft
-  PRIVATE
-  CQ-SIMBE::cq-simbe
-  ${MATHS_LIBRARY}
-)
-
-set_target_properties(plus-qft
-  PROPERTIES
-  Fortran_PREPROCESS ON
-  Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod/plus-qft"
-)
-
-if (BUILD_WITH_MPI)
-  add_executable(mpi-plus-qft
-    mpi_plus_qft.f90
-    utils.f90
-  )
-
-  target_link_libraries(mpi-plus-qft
-    PRIVATE
-    CQ-SIMBE::cq-simbe
-    ${MATHS_LIBRARY}
-    ${MPI_Fortran_LIBRARIES}
-  )
-
-  set_target_properties(mpi-plus-qft
-    PROPERTIES
+function(cq_add_fortran_example target source)
+  add_executable(${target} ${source} utils.f90)
+  target_link_libraries(${target} PRIVATE CQ-SIMBE::fortran ${CQ_SIMBE_MATH_LIBRARY})
+  set_target_properties(${target} PROPERTIES
     Fortran_PREPROCESS ON
-    Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod/mpi-plus-qft"
+    Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod/${target}"
   )
+endfunction()
+
+cq_add_fortran_example(zero-qft zero_qft.f90)
+cq_add_fortran_example(plus-qft plus_qft.f90)
+if(CQ_SIMBE_ENABLE_MPI)
+  find_package(MPI REQUIRED COMPONENTS Fortran)
+  cq_add_fortran_example(mpi-plus-qft mpi_plus_qft.f90)
+  target_link_libraries(mpi-plus-qft PRIVATE MPI::MPI_Fortran)
 endif()

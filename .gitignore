@@ -1,4 +1,10 @@
-build
-build/*
-.cache
-.clang-format*
+/build/
+/out/
+/.devenv/
+/.direnv/
+/.superpowers/
+/CMakeUserPresets.json
+/devenv.local.nix
+/devenv.local.yaml
+*.mod
+*.smod

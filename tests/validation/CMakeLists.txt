@@ -1,5 +1,3 @@
-find_library(MATHS_LIBRARY m REQUIRED)
-
 add_executable(test_qft
   test_qft_runner.c
   test_qft.c
@@ -8,15 +6,15 @@ add_executable(test_qft
 
 target_link_libraries(test_qft
   PRIVATE
-  CQ-SIMBE::cq-simbe
-  unity::framework
+  cq-simbe-test-support
   QuEST::QuEST
-  ${MATHS_LIBRARY}
+  ${CQ_SIMBE_MATH_LIBRARY}
 )
 
 add_test(
   NAME test_qft
-  COMMAND ./test_qft
+  COMMAND test_qft
 )
 
+# Kernel validation does not use the NLopt-driven example.
 add_subdirectory(vqe)

@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define CQ_ADDR_GLOBAL 0
 #define CQ_ADDR_LOCAL 1
@@ -24,9 +25,15 @@
 cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, const size_t NMEASURE, cstate * cr, qkern_map * reg)
 {
   CQ_REGISTER_KERNEL(reg);
-  set_qureg(qr, 0, NQUBITS);
+  HANDLE_CQ_ERROR(set_qureg(qr, 0, NQUBITS));
 
-  int qreg_id = 0;
+  /* Analog state belongs to each device process, not to the host rank. */
+  static bool analog_enabled;
+  if (!analog_enabled) {
+    HANDLE_CQ_ERROR(cq_enable_analog_mode(ISING));
+    analog_enabled = true;
+  }
+
   HANDLE_CQ_ERROR(cq_enable_analog_qreg(qr));
   channel ch0 = {0};
   HANDLE_CQ_ERROR(cq_get_channel(&ch0, CQ_ADDR_GLOBAL, qr, NULL));
@@ -56,7 +63,7 @@ cq_status quantum_adiabatic_algo(const size_t NQUBITS, qubit *qr, const size_t N
   HANDLE_CQ_ERROR(cq_set_qubit_pos(positions, qr));
   HANDLE_CQ_ERROR(cq_play(&ch0, &pulse));
 
-  measure_qureg(qr, NQUBITS, cr);
+  HANDLE_CQ_ERROR(measure_qureg(qr, NQUBITS, cr));
   HANDLE_CQ_ERROR(cq_free_pulse(&pulse));
   HANDLE_CQ_ERROR(cq_disable_analog_qreg(qr));
   return CQ_SUCCESS;
@@ -69,34 +76,48 @@ int main (void)
   const size_t NMEASURE = NQUBITS;
 
   cq_exec eh_maxcut;
+  int failed = 0;
 
-  cq_init(0);
+  if (cq_init(0) != CQ_SUCCESS) return EXIT_FAILURE;
+  if (register_qkern(quantum_adiabatic_algo) != CQ_SUCCESS) {
+    cq_finalise(0);
+    return EXIT_FAILURE;
+  }
 
-  cq_enable_analog_mode(ISING);
+  CQ_PROG_BEGIN()
   qubit * qr = NULL;
-  alloc_qureg(&qr, NQUBITS);
-
   cstate cr[NMEASURE * NSHOTS];
+  if (alloc_qureg(&qr, NQUBITS) != CQ_SUCCESS) {
+    failed = 1;
+    goto host_done;
+  }
 
   init_creg(NMEASURE * NSHOTS, -1, cr);
 
-  register_qkern(quantum_adiabatic_algo);
-
   printf("Offloading QAA circuit to the quantum device.\n");
-  am_qrun(quantum_adiabatic_algo, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh_maxcut);
+  if (am_qrun(quantum_adiabatic_algo, qr, NQUBITS, cr, NMEASURE, NSHOTS, &eh_maxcut) != CQ_SUCCESS) {
+    failed = 1;
+    goto host_done;
+  }
 
   printf("Hello from the host, pretend I'm doing something useful!\n");
   sleep(2);
   printf("Hello again, I'm done being 'useful' and will now wait for ");
   printf("the quantum device to return!\n");
 
-  wait_qrun(&eh_maxcut);
-  printf("Results from QAA:\n");
-  report_results(cr, NMEASURE, NSHOTS);
+  if (wait_qrun(&eh_maxcut) != CQ_SUCCESS || eh_maxcut.status != CQ_SUCCESS) {
+    failed = 1;
+  } else {
+    printf("Results from QAA:\n");
+    report_results(cr, NMEASURE, NSHOTS);
+  }
 
-  free_qureg(&qr);
+host_done:
+  if (qr && free_qureg(&qr) != CQ_SUCCESS) failed = 1;
 
-  cq_finalise(0);
+  CQ_PROG_END()
 
-  return 0;
+  if (cq_finalise(0) != CQ_SUCCESS) failed = 1;
+
+  return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }

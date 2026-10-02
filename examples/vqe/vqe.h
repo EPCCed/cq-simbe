@@ -24,6 +24,7 @@ typedef struct vqe_settings {
   double params[NPARAMS];
   double prev_params[NPARAMS];
   ptrdiff_t iter;
+  int failed;
 } vqe_settings;
 
 #define NTERMS 5
@@ -31,10 +32,15 @@ typedef struct vqe_settings {
 typedef struct hamiltonian {
   char paulis[NPAULIS];
   double coeffs[NTERMS];
-  ptrdiff_t term_start_idx;
 } hamiltonian;
 
 extern hamiltonian h2_hamil;
+
+/* A complete value payload: remote workers never consult host-only state. */
+typedef struct vqe_kernel_params {
+  double angles[NPARAMS];
+  char paulis[MAX_NQUBITS];
+} vqe_kernel_params;
 
 void init_hf_state(qubit * qr, int num_spin_orbitals);
 
@@ -45,7 +51,7 @@ cq_status ansatz(const size_t NQUBITS,
                  void * kernpar,
                  pqkern_map * reg);
 
-static double get_term_expectation(int * histogram,
+double get_term_expectation(int * histogram,
                                    int num_bins,
                                    const size_t NMEASURE,
                                    const size_t NSHOTS,

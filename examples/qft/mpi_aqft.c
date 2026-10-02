@@ -1,86 +1,64 @@
 #include "env.h"
 #include "qft.h"
-
 #include "cq.h"
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-
 #include <mpi.h>
 
 int main(void) {
-  int provided;
-
-  MPI_Comm cq_comm;
-  int nproc;
-  int rank;
-  MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+  int provided, nproc, rank, failed = 0;
+  MPI_Comm cq_comm = MPI_COMM_NULL;
+  if (MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided) != MPI_SUCCESS)
+    return EXIT_FAILURE;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  const int split_cond = rank >= 3;
-  MPI_Comm_split(MPI_COMM_WORLD, split_cond, rank, &cq_comm);
-  const size_t NQUBITS = 10;
-  const size_t NSHOTS = 10;
-  const size_t NMEASURE = NQUBITS;
-
-  cstate cr_zero[NMEASURE * NSHOTS];
-  cstate cr_plus[NMEASURE * NSHOTS];
+  if (provided < MPI_THREAD_MULTIPLE || nproc < 4) {
+    if (rank == 0) fprintf(stderr, "mpi_aqft requires MPI_THREAD_MULTIPLE and at least four ranks.\n");
+    MPI_Finalize();
+    return EXIT_FAILURE;
+  }
+  /* The first three application ranks do not participate in CQ. */
+  if (MPI_Comm_split(MPI_COMM_WORLD, rank >= 3 ? 1 : MPI_UNDEFINED,
+                     rank, &cq_comm) != MPI_SUCCESS) {
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    return EXIT_FAILURE;
+  }
+  const size_t NQUBITS = 10, NSHOTS = 10, NMEASURE = NQUBITS;
+  cstate cr_zero[NMEASURE * NSHOTS], cr_plus[NMEASURE * NSHOTS];
   cq_exec eh_zero, eh_plus;
-
-  qubit * qr = NULL;
-
-  if (split_cond) {
-    cq_init_custom_mpi_comm(cq_comm, 1);
-
-    register_qkern(zero_init_full_qft);
-    register_qkern(plus_init_full_qft);
-
-    CQ_PROG_BEGIN()
-
-    // We will reuse the quantum buffer as the quantum
-    // kernels cannot run simultaneously (for now...)
-    alloc_qureg(&qr, NQUBITS);
-
-    init_creg(NMEASURE * NSHOTS, -1, cr_zero);
-    init_creg(NMEASURE * NSHOTS, -1, cr_plus);
-
-    printf("Offloading both QFT circuits to the quantum device.\n");
-    am_qrun(zero_init_full_qft, qr, NQUBITS, cr_zero, NMEASURE, NSHOTS,
-            &eh_zero);
-    am_qrun(plus_init_full_qft, qr, NQUBITS, cr_plus, NMEASURE, NSHOTS,
-            &eh_plus);
-
-    CQ_PROG_END()
+  qubit *qr = NULL;
+  if (cq_comm != MPI_COMM_NULL) {
+    if (cq_init_custom_mpi_comm(cq_comm, 1) != CQ_SUCCESS) {
+      failed = 1;
+    } else {
+      if (register_qkern(zero_init_full_qft) != CQ_SUCCESS ||
+          register_qkern(plus_init_full_qft) != CQ_SUCCESS) failed = 1;
+      CQ_PROG_BEGIN()
+      if (!failed && alloc_qureg(&qr, NQUBITS) == CQ_SUCCESS) {
+        init_creg(NMEASURE * NSHOTS, -1, cr_zero);
+        init_creg(NMEASURE * NSHOTS, -1, cr_plus);
+        int zero_started = am_qrun(zero_init_full_qft, qr, NQUBITS, cr_zero,
+                                   NMEASURE, NSHOTS, &eh_zero) == CQ_SUCCESS;
+        int plus_started = am_qrun(plus_init_full_qft, qr, NQUBITS, cr_plus,
+                                   NMEASURE, NSHOTS, &eh_plus) == CQ_SUCCESS;
+        if (!zero_started || !plus_started) failed = 1;
+        if (zero_started && (wait_qrun(&eh_zero) != CQ_SUCCESS || eh_zero.status != CQ_SUCCESS)) failed = 1;
+        if (plus_started && (wait_qrun(&eh_plus) != CQ_SUCCESS || eh_plus.status != CQ_SUCCESS)) failed = 1;
+        if (!failed) {
+          printf("Results from zero-initialised QFT:\n");
+          report_results(cr_zero, NMEASURE, NSHOTS);
+          printf("Results from plus-initialised QFT:\n");
+          report_results(cr_plus, NMEASURE, NSHOTS);
+        }
+        if (free_qureg(&qr) != CQ_SUCCESS) failed = 1;
+      } else failed = 1;
+      CQ_PROG_END()
+      if (cq_finalise(0) != CQ_SUCCESS) failed = 1;
+    }
+    if (MPI_Comm_free(&cq_comm) != MPI_SUCCESS) failed = 1;
   }
-
-  if (rank <= 3) {
-    printf("Hello from the host, pretend I'm doing something useful!\n");
-    sleep(2);
-    printf("Hello again, I'm done being 'useful' and will now wait for ");
-    printf("the quantum device to return!\n");
-  }
-
-  if (split_cond) {
-    CQ_PROG_BEGIN()
-
-    wait_qrun(&eh_zero);
-    wait_qrun(&eh_plus);
-
-    free_qureg(&qr);
-
-    printf("Results from zero-initialised QFT:\n");
-    report_results(cr_zero, NMEASURE, NSHOTS);
-
-    printf("Results from plus-initialised QFT:\n");
-    report_results(cr_plus, NMEASURE, NSHOTS);
-
-    CQ_PROG_END()
-    cq_finalise(0);
-  }
-
-  MPI_Finalize();
-
-  return 0;
+  int any_failed = 0;
+  MPI_Allreduce(&failed, &any_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  if (MPI_Finalize() != MPI_SUCCESS) return EXIT_FAILURE;
+  return any_failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }

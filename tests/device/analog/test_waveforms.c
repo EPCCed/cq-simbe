@@ -701,5 +701,3 @@ void test_cq_composite_wf(void) {
         TEST_ASSERT(composite_wav[i] - expected[i] < epsilon);
     }
 }
-
-

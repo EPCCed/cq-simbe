@@ -1,25 +1,16 @@
-program test_host_ops
+module test_host_ops_cases
 use cq
 #include "cqf.h"
 
 use test_utils
 implicit none
-
-call test_initialising_cq()
-call test_resource_management()
-call test_qkernel_reg()
-call test_sync_qrun()
-call test_executor_handle()
-call test_async_qrun()
-call test_finalising_cq()
-
 contains
   function good_kernel(NQUBITS, qr, NMEASURE, cr, reg) result(status) bind(C)
     implicit none
     integer(kind=8), value :: NQUBITS
     type(qubit), value :: qr
     integer(kind=8), value :: NMEASURE
-    integer(kind=2), intent(inout) :: cr(0:NQUBITS)
+    integer(kind=2), intent(inout) :: cr(0:NMEASURE-1)
     !integer(kind=2), intent(inout) :: cr(:)
     type(qkern_map), value :: reg
     integer(kind=8) :: STATE_IDX = 0
@@ -37,7 +28,7 @@ contains
     call assert(cq_init(0) == SUCCESS)
     write(*, *) 'Test repeated call to cq_init: '
     call assert(cq_init(4) == WARNING)
-  end subroutine 
+  end subroutine
 
 
   subroutine test_resource_management()
@@ -57,14 +48,14 @@ contains
 
     write(*, *) 'Test freeing qubit: '
     call assert(cq_free_qubit(qhp) == SUCCESS)
-    
+
     write(*, *) 'Test freeing uninitialised qubit: '
     call assert(cq_free_qureg(qr) == WARNING)
     write(*, *) 'Test allocating qureg: '
     call assert(cq_alloc_qureg(qr, NQUBITS) == SUCCESS)
     write(*, *) 'Test freeing qureg: '
     call assert(cq_free_qureg(qr) == SUCCESS)
-    
+
     NQUBITS = -1
     write(*, *) 'Test allocating qureg with negative number of qubits: '
     call assert(cq_alloc_qureg(qr, NQUBITS) == ERROR)
@@ -86,7 +77,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qhp
     type(qubit) :: qr
     type(cq_exec) :: eh
@@ -96,7 +87,7 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
     allocate(cr_multi_shot(NMEASURE * NSHOTS))
 
@@ -126,6 +117,10 @@ contains
 
     write(*, *) 'Test normal initialisation of executor handle: '
     call assert(cq_create_exec_handle(eh) == SUCCESS)
+    write(*, *) 'Test operations on an executor handle before submission: '
+    call assert(cq_sync_qrun(eh) == ERROR)
+    call assert(cq_wait_qrun(eh) == ERROR)
+    call assert(cq_halt_qrun(eh) == ERROR)
     write(*, *) 'Test repeated initialisation of executor handle: '
     call assert(cq_create_exec_handle(eh) == ERROR)
     write(*, *) 'Test freeing initialised executor handle: '
@@ -138,7 +133,7 @@ contains
     integer(kind=8) :: NQUBITS
     integer(kind=8) :: NMEASURE
     integer(kind=8) :: NSHOTS
-    
+
     type(qubit) :: qr
     type(cq_exec) :: eh
     integer(kind=2), allocatable, target :: cr(:)
@@ -147,7 +142,7 @@ contains
     NQUBITS = 10
     NMEASURE = 10
     NSHOTS = 10
-    
+
     allocate(cr(NMEASURE))
     allocate(cr_multi_shot(NMEASURE * NSHOTS))
 
@@ -167,18 +162,21 @@ contains
     write(*, *) 'Test single shot offload on initialised executor handle: '
     status = cq_create_exec_handle(eh)
     call assert(cq_a_qrun(good_kernel, qr, NQUBITS, cr, NMEASURE, eh) == SUCCESS)
-    status = cq_free_qureg(qr)
-    
+
     write(*, *) 'Test synchronisation of the executor: '
     call assert(cq_sync_qrun(eh) == SUCCESS)
-    
+    call assert(cq_wait_qrun(eh) == SUCCESS)
+    call assert(all(cr == 0))
+    call assert(cq_free_qureg(qr) == SUCCESS)
+
     write(*, *) 'Test waiting on the executor: '
     status = cq_free_exec_handle(eh)
     status = cq_create_exec_handle(eh)
     status = cq_alloc_qureg(qr, NQUBITS)
     call assert(cq_a_qrun(good_kernel, qr, NQUBITS, cr, NMEASURE, eh) == SUCCESS)
     call assert(cq_wait_qrun(eh) == SUCCESS)
-    status = cq_free_qureg(qr)
+    call assert(all(cr == 0))
+    call assert(cq_free_qureg(qr) == SUCCESS)
 
     write(*, *) 'Test halting the executor: '
     status = cq_free_exec_handle(eh)
@@ -193,7 +191,10 @@ contains
     status = cq_create_exec_handle(eh)
     status = cq_alloc_qureg(qr, NQUBITS)
     call assert(cq_am_qrun(good_kernel, qr, NQUBITS, cr_multi_shot, NMEASURE, NSHOTS, eh) == SUCCESS)
-    status = cq_free_qureg(qr)
+    call assert(cq_wait_qrun(eh) == SUCCESS)
+    call assert(all(cr_multi_shot == 0))
+    call assert(cq_free_qureg(qr) == SUCCESS)
+    call assert(cq_free_exec_handle(eh) == SUCCESS)
 
   end subroutine test_async_qrun
 
@@ -206,7 +207,21 @@ contains
     write(*, *) 'Test repeated call to cq_finalise: '
     call assert(cq_finalise(0) == WARNING)
 
-  end subroutine 
+  end subroutine
 
- 
-end program
+
+end module test_host_ops_cases
+
+program test_host_ops
+use test_host_ops_cases
+implicit none
+call test_initialising_cq()
+call test_qkernel_reg()
+CQ_PROG_BEGIN()
+call test_resource_management()
+call test_sync_qrun()
+call test_executor_handle()
+call test_async_qrun()
+CQ_PROG_END()
+call test_finalising_cq()
+end program test_host_ops
