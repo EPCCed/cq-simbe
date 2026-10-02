@@ -4,7 +4,8 @@
 #include <string.h>
 #include "datatypes.h"
 #include "kernel_utils.h"
-#include "comms.h"
+#include "../comms.h"
+#include "comms_core.h"
 #include "src/host/opcodes.h"
 #include "src/device/control.h"
 #include "src/device/mpi_runtime.h"
@@ -17,21 +18,24 @@ static void destroy_device_sync(void) {
   pthread_mutex_destroy(&dev_ctrl.device_lock);
 }
 
-static void stop_device(void) {
+void stop_device(void) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
   dev_ctrl.run_device = false;
   pthread_cond_broadcast(&dev_ctrl.cond_queue_empty);
   pthread_mutex_unlock(&dev_ctrl.device_lock);
+}
+
+int finalise_device_controls(const unsigned int verbosity) {
+  if (!dev_ctrl.worker_started) return CQ_WARNING;
   pthread_join(dev_ctrl.device_thread, NULL);
   dev_ctrl.worker_started = false;
   destroy_device_sync();
+  return CQ_SUCCESS;
 }
 
-int initialise_device(const unsigned int VERBOSITY) {
+int init_device_controls(const unsigned int VERBOSITY) {
   if (dev_ctrl.worker_started)
     return CQ_WARNING;
-  if (cq_mpi_preflight(!isQuESTEnvInit()) != CQ_SUCCESS)
-    return CQ_ERROR;
   if (VERBOSITY > 0)
     printf("Initialising device.\n");
 
@@ -62,15 +66,7 @@ int initialise_device(const unsigned int VERBOSITY) {
     goto fail_empty;
   }
   dev_ctrl.worker_started = true;
-  unsigned int verbosity = VERBOSITY;
-  host_send_ctrl_op(CQ_CTRL_INIT, &verbosity);
-  host_wait_all_ops();
-  cq_status status = dev_ctrl.lifecycle_status;
-  if (status != CQ_SUCCESS) {
-    stop_device();
-    cq_mpi_cancel_preflight();
-  }
-  return status;
+  return CQ_SUCCESS;
 
 fail_empty:
   pthread_cond_destroy(&dev_ctrl.cond_queue_empty);
@@ -79,15 +75,31 @@ fail_busy:
 fail_mutex:
   pthread_mutex_destroy(&dev_ctrl.device_lock);
 fail_preflight:
-  /* Peers may already be preparing MPI on their workers. Join their readiness
-     agreement even when this rank could not create a worker. If MPI is owned,
-     this failure-only path initialises and finalises it on this caller. */
-  cq_mpi_prepare(0);
-  cq_mpi_cancel_preflight();
   return CQ_ERROR;
 }
 
-size_t host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params) {
+int serial_initialise_device(const unsigned int VERBOSITY) {
+  if (dev_ctrl.worker_started) return CQ_WARNING;
+  if (cq_mpi_preflight(!isQuESTEnvInit()) != CQ_SUCCESS) return CQ_ERROR;
+  cq_status status = init_device_controls(VERBOSITY);
+  if (status != CQ_SUCCESS) {
+    cq_mpi_prepare(0);
+    cq_mpi_cancel_preflight();
+    return status;
+  }
+  unsigned int verbosity = VERBOSITY;
+  insert_op(CQ_CTRL_INIT, &verbosity);
+  device_wait_all_ops();
+  status = dev_ctrl.lifecycle_status;
+  if (status != CQ_SUCCESS) {
+    stop_device();
+    finalise_device_controls(VERBOSITY);
+    cq_mpi_cancel_preflight();
+  }
+  return status;
+}
+
+size_t insert_op(const enum ctrl_code OP, void * ctrl_params) {
   pthread_mutex_lock(&dev_ctrl.device_lock);
 
   while (dev_ctrl.num_ops >= __CQ_DEVICE_QUEUE_SIZE__) {
@@ -100,18 +112,18 @@ size_t host_send_ctrl_op(const enum ctrl_code OP, void * ctrl_params) {
   dev_ctrl.op_params_buffer[dev_ctrl.next_op_in] = ctrl_params;
   ++dev_ctrl.num_ops;
 
-  // It's a ring buffer! 
+  // It's a ring buffer!
   // advance next_op_in then mod out buffer size
   ++dev_ctrl.next_op_in;
   dev_ctrl.next_op_in %= __CQ_DEVICE_QUEUE_SIZE__;
 
   pthread_cond_signal(&dev_ctrl.cond_queue_empty);
+  size_t pending = dev_ctrl.num_ops;
   pthread_mutex_unlock(&dev_ctrl.device_lock);
-
-  return dev_ctrl.num_ops;
+  return pending;
 }
 
-size_t host_sync_exec(cq_exec * const ehp) {
+size_t comms_exec_sync(cq_exec * const ehp) {
   size_t completed_shots = 0;
   pthread_mutex_lock(&(ehp->lock));
   completed_shots = ehp->completed_shots;
@@ -119,11 +131,11 @@ size_t host_sync_exec(cq_exec * const ehp) {
   return completed_shots;
 }
 
-size_t host_wait_exec(cq_exec * const ehp) {
+size_t comms_exec_wait(cq_exec * const ehp) {
   pthread_mutex_lock(&(ehp->lock));
   while (!ehp->complete) {
     pthread_cond_wait(
-      &(ehp->cond_exec_complete), 
+      &(ehp->cond_exec_complete),
       &(ehp->lock)
     );
   }
@@ -131,22 +143,24 @@ size_t host_wait_exec(cq_exec * const ehp) {
   return ehp->completed_shots;
 }
 
-size_t host_wait_all_ops() {
+size_t device_wait_all_ops(void) {
+  if (!dev_ctrl.worker_started) return 0;
   pthread_mutex_lock(&dev_ctrl.device_lock);
   while(dev_ctrl.num_ops > 0 || dev_ctrl.device_busy) {
     pthread_cond_wait(
-      &dev_ctrl.cond_device_busy, 
+      &dev_ctrl.cond_device_busy,
       &dev_ctrl.device_lock
     );
   }
+  size_t pending = dev_ctrl.num_ops;
   pthread_mutex_unlock(&dev_ctrl.device_lock);
-  return dev_ctrl.num_ops;
+  return pending;
 }
 
-size_t device_sync_exec(const cq_status STATUS, const size_t SHOT, 
+size_t device_sync_exec(const cq_status STATUS, const size_t SHOT,
 cstate const * const RESULT, cq_exec * ehp) {
   pthread_mutex_lock(&ehp->lock);
-  
+
   if (STATUS == CQ_EARLY_SUCCESS) {
     // generally speaking we should respect the kernel-provided
     // status code, but CQ_EARLY_SUCCESS really means CQ_SUCCESS
@@ -155,13 +169,15 @@ cstate const * const RESULT, cq_exec * ehp) {
   } else {
     ehp->status = STATUS;
   }
-  
+
   ehp->completed_shots += 1;
 
   // copy local result register to exec
-  cstate * dest_creg = ehp->creg + SHOT * ehp->nmeasure;
-  memcpy(dest_creg, RESULT, ehp->nmeasure * sizeof(cstate));
-  
+  if (ehp->nmeasure) {
+    cstate *dest_creg = ehp->creg + SHOT * ehp->nmeasure;
+    memcpy(dest_creg, RESULT, ehp->nmeasure * sizeof(cstate));
+  }
+
   // check if the whole execution is done
   if (ehp->completed_shots == ehp->expected_shots || STATUS != CQ_SUCCESS) {
     ehp->complete = true;
@@ -207,17 +223,45 @@ void * device_control_thread(void * par) {
   return NULL;
 }
 
-int finalise_device(const unsigned int VERBOSITY) {
+int serial_finalise_device(const unsigned int VERBOSITY) {
   if (!dev_ctrl.worker_started)
     return CQ_WARNING;
-  host_wait_all_ops();
+  device_wait_all_ops();
   if (VERBOSITY > 0)
     printf("Finalising device.\n");
 
   unsigned int verbosity = VERBOSITY;
-  host_send_ctrl_op(CQ_CTRL_FINALISE, &verbosity);
-  host_wait_all_ops();
+  insert_op(CQ_CTRL_FINALISE, &verbosity);
+  device_wait_all_ops();
   cq_status status = dev_ctrl.lifecycle_status;
   stop_device();
+  finalise_device_controls(VERBOSITY);
   return status;
+}
+
+void comms_exec_halt(cq_exec *ehp) {
+  if (!ehp) return;
+  pthread_mutex_lock(&ehp->lock);
+  ehp->halt = true;
+  pthread_mutex_unlock(&ehp->lock);
+}
+
+size_t serial_host_send_ctrl_op(const enum ctrl_code op, void *params) {
+  switch (op) {
+    case CQ_CTRL_SYNC_EXEC: return comms_exec_sync(params);
+    case CQ_CTRL_WAIT_EXEC: return comms_exec_wait(params);
+    case CQ_CTRL_ABORT: comms_exec_halt(params); return 0;
+    default: return insert_op(op, params);
+  }
+}
+size_t serial_host_wait_all_ops(void) { return device_wait_all_ops(); }
+void serial_host_device_sync_comms(void) {}
+size_t assign_exec_id(void) { return (size_t)-1; }
+
+void complete_failed_exec(cq_exec *exec, cq_status status) {
+  pthread_mutex_lock(&exec->lock);
+  exec->status = status;
+  exec->complete = true;
+  pthread_cond_broadcast(&exec->cond_exec_complete);
+  pthread_mutex_unlock(&exec->lock);
 }

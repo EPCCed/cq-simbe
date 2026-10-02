@@ -14,7 +14,7 @@
 cq_status qft_circuit(const size_t NQUBITS, qubit * qr) {
   // Run QFT
   for (size_t i = 0; i < NQUBITS; ++i) {
-    hadamard(&qr[i]); 
+    hadamard(&qr[i]);
     for (size_t j = i+1; j < NQUBITS; ++j) {
       double angle = M_PI / pow(2, j);
       cphase(&qr[j], &qr[i], angle);
@@ -25,14 +25,14 @@ cq_status qft_circuit(const size_t NQUBITS, qubit * qr) {
   for (size_t i = 0; i < NQUBITS / 2; ++i) {
     size_t j = NQUBITS - (i+1);
     swap(&qr[i], &qr[j]);
-  } 
+  }
 
   return CQ_SUCCESS;
 }
 
 
 cq_status zero_init_full_qft(
-const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
+const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg)
 
   // Prepare state
@@ -43,12 +43,12 @@ const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
 
   // Measure
   measure_qureg(qr, NQUBITS, cr);
-  
+
   return CQ_SUCCESS;
 }
 
 cq_status plus_init_full_qft(
-const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
+const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
   // Prepare state
@@ -66,7 +66,7 @@ const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
   return CQ_SUCCESS;
 }
 
-cq_status all_site_hadamard(const size_t NQUBITS, qubit * qr, cstate * cr,
+cq_status all_site_hadamard(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr,
 qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
@@ -76,12 +76,12 @@ qkern_map * reg) {
   }
 
   measure_qureg(qr, NQUBITS, cr);
-  
+
   return CQ_SUCCESS;
 }
 
 cq_status only_measure_first_site(const size_t NQUBITS, qubit * qr,
-cstate * cr, qkern_map * reg) {
+const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
   set_qureg(qr, 0, NQUBITS);
@@ -94,8 +94,8 @@ cstate * cr, qkern_map * reg) {
   return CQ_SUCCESS;
 }
 
-cq_status no_measure_qkern(const size_t NQUBITS, qubit * qr, cstate * cr,
-qkern_map * reg) {
+cq_status no_measure_qkern(const size_t NQUBITS, qubit * qr, const size_t NMEASURE,
+cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
 
   // a tree falls in the forest with no-one to hear it...
@@ -104,13 +104,13 @@ qkern_map * reg) {
 }
 
 cq_status unregistered_kernel(const size_t NQUBITS, qubit * qr,
-cstate * cr, qkern_map * reg) {
+const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   printf("I'm an unregistered kernel. How did you get here?\n");
   return CQ_ERROR;
 }
 
 cq_status overly_long_qkern_name(const size_t NQUBITS, qubit * qr,
-cstate * cr, qkern_map * reg) {
+const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   // "overly_long_qkern_name" is of course fine, but the string
   // we're about to build isn't!
   char too_long[__CQ_MAX_QKERN_NAME_LENGTH__ + 1];
@@ -135,14 +135,14 @@ cstate * cr, qkern_map * reg) {
   return CQ_SUCCESS;
 }
 
-cq_status immediate_qabort(const size_t NQUBITS, qubit * qr, cstate * cr, qkern_map * reg) {
+cq_status immediate_qabort(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr, qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
   return qabort(CQ_ERROR);
 }
 
 // these qabort kernels will abort on the FOURTH shot
 
-cq_status successful_qabort(const size_t NQUBITS, qubit * qr, cstate * cr,
+cq_status successful_qabort(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr,
 qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
   const unsigned int COUNT_LIMIT = 4;
@@ -153,8 +153,6 @@ qkern_map * reg) {
     cr[i] = 1;
   }
 
-  printf("%s: count = %d on entry\n", __func__, count);
-
   // increment count and abort on 4th shot (or greater)
   if (++count >= COUNT_LIMIT) {
     return qabort(CQ_SUCCESS);
@@ -163,7 +161,7 @@ qkern_map * reg) {
   return CQ_SUCCESS;
 }
 
-cq_status cq_error_qabort(const size_t NQUBITS, qubit * qr, cstate * cr,
+cq_status cq_error_qabort(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr,
 qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
   const unsigned int COUNT_LIMIT = 4;
@@ -181,7 +179,7 @@ qkern_map * reg) {
   return CQ_SUCCESS;
 }
 
-cq_status custom_error_qabort(const size_t NQUBITS, qubit * qr, cstate * cr,
+cq_status custom_error_qabort(const size_t NQUBITS, qubit * qr, const size_t NMEASURE, cstate * cr,
 qkern_map * reg) {
   CQ_REGISTER_KERNEL(reg);
   const int CUSTOM_ERROR = 666;

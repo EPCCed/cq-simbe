@@ -40,7 +40,8 @@ void test_register_qkern(void) {
   TEST_ASSERT_EQUAL_size_t(5, qk_reg.next_available_slot);
 
   qk_reg.next_available_slot = __CQ_MAX_NUM_QKERN__;
-  TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(zero_init_full_qft));
+  TEST_ASSERT_EQUAL_INT(CQ_WARNING, register_qkern(zero_init_full_qft));
+  TEST_ASSERT_EQUAL_INT(CQ_ERROR, register_qkern(immediate_qabort));
   TEST_ASSERT_EQUAL_size_t(__CQ_MAX_NUM_QKERN__, qk_reg.next_available_slot);
   // reset our vandalism of the qkern registry as there's no function to clear
   // it currently
@@ -113,6 +114,6 @@ void test_init_and_finalise_exec_handle(void) {
   TEST_ASSERT_EQUAL_INT(CQ_ERROR, eh.status);
   TEST_ASSERT_EQUAL_size_t(0, eh.completed_shots);
   TEST_ASSERT_EQUAL_size_t(NSHOTS, eh.expected_shots);
-  
+
   return;
 }

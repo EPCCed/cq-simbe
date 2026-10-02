@@ -6,3 +6,5 @@
 /CMakeUserPresets.json
 /devenv.local.nix
 /devenv.local.yaml
+*.mod
+*.smod

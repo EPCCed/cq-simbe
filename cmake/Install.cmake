@@ -18,6 +18,22 @@ install(EXPORT CQ-SIMBETargets
   FILE CQ-SIMBETargets.cmake NAMESPACE CQ-SIMBE::
   DESTINATION "${_cq_simbe_config_dir}"
 )
+if(CQ_SIMBE_BUILD_FORTRAN)
+  set_target_properties(cq-simbe-fortran PROPERTIES
+    VERSION "${PROJECT_VERSION}" SOVERSION 0.2)
+  install(TARGETS cq-simbe-fortran EXPORT CQ-SIMBEFortranTargets
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    FILE_SET fortran_headers DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  )
+  install(DIRECTORY "${CQ_SIMBE_FORTRAN_MODULE_DIR}/"
+    DESTINATION "${CQ_SIMBE_FORTRAN_MODULE_INSTALL_DIR}"
+    FILES_MATCHING PATTERN "*.mod" PATTERN "*.smod")
+  install(EXPORT CQ-SIMBEFortranTargets
+    FILE CQ-SIMBEFortranTargets.cmake NAMESPACE CQ-SIMBE::
+    DESTINATION "${_cq_simbe_config_dir}")
+endif()
 configure_package_config_file(
   "${CMAKE_CURRENT_LIST_DIR}/CQ-SIMBEConfig.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/CQ-SIMBEConfig.cmake"

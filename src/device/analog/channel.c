@@ -1,0 +1,172 @@
+/**
+* @author Mateusz Meller
+*
+* @copyright Copyright (c) 2025
+* UK Research and Innovation,
+* Science and Technology Facilities Council,
+* Hartree Centre
+*/
+
+#include "channel.h"
+#include "analog_device.h"
+#include <assert.h>
+#include <stdio.h>
+
+static cq_status setup_local_channel_params(channel_params *params, ptrdiff_t qreg_id) {
+    assert(params != NULL);
+
+    params->max_freq = 62.83;
+    params->max_detuning = 125.7;
+    params->min_amp = 0.0;
+    params->min_retarget_dt = 220.0;
+    params->retarget_delay = 0.0;
+    params->sample_rate = get_device_sample_rate();
+    params->min_pulse_duration = get_device_min_pulse_duration();
+    params->max_pulse_duration = get_device_max_pulse_duration();
+    params->max_targets = 1;
+    params->addressing = CQ_ADDR_LOCAL;
+    params->qreg_id = qreg_id;
+
+    return CQ_SUCCESS;
+}
+
+static cq_status setup_global_channel_params(channel_params *params, ptrdiff_t qreg_id) {
+    assert(params != NULL);
+
+    params->max_freq = 15.71;
+    params->max_detuning = 125.7;
+    params->min_amp = 0.0;
+    params->min_retarget_dt = 0.0;
+    params->retarget_delay = 0.0;
+    params->sample_rate = get_device_sample_rate();
+    params->min_pulse_duration = get_device_min_pulse_duration();
+    params->max_pulse_duration = get_device_max_pulse_duration();
+    params->max_targets = -1;
+    params->addressing = CQ_ADDR_GLOBAL;
+    params->qreg_id = qreg_id;
+
+    return CQ_SUCCESS;
+}
+
+cq_status setup_channel_params(analog_qreg *qreg) {
+    assert(qreg != NULL);
+
+    ptrdiff_t qreg_id = qreg->id;
+    setup_global_channel_params(&qreg->channel_params[CQ_ADDR_GLOBAL], qreg_id);
+    setup_local_channel_params(&qreg->channel_params[CQ_ADDR_LOCAL], qreg_id);
+    return CQ_SUCCESS;
+}
+
+cq_status copy_channel(channel *dest, const channel *src) {
+    assert(dest != NULL);
+    assert(src != NULL);
+    assert(src->params != NULL);
+    assert(src->id > -1);
+    assert(src->target > -2);
+    assert(src->target < __CQ_ANALOG_MAX_NUM_QUBITS__);
+    assert(src->time > -__CQ_ANALOG_EPSILON__);
+
+    dest->id = src->id;
+    dest->type = src->type;
+    dest->target = src->target;
+    dest->params = src->params;
+    dest->time = src->time;
+
+    return CQ_SUCCESS;
+}
+
+cq_status retarget_channel(channel *ch, ptrdiff_t new_target) {
+    assert(ch != NULL);
+    assert(new_target > -2);
+    assert(new_target < __CQ_ANALOG_MAX_NUM_QUBITS__);
+    assert(ch->params != NULL);
+
+    ch->target = new_target;
+    ch->time += ((channel_params *)ch->params)->retarget_delay;
+    return CQ_SUCCESS;
+}
+
+void print_avail_channels(void) {
+    printf("==============================================================\n"
+           "Available Channels:\n"
+           "----- CQ_ADDR_GLOBAL:     \n"
+            "\tmax_freq = 15.71       \n"
+            "\tmax_detuning = 125.7   \n"
+            "\tmin_amp = 0.0          \n"
+            "\tmin_retarget_dt = 0.0  \n"
+            "\tretarget_delay = 0.0   \n"
+            "\tsample_rate = 0.25     \n"
+            "\tmin_pulse_duration = 16\n"
+            "\tmax_targets = -1       \n"
+            "\taddressing = CQ_ADDR_GLOBAL    \n\n"
+
+           "----- CQ_ADDR_LOCAL:      \n"
+            "\tmax_freq = 62.83       \n"
+            "\tmax_detuning = 125.7   \n"
+            "\tmin_amp = 0.0          \n"
+            "\tmin_retarget_dt = 220.0  \n"
+            "\tretarget_delay = 0.0   \n"
+            "\tsample_rate = 0.25     \n"
+            "\tmin_pulse_duration = 16\n"
+            "\tmax_targets = 1       \n"
+            "\taddressing = CQ_ADDR_LOCAL    \n"
+            "==============================================================\n"
+    );
+}
+
+static const char *get_channel_type_str(addressing type) {
+    switch (type) {
+        case CQ_ADDR_LOCAL:
+            return "CQ_ADDR_LOCAL";
+        case CQ_ADDR_GLOBAL:
+            return "CQ_ADDR_GLOBAL";
+        default:
+            return "Unknown";
+    }
+}
+
+static const char *get_addressing_str(addressing addressing) {
+    switch (addressing) {
+        case CQ_ADDR_LOCAL:
+            return "CQ_ADDR_LOCAL";
+        case CQ_ADDR_GLOBAL:
+            return "CQ_ADDR_GLOBAL";
+        default:
+            return "Unknown";
+    }
+}
+
+void print_channel(channel *ch) {
+    assert(ch != NULL);
+    channel_params *params = (channel_params *)ch->params;
+    assert(params != NULL);
+    printf(
+       "----- channel:      \n"
+            "\tid: %d\n"
+            "\ttype: %s\n"
+            "\ttarget: %td\n"
+            "\ttime: %f\n"
+            "\tmax_freq = %f       \n"
+            "\tmax_detuning = %f   \n"
+            "\tmin_amp = %f          \n"
+            "\tmin_retarget_dt = %f  \n"
+            "\tretarget_delay = %f   \n"
+            "\tsample_rate = %f    \n"
+            "\tmin_pulse_duration = %f\n"
+            "\tmax_targets = %d       \n"
+            "\taddressing = %s    \n",
+            ch->id,
+            get_channel_type_str(ch->type),
+            ch->target,
+            ch->time,
+            params->max_freq,
+            params->max_detuning,
+            params->min_amp,
+            params->min_retarget_dt,
+            params->retarget_delay,
+            params->sample_rate,
+            params->min_pulse_duration,
+            params->max_targets,
+            get_addressing_str(params->addressing)
+    );
+}

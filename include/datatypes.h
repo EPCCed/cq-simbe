@@ -27,13 +27,16 @@ typedef struct qubit {
 } qubit;
 
 typedef struct exec {
+  size_t id;
   bool exec_init;
   bool complete;
+  bool halt;
   cq_status status;
   size_t nqubits;
   size_t completed_shots;
   size_t expected_shots;
   size_t nmeasure;
+  size_t params_size;
   pthread_mutex_t lock;
   pthread_cond_t cond_exec_complete;
   char * fname;
@@ -46,11 +49,11 @@ struct qkern_map;
 struct pqkern_map;
 
 typedef cq_status (*qkern)
-  (const size_t NQUBITS, qubit * qreg, cstate * creg, 
+  (const size_t NQUBITS, qubit * qreg, const size_t NMEASURE, cstate * creg,
   struct qkern_map * registration);
 
 typedef cq_status (*pqkern)
-  (const size_t NQUBITS, qubit * qreg, cstate * creg, void * params, 
+  (const size_t NQUBITS, qubit * qreg, const size_t NMEASURE, cstate * creg, void * params,
   struct pqkern_map * registration);
 
 typedef struct qkern_map {

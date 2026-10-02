@@ -15,3 +15,6 @@ add_test(
   NAME test_qft
   COMMAND test_qft
 )
+
+# Kernel validation does not use the NLopt-driven example.
+add_subdirectory(vqe)

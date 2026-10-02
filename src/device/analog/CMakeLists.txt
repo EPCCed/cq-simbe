@@ -1,0 +1,11 @@
+target_sources(cq-simbe
+	PRIVATE
+	analog_device.c
+	analog_qreg.c
+	channel.c
+	hamil.c
+	pulse.c
+	waveforms.c
+	simulator.c
+	analog.c
+)

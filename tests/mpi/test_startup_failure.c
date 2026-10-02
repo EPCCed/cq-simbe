@@ -53,13 +53,21 @@ static int shim_join(pthread_t thread, void **result) {
 #define pthread_cond_destroy shim_cond_destroy
 #define pthread_create shim_create
 #define pthread_join shim_join
-#include "src/host-device/comms.c"
+#include "src/host-device/comms/comms_core.c"
+#include "src/host-device/comms/comms.c"
 #include "src/host/env.c"
+
+/* These startup-only fixtures never own an executor. */
+void finalise_exec_handle(cq_exec *exec) { abort(); }
 
 int isQuESTEnvInit(void) { return 0; }
 cq_status cq_mpi_preflight(int ready) { return ready ? CQ_SUCCESS : CQ_ERROR; }
 void cq_mpi_cancel_preflight(void) {}
+cq_status cq_mpi_finish(void) { return CQ_SUCCESS; }
 cq_status cq_mpi_prepare(int ready) { return ready ? CQ_SUCCESS : CQ_ERROR; }
+cq_status cq_mpi_agree_status(cq_status status, bool halt) {
+  return halt && status == CQ_SUCCESS ? CQ_EARLY_SUCCESS : status;
+}
 static cq_status init(void *arg) { return init_result; }
 static cq_status finish(void *arg) { return final_result; }
 cq_status (*control_registry[8])(void *) = {init, NULL, finish};
@@ -81,7 +89,8 @@ int main(int argc, char **argv) {
   CHECK(cq_env.initialised);
   final_result = CQ_ERROR;
   CHECK(cq_finalise(0) == CQ_ERROR);
-  CHECK(!cq_env.finalised);
+  CHECK(cq_env.finalised);
+  CHECK(cq_finalise(0) == CQ_WARNING && cq_init(0) == CQ_ERROR);
   CHECK(!live_mutexes && !live_conditions && !live_threads);
   CHECK(!dev_ctrl.worker_started && !dev_ctrl.run_device);
   return 0;

@@ -6,8 +6,8 @@ add_executable(test_device_resource_management
   test_device_resource_management.c
 )
 
-target_link_libraries(test_device_resource_management 
-  PRIVATE 
+target_link_libraries(test_device_resource_management
+  PRIVATE
   cq-simbe-test-support
   QuEST::QuEST
 )
@@ -85,3 +85,5 @@ add_test(
   NAME test_qasm_gates
   COMMAND test_qasm_gates
 )
+
+add_subdirectory(analog)

@@ -2,6 +2,7 @@
    Compile the real helper against a deterministic shim, without interposing
    any functions in the production library or the installed MPI library. */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <mpi.h>
@@ -11,6 +12,7 @@ static pthread_t caller, init_thread;
 static int initialised, finalised, provided = MPI_THREAD_MULTIPLE;
 static int query_count, init_count, finalize_count, wrong_thread;
 static int peer_ready = 1, world_size = 2, init_error, late_peer, reductions, local_unready;
+static int duplicate_count, free_count;
 #define CHECK(condition) do { if (!(condition)) { \
   fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition); return 1; \
 } } while (0)
@@ -40,6 +42,16 @@ static int shim_finalize(void) {
   return MPI_SUCCESS;
 }
 static int shim_size(MPI_Comm comm, int *size) { *size = world_size; return MPI_SUCCESS; }
+static int shim_dup(MPI_Comm comm, MPI_Comm *duplicate) {
+  ++duplicate_count;
+  *duplicate = MPI_COMM_SELF;
+  return MPI_SUCCESS;
+}
+static int shim_free(MPI_Comm *comm) {
+  ++free_count;
+  *comm = MPI_COMM_NULL;
+  return MPI_SUCCESS;
+}
 static int shim_reduce(const void *in, void *out, int count, MPI_Datatype datatype,
                        MPI_Op op, MPI_Comm comm) {
   reductions++;
@@ -52,13 +64,19 @@ static int shim_reduce(const void *in, void *out, int count, MPI_Datatype dataty
 #define MPI_Init_thread shim_init
 #define MPI_Finalize shim_finalize
 #define MPI_Comm_size shim_size
+#define MPI_Comm_dup shim_dup
+#define MPI_Comm_free shim_free
 #define MPI_Allreduce shim_reduce
 #include "src/device/mpi_runtime.c"
 
 /* Use the production host and worker so rejection also exercises queue
    status propagation, joining the worker, and no-worker finalisation. */
-#include "src/host-device/comms.c"
+#include "src/host-device/comms/comms_core.c"
+#include "src/host-device/comms/comms.c"
 #include "src/host/env.c"
+
+/* These startup-only fixtures never own an executor. */
+void finalise_exec_handle(cq_exec *exec) { abort(); }
 int isQuESTEnvInit(void) { return local_unready; }
 static cq_status init(void *arg) { return cq_mpi_prepare(!isQuESTEnvInit()); }
 static cq_status finish(void *arg) { return cq_mpi_finish(); }
@@ -87,6 +105,8 @@ int main(int argc, char **argv) {
     CHECK(cq_finalise(0) == CQ_SUCCESS);
   }
   CHECK(!dev_ctrl.worker_started);
+  CHECK(duplicate_count == free_count);
+  CHECK(duplicate_count == (status == CQ_SUCCESS));
   if (strcmp(argv[1], "finalized") == 0 || (borrowed && rejected)) {
     CHECK(init_count == 0 && finalize_count == 0 && wrong_thread == 0);
     CHECK(query_count == borrowed);

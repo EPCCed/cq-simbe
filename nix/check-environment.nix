@@ -8,6 +8,7 @@ let
       environment = import ./environment.nix { inherit pkgs; };
       static = import ./environment.nix { inherit pkgs; questOptions.shared = false; };
       serial = import ./environment.nix { inherit pkgs; questOptions.enableMpi = false; };
+      nonMpi = import ./environment.nix { inherit pkgs; enableMpi = false; questOptions.enableMpi = false; };
       clang = import ./environment.nix { inherit pkgs; compiler = "clang"; };
       deps = environment.dependencies;
     in
@@ -18,7 +19,13 @@ let
     assert deps.quest.options.QUEST_ENABLE_INSTALL && !deps.quest.options.QUEST_ENABLE_PACKAGING;
     assert !static.dependencies.quest.shared && static.dependencies.quest.options.CMAKE_POSITION_INDEPENDENT_CODE;
     assert !serial.dependencies.quest.enableMpi && !serial.dependencies.quest.enableSubcomm;
-    assert !(builtins.elem serial.dependencies.mpi serial.cmakeDependencies);
+    assert builtins.elem serial.dependencies.mpi serial.cmakeDependencies;
+    assert !(builtins.elem nonMpi.dependencies.mpi nonMpi.cmakeDependencies);
+    assert !nonMpi.dependencies.quest.enableMpi;
+    assert deps.fortran.drvPath == pkgs.gfortran.drvPath;
+    assert environment.env.FC == "${deps.fortran}/bin/gfortran";
+    assert builtins.elem deps.nlopt environment.cmakeDependencies;
+    assert deps.nlopt.version == "2.11.0";
     assert deps.unity.version == "2.6.1";
     assert deps.quest.stdenv.drvPath == environment.stdenv.drvPath;
     assert deps.unity.stdenv.drvPath == environment.stdenv.drvPath;
@@ -32,10 +39,12 @@ let
     {
       inherit system;
       compiler = environment.env.CXX;
+      fortranCompiler = environment.env.FC;
       prefix = environment.env.CMAKE_PREFIX_PATH;
       quest = deps.quest.drvPath;
       unity = deps.unity.drvPath;
       mpi = deps.mpi.drvPath;
+      nlopt = deps.nlopt.drvPath;
       clangShell = clang.shell.drvPath;
     };
 in builtins.map check [ "aarch64-darwin" "aarch64-linux" "x86_64-linux" ]

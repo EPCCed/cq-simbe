@@ -21,15 +21,15 @@ jobs:
       - uses: cachix/install-nix-action@v31
       - name: Check environment policy
         run: nix build .#checks.x86_64-linux.environment-policy --no-link --no-update-lock-file
-      - name: Build and test Debug and Release
+      - name: Build and test full Debug and Release
         run: |
           nix develop .#${{ matrix.shell }} --no-update-lock-file --max-jobs 2 --cores 2 --command bash -euc '
-            for preset in debug release; do
+            for preset in full-debug full-release; do
               cmake --preset "$preset"
               cmake --build --preset "$preset" --parallel 2
               ctest --preset "$preset" --output-on-failure
             done
-            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -P tests/packaging/check-package.cmake
+            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -DCQ_SIMBE_BUILD_FORTRAN=ON -P tests/packaging/check-package.cmake
           '
   static-quest:
     runs-on: ubuntu-latest
@@ -39,18 +39,33 @@ jobs:
       - name: Validate shared and static CQ-SimBE against static QuEST
         run: |
           nix develop .#static-quest --no-update-lock-file --max-jobs 2 --cores 2 --command bash -euc '
-            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -P tests/packaging/check-package.cmake
+            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -DCQ_SIMBE_BUILD_FORTRAN=ON -P tests/packaging/check-package.cmake
           '
-  non-mpi:
+  transport:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pthread with MPI QuEST
+            shell: default
+            mpi: "OFF"
+          - name: MPI transport with serial QuEST
+            shell: serial-quest
+            mpi: "ON"
+          - name: no MPI
+            shell: non-mpi
+            mpi: "OFF"
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-      - name: Build and test without MPI
+      - name: Build and test ${{ matrix.name }}
         run: |
-          nix develop .#non-mpi --no-update-lock-file --max-jobs 2 --cores 2 --command bash -euc '
-            cmake --preset debug
-            cmake --build --preset debug --parallel 2
-            ctest --preset debug --output-on-failure
-            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -P tests/packaging/check-package.cmake
+          nix develop .#${{ matrix.shell }} --no-update-lock-file --max-jobs 2 --cores 2 --command bash -euc '
+            for preset in full-debug full-release; do
+              cmake --preset "$preset" -DCQ_SIMBE_ENABLE_MPI=${{ matrix.mpi }}
+              cmake --build --preset "$preset" --parallel 2
+              ctest --preset "$preset" --output-on-failure
+            done
+            cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -DCQ_SIMBE_ENABLE_MPI=${{ matrix.mpi }} -P tests/packaging/check-package.cmake
           '

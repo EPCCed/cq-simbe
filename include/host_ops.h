@@ -16,61 +16,141 @@ cq_status free_qureg(qubit ** qrp);
 
 // Executors
 
-cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
-  const size_t NMEASURE);
+cq_status s_qrun(qkern kernel,
+                 qubit * qrp,
+                 const size_t NQUBITS,
+                 cstate * const crp,
+                 const size_t NMEASURE);
 
-cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, cstate * const crp,
-  const size_t NMEASURE, cq_exec * const ehp);
+cq_status a_qrun(qkern kernel,
+                 qubit * qrp,
+                 const size_t NQUBITS,
+                 cstate * const crp,
+                 const size_t NMEASURE,
+                 cq_exec * const ehp);
 
-cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS);
+cq_status sm_qrun(qkern kernel,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  const size_t NSHOTS);
 
-cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS,
-  cq_exec * const ehp);
+cq_status am_qrun(qkern kernel,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  const size_t NSHOTS,
+                  cq_exec * const ehp);
 
-cq_status sb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const backend_id BE);
+cq_status sb_qrun(qkern kernel,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  const backend_id BE);
 
-cq_status ab_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const backend_id BE,
-  cq_exec * const ehp);
+cq_status ab_qrun(qkern kernel,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  const backend_id BE,
+                  cq_exec * const ehp);
 
-cq_status smb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
-  const backend_id BE);
+cq_status smb_qrun(qkern kernel,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const size_t NSHOTS,
+                   const backend_id BE);
 
-cq_status amb_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
-  const backend_id BE, cq_exec * const ehp);
+cq_status amb_qrun(qkern kernel,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const size_t NSHOTS,
+                   const backend_id BE,
+                   cq_exec * const ehp);
 
-cq_status sp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
-  cstate * const crp, const size_t NMEASURE);
+// NOTE: requires modification of CQ spec
+cq_status sp_qrun(pqkern kernel,
+                  void * kernpar,
+                  const size_t KERNPAR_SIZE,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE);
 
-cq_status ap_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
-  cstate * const crp, const size_t NMEASURE, cq_exec * const ehp);
+// NOTE: requires modification of CQ spec
+cq_status ap_qrun(pqkern kernel,
+                  void * kernpar,
+                  const size_t KERNPAR_SIZE,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  cq_exec * const ehp);
 
-cq_status smp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS);
+// NOTE: requires modification of CQ spec
+cq_status smp_qrun(pqkern kernel,
+                   void * kernpar,
+                   const size_t KERNPAR_SIZE,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const size_t NSHOTS);
 
-cq_status amp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS,
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
-  cq_exec * const ehp);
+// NOTE: requires modification of CQ spec
+cq_status amp_qrun(pqkern kernel,
+                   void * kernpar,
+                   const size_t KERNPAR_SIZE,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const size_t NSHOTS,
+                   cq_exec * const ehp);
 
-cq_status sbp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const backend_id BE);
+cq_status sbp_qrun(pqkern kernel,
+                   void * kernpar,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const backend_id BE);
 
-cq_status abp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, 
-  const backend_id BE, cq_exec * const ehp);
+cq_status abp_qrun(pqkern kernel,
+                   void * kernpar,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const backend_id BE,
+                   cq_exec * const ehp);
 
-cq_status smbp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
-  const backend_id BE);
+cq_status smbp_qrun(pqkern kernel,
+                    void * kernpar,
+                    qubit * qrp,
+                    const size_t NQUBITS,
+                    cstate * const crp,
+                    const size_t NMEASURE,
+                    const size_t NSHOTS,
+                    const backend_id BE);
 
-cq_status ambp_qrun(pqkern kernel, void * kernpar, qubit * qrp, const size_t NQUBITS, 
-  cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
-  const backend_id BE, cq_exec * const ehp);
+cq_status ambp_qrun(pqkern kernel,
+                    void * kernpar,
+                    qubit * qrp,
+                    const size_t NQUBITS,
+                    cstate * const crp,
+                    const size_t NMEASURE,
+                    const size_t NSHOTS,
+                    const backend_id BE,
+                    cq_exec * const ehp);
 
 // Synchronisation
 

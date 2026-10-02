@@ -34,8 +34,12 @@ static int selective_create(pthread_t *thread, const pthread_attr_t *attr,
 #define MPI_Finalize observed_finalize
 #define pthread_create selective_create
 #include "src/device/mpi_runtime.c"
-#include "src/host-device/comms.c"
+#include "src/host-device/comms/comms_core.c"
+#include "src/host-device/comms/comms.c"
 #include "src/host/env.c"
+
+/* These startup-only fixtures never own an executor. */
+void finalise_exec_handle(cq_exec *exec) { abort(); }
 
 static cq_status init(void *arg) {
   cq_status status = cq_mpi_prepare(!isQuESTEnvInit());

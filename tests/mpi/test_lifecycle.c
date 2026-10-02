@@ -13,7 +13,7 @@
   fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition); return 1; \
 } } while (0)
 
-static cq_status deterministic_kernel(const size_t n, qubit *qr, cstate *cr,
+static cq_status deterministic_kernel(const size_t n, qubit *qr, const size_t nm, cstate *cr,
                                      qkern_map *reg) {
   CQ_REGISTER_KERNEL(reg);
   cq_status status = set_qureg(qr, 5, n);
