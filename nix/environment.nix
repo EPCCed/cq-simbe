@@ -39,7 +39,20 @@ let
     CXX = "${stdenv.cc}/bin/${stdenv.cc.targetPrefix}c++";
     FC = "${dependencies.fortran}/bin/gfortran";
     CMAKE_PREFIX_PATH = lib.makeSearchPath "" (map lib.getDev cmakeDependencies);
-  };
+  } // lib.optionalAttrs (stdenv.hostPlatform.isLinux && stdenv.cc.isClang) (
+    let
+      # Clang reports host library directories even through its Nix wrapper.
+      # CMake can replay these ahead of Nix's libc when GFortran links a C/C++
+      # static library. Exclude only host paths, retaining the Nix runtimes.
+      excluded = lib.concatStringsSep ";" [
+        "/lib" "/lib32" "/lib64" "/usr/lib" "/usr/lib32" "/usr/lib64"
+        "/lib/x86_64-linux-gnu" "/usr/lib/x86_64-linux-gnu"
+        "/lib/aarch64-linux-gnu" "/usr/lib/aarch64-linux-gnu"
+      ];
+    in {
+      CMAKE_C_IMPLICIT_LINK_DIRECTORIES_EXCLUDE = excluded;
+      CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES_EXCLUDE = excluded;
+    });
 in
 assert lib.assertMsg (builtins.elem compiler [ "default" "gcc" "clang" ]) "Unknown compiler selection.";
 assert lib.assertMsg (!darwin || compiler != "gcc") "The GCC shell is supported on Linux; Darwin uses LLVM 22/libc++.";

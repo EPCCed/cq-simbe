@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "develop", "mpi" ]
 
 permissions:
   contents: read
@@ -29,6 +29,7 @@ jobs:
               cmake --build --preset "$preset" --parallel 2
               ctest --preset "$preset" --output-on-failure
             done
+            sed -n "/IMPLICIT_LINK_DIRECTORIES/p" out/build/full-debug/CMakeFiles/*/CMake{C,CXX}Compiler.cmake
             cmake -DSOURCE_DIR="$PWD" -DBINARY_DIR="$PWD/out/package-check" -DCQ_SIMBE_BUILD_FORTRAN=ON -P tests/packaging/check-package.cmake
           '
   static-quest:

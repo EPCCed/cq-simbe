@@ -2,6 +2,18 @@
 { nixpkgs }:
 let
   lib = nixpkgs.lib;
+  implicitLinkExclusions = [
+    "/lib" "/lib32" "/lib64" "/usr/lib" "/usr/lib32" "/usr/lib64"
+    "/lib/x86_64-linux-gnu" "/usr/lib/x86_64-linux-gnu"
+    "/lib/aarch64-linux-gnu" "/usr/lib/aarch64-linux-gnu"
+  ];
+  checkImplicitLinkExclusions = environment: enabled:
+    lib.all (language:
+      let name = "CMAKE_${language}_IMPLICIT_LINK_DIRECTORIES_EXCLUDE"; in
+      if enabled then
+        lib.splitString ";" (environment.env.${name} or "") == implicitLinkExclusions
+      else !(builtins.hasAttr name environment.env)
+    ) [ "C" "CXX" ];
   check = system:
     let
       pkgs = import nixpkgs { inherit system; };
@@ -10,6 +22,7 @@ let
       serial = import ./environment.nix { inherit pkgs; questOptions.enableMpi = false; };
       nonMpi = import ./environment.nix { inherit pkgs; enableMpi = false; questOptions.enableMpi = false; };
       clang = import ./environment.nix { inherit pkgs; compiler = "clang"; };
+      gcc = import ./environment.nix { inherit pkgs; compiler = "gcc"; };
       deps = environment.dependencies;
     in
     assert deps.quest.options.QUEST_FLOAT_PRECISION == 2;
@@ -33,6 +46,10 @@ let
     assert clang.dependencies.quest.stdenv.drvPath == clang.stdenv.drvPath;
     assert clang.dependencies.mpi.stdenv.drvPath == clang.stdenv.drvPath;
     assert clang.stdenv.cc.isClang;
+    assert checkImplicitLinkExclusions clang pkgs.stdenv.hostPlatform.isLinux;
+    assert builtins.all (environment: checkImplicitLinkExclusions environment false)
+      [ environment static serial nonMpi ];
+    assert pkgs.stdenv.hostPlatform.isDarwin || checkImplicitLinkExclusions gcc false;
     assert if pkgs.stdenv.hostPlatform.isDarwin then
       environment.stdenv.drvPath == pkgs.llvmPackages_22.libcxxStdenv.drvPath
     else environment.stdenv.drvPath == pkgs.stdenv.drvPath;
