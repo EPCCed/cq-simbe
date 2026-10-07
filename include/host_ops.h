@@ -16,6 +16,24 @@ cq_status free_qureg(qubit ** qrp);
 
 // Executors
 
+cq_status alloc_exec(cq_exec ** ehp);
+
+cq_status free_exec(cq_exec ** ehp);
+
+size_t exec_id(cq_exec * const eh);
+
+bool exec_is_init(cq_exec * const eh);
+
+bool exec_completed(cq_exec * const eh);
+
+bool exec_halted(cq_exec * const eh);
+
+size_t exec_completed_shots(cq_exec * const eh);
+
+size_t exec_expected_shots(cq_exec * const eh);
+
+cq_status exec_status(cq_exec * const eh);
+
 cq_status s_qrun(qkern kernel,
                  qubit * qrp,
                  const size_t NQUBITS,
@@ -76,7 +94,6 @@ cq_status amb_qrun(qkern kernel,
                    const backend_id BE,
                    cq_exec * const ehp);
 
-// NOTE: requires modification of CQ spec
 cq_status sp_qrun(pqkern kernel,
                   void * kernpar,
                   const size_t KERNPAR_SIZE,
@@ -85,7 +102,6 @@ cq_status sp_qrun(pqkern kernel,
                   cstate * const crp,
                   const size_t NMEASURE);
 
-// NOTE: requires modification of CQ spec
 cq_status ap_qrun(pqkern kernel,
                   void * kernpar,
                   const size_t KERNPAR_SIZE,
@@ -95,7 +111,6 @@ cq_status ap_qrun(pqkern kernel,
                   const size_t NMEASURE,
                   cq_exec * const ehp);
 
-// NOTE: requires modification of CQ spec
 cq_status smp_qrun(pqkern kernel,
                    void * kernpar,
                    const size_t KERNPAR_SIZE,
@@ -105,7 +120,6 @@ cq_status smp_qrun(pqkern kernel,
                    const size_t NMEASURE,
                    const size_t NSHOTS);
 
-// NOTE: requires modification of CQ spec
 cq_status amp_qrun(pqkern kernel,
                    void * kernpar,
                    const size_t KERNPAR_SIZE,

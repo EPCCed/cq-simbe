@@ -88,6 +88,88 @@ cq_status free_qureg(qubit ** qrp) {
 
 // Executors
 
+cq_status alloc_exec(cq_exec ** ehp) {
+  RUN_HOST_ONLY();
+
+  // already allocated!
+  if (*ehp != NULL) return CQ_ERROR;
+  *ehp = (cq_exec *)malloc(sizeof(cq_exec));
+  if (*ehp == NULL) return CQ_ERROR;
+
+  return CQ_SUCCESS;
+}
+
+cq_status free_exec(cq_exec ** ehp) {
+  RUN_HOST_ONLY();
+  if (ehp == NULL) return CQ_ERROR;
+  if (*ehp == NULL) return CQ_WARNING;
+
+  // NOTE: we just set those members to null because
+  // they are non-owning, clean up is handled by
+  // other functions such as free_qureg
+  pthread_mutex_lock(&(*ehp)->lock);
+  if ((*ehp)->fname != NULL) {
+    (*ehp)->fname = NULL;
+  }
+
+  if ((*ehp)->qreg != NULL) {
+    (*ehp)->qreg = NULL;
+  }
+
+  if ((*ehp)->creg != NULL) {
+    (*ehp)->creg = NULL;
+  }
+
+  if ((*ehp)->params != NULL) {
+    (*ehp)->params = NULL;
+  }
+
+  pthread_mutex_unlock(&(*ehp)->lock);
+  pthread_mutex_destroy(&(*ehp)->lock);
+  pthread_cond_destroy(&(*ehp)->cond_exec_complete);
+  if ((*ehp) != NULL) {
+    free((*ehp));
+    (*ehp) = NULL;
+  }
+
+  return CQ_SUCCESS;
+}
+
+size_t exec_id(cq_exec * const eh) {
+  if (eh == NULL) return 0;
+  return eh->id;
+}
+
+bool exec_is_init(cq_exec * const eh) {
+  if (eh == NULL) return false;
+  return eh->exec_init;
+}
+
+bool exec_completed(cq_exec * const eh) {
+  if (eh == NULL) return false;
+  return eh->complete;
+}
+
+bool exec_halted(cq_exec * const eh) {
+  if (eh == NULL) return false;
+  return eh->halt;
+}
+
+size_t exec_completed_shots(cq_exec * const eh) {
+  if (eh == NULL) return 0;
+  return eh->completed_shots;
+}
+
+size_t exec_expected_shots(cq_exec * const eh) {
+  if (eh == NULL) return 0;
+  return eh->expected_shots;
+}
+
+cq_status exec_status(cq_exec * const eh) {
+  if (eh == NULL) return CQ_ERROR;
+  return eh->status;
+}
+
 cq_status s_qrun(qkern kernel,
                  qubit * qrp,
                  const size_t NQUBITS,

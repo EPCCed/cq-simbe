@@ -27,7 +27,9 @@ int main(void) {
 
   cstate cr_zero[NMEASURE * NSHOTS];
   cstate cr_plus[NMEASURE * NSHOTS];
-  cq_exec eh_zero, eh_plus;
+
+  cq_exec * eh_zero = NULL;
+  cq_exec * eh_plus = NULL;
 
   qubit * qr = NULL;
 
@@ -38,6 +40,8 @@ int main(void) {
     register_qkern(plus_init_full_qft);
 
     CQ_PROG_BEGIN()
+    alloc_exec(&eh_zero);
+    alloc_exec(&eh_plus);
 
     // We will reuse the quantum buffer as the quantum
     // kernels cannot run simultaneously (for now...)
@@ -48,9 +52,9 @@ int main(void) {
 
     printf("Offloading both QFT circuits to the quantum device.\n");
     am_qrun(zero_init_full_qft, qr, NQUBITS, cr_zero, NMEASURE, NSHOTS,
-            &eh_zero);
+            eh_zero);
     am_qrun(plus_init_full_qft, qr, NQUBITS, cr_plus, NMEASURE, NSHOTS,
-            &eh_plus);
+            eh_plus);
 
     CQ_PROG_END()
   }
@@ -65,10 +69,12 @@ int main(void) {
   if (split_cond) {
     CQ_PROG_BEGIN()
 
-    wait_qrun(&eh_zero);
-    wait_qrun(&eh_plus);
+    wait_qrun(eh_zero);
+    wait_qrun(eh_plus);
 
     free_qureg(&qr);
+    free_exec(&eh_plus);
+    free_exec(&eh_zero);
 
     printf("Results from zero-initialised QFT:\n");
     report_results(cr_zero, NMEASURE, NSHOTS);

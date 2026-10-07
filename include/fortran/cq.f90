@@ -124,17 +124,17 @@ interface
   end function
 
 ! Executor management
-  module function cq_create_exec_handle(ehp) result(status)
+  module function cq_alloc_exec(ehp) result(status)
     implicit none
     type(cq_exec), intent(inout) :: ehp
     integer :: status
-  end function cq_create_exec_handle
+  end function cq_alloc_exec
 
-  module function cq_free_exec_handle(ehp) result(status)
+  module function cq_free_exec(ehp) result(status)
     implicit none
     type(cq_exec), intent(inout) :: ehp
     integer :: status
-  end function cq_free_exec_handle
+  end function cq_free_exec
 
 end interface
 

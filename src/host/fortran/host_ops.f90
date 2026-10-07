@@ -55,13 +55,13 @@ contains
     status = halt_qrun(ehp%this)
   end procedure cq_halt_qrun
 
-  module procedure cq_create_exec_handle !(ehp) result(status)
-    status = fort_create_exec_handle(ehp%this)
-  end procedure cq_create_exec_handle
+  module procedure cq_alloc_exec !(ehp) result(status)
+    status = alloc_exec(ehp%this)
+  end procedure cq_alloc_exec
 
-  module procedure cq_free_exec_handle !(ehp) result(status)
-    status = fort_free_exec_handle(ehp%this)
-  end procedure cq_free_exec_handle
+  module procedure cq_free_exec !(ehp) result(status)
+    status = free_exec(ehp%this)
+  end procedure cq_free_exec
 
 end submodule host_ops
 
