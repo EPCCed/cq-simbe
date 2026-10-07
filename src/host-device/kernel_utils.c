@@ -1,8 +1,12 @@
+#include "kernel_utils.h"
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <string.h>
-#include "kernel_utils.h"
+
+// #include "mpi_comms.h"
+#include <stdio.h>
+#include "src/host-device/comms.h"
 
 struct qkern_registry qk_reg;
 struct pqkern_registry pqk_reg;
@@ -10,7 +14,7 @@ struct pqkern_registry pqk_reg;
 cq_status register_qkern(qkern kernel) {
   cq_status status = CQ_ERROR;
   char * fname;
-  
+
   if (kernel != NULL && qk_reg.next_available_slot < __CQ_MAX_NUM_QKERN__) {
     status = find_qkern_name(kernel, &fname);
     if (status == CQ_SUCCESS) {
@@ -29,17 +33,46 @@ cq_status register_qkern(qkern kernel) {
     }
   }
 
+  // host_device_sync_comms();
+  RUN_HOST_ONLY();
+  host_wait_all_ops();
   return status;
 }
 
 cq_status register_pqkern(pqkern kernel) {
+  cq_status status = CQ_ERROR;
+  char * fname;
+
+  if (kernel != NULL && pqk_reg.next_available_slot < __CQ_MAX_NUM_QKERN__) {
+    status = find_pqkern_name(kernel, &fname);
+    if (status == CQ_SUCCESS) {
+      // This kernel has already been registered!
+      status = CQ_WARNING;
+    } else {
+      pqkern_map * pqkmap = &pqk_reg.pqkernels[pqk_reg.next_available_slot];
+      kernel(0, NULL, 0, NULL, NULL, pqkmap);
+      if (pqkmap->fname[0] != '\0') {
+        pqkmap->fn = kernel;
+        ++pqk_reg.next_available_slot;
+        status = CQ_SUCCESS;
+      } else {
+        status = CQ_ERROR;
+      }
+    }
+  }
+
+  // host_device_sync_comms();
+  RUN_HOST_ONLY();
+  host_wait_all_ops();
+  return status;
+
   return CQ_ERROR;
 }
 
 cq_status find_qkern_pointer(char const * const FNAME, qkern * qk) {
   *qk = NULL;
   cq_status status = CQ_SUCCESS;
-  
+
   for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
     if (!strcmp(FNAME, qk_reg.qkernels[i].fname)) {
       // We found it!
@@ -73,8 +106,8 @@ cq_status find_qkern_name(const qkern QK, char ** fname) {
 cq_status find_pqkern_pointer(char const * const FNAME, pqkern * pqk) {
   *pqk = NULL;
   int status = CQ_SUCCESS;
-  
-  for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
+
+  for (size_t i = 0; i < pqk_reg.next_available_slot; ++i) {
     if (!strcmp(FNAME, pqk_reg.pqkernels[i].fname)) {
       // We found it!
       *pqk = pqk_reg.pqkernels[i].fn;
@@ -91,7 +124,7 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
   *fname = NULL;
   int status = CQ_SUCCESS;
 
-  for (size_t i = 0; i < qk_reg.next_available_slot; ++i) {
+  for (size_t i = 0; i < pqk_reg.next_available_slot; ++i) {
     if (PQK == pqk_reg.pqkernels[i].fn) {
       // We found it!
       *fname = pqk_reg.pqkernels[i].fname;
@@ -104,7 +137,11 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname) {
   return status;
 }
 
-void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NMEASURE, cq_exec * ehp) {
+void init_exec_handle(const size_t NQUBITS,
+                      const size_t NSHOTS,
+                      const size_t NMEASURE,
+                      cq_exec * ehp) {
+  ehp->id = assign_exec_id();
   ehp->exec_init = true;
   ehp->complete = false;
   ehp->halt = false;
@@ -113,6 +150,7 @@ void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NM
   ehp->completed_shots = 0;
   ehp->expected_shots = NSHOTS;
   ehp->nmeasure = NMEASURE;
+  ehp->params_size = 0;
   ehp->fname = NULL;
   ehp->qreg = NULL;
   ehp->creg = NULL;
@@ -146,20 +184,4 @@ cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg) {
     }
   }
   return CQ_ERROR;
-}
-
-cq_status fort_create_exec_handle(cq_exec ** ehp) {
-  cq_status status = CQ_ERROR;
-  if (*ehp == NULL) {
-    *ehp = (cq_exec *) malloc(sizeof(cq_exec));
-    // check malloc
-    if (*ehp != NULL) status = CQ_SUCCESS;
-  }
-  return status;
-}
-
-cq_status fort_free_exec_handle(cq_exec ** ehp) {
-  free(*ehp);
-  *ehp = NULL;
-  return CQ_SUCCESS;
 }

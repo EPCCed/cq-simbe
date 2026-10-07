@@ -7,17 +7,17 @@
 // This has to be a macro as we need __func__ to return the
 // name of the user function, not our own cq_register_kernel
 // function
-#define CQ_REGISTER_KERNEL(reg) \
-if (reg != NULL) {\
-  size_t strsz = sizeof(__func__);\
-  if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) {\
-    strcpy(reg->fname, __func__);\
-    return CQ_SUCCESS;\
-  } else {\
-    reg->fname[0] = '\0';\
-    return CQ_ERROR;\
-  }\
-}
+#define CQ_REGISTER_KERNEL(reg)                 \
+  if (reg != NULL) {                            \
+    size_t strsz = sizeof(__func__);            \
+    if (strsz < __CQ_MAX_QKERN_NAME_LENGTH__) { \
+      strcpy(reg->fname, __func__);             \
+      return CQ_SUCCESS;                        \
+    } else {                                    \
+      reg->fname[0] = '\0';                     \
+      return CQ_ERROR;                          \
+    }                                           \
+  }
 
 struct qkern_registry {
   struct qkern_map qkernels[__CQ_MAX_NUM_QKERN__];
@@ -50,15 +50,14 @@ cq_status find_pqkern_name(pqkern const PQK, char ** fname);
 
 // set exec handles
 
-void init_exec_handle(const size_t NQUBITS, const size_t NSHOTS, const size_t NMEASURE, cq_exec * ehp);
+void init_exec_handle(const size_t NQUBITS,
+                      const size_t NSHOTS,
+                      const size_t NMEASURE,
+                      cq_exec * ehp);
 
 void finalise_exec_handle(cq_exec * ehp);
 
 // fortran helpers -- just don't call them from C
 cq_status fort_insert_to_qkern_map(const char * FNAME, qkern_map * reg);
-
-cq_status fort_create_exec_handle(cq_exec ** ehp);
-
-cq_status fort_free_exec_handle(cq_exec ** ehp);
 
 #endif

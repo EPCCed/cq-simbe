@@ -27,6 +27,7 @@ typedef struct qubit {
 } qubit;
 
 typedef struct exec {
+  size_t id;
   bool exec_init;
   bool complete;
   bool halt;
@@ -35,6 +36,7 @@ typedef struct exec {
   size_t completed_shots;
   size_t expected_shots;
   size_t nmeasure;
+  size_t params_size;
   pthread_mutex_t lock;
   pthread_cond_t cond_exec_complete;
   char * fname;

@@ -1,18 +1,28 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
 #include "qft.h"
+
 #include "cq.h"
 
-int main (void)
-{
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main(void) {
   const size_t NQUBITS = 10;
   const size_t NSHOTS = 10;
   const size_t NMEASURE = NQUBITS;
 
-  cq_exec eh_zero, eh_plus;
+  cq_exec * eh_zero = NULL;
+  cq_exec * eh_plus = NULL;
 
   cq_init(0);
+
+  register_qkern(zero_init_full_qft);
+  register_qkern(plus_init_full_qft);
+
+  CQ_PROG_BEGIN()
+
+  alloc_exec(&eh_zero);
+  alloc_exec(&eh_plus);
 
   // We will reuse the quantum buffer as the quantum
   // kernels cannot run simultaneously (for now...)
@@ -25,27 +35,28 @@ int main (void)
   init_creg(NMEASURE * NSHOTS, -1, cr_zero);
   init_creg(NMEASURE * NSHOTS, -1, cr_plus);
 
-  register_qkern(zero_init_full_qft);
-  register_qkern(plus_init_full_qft);
-
   printf("Offloading both QFT circuits to the quantum device.\n");
-  am_qrun(zero_init_full_qft, qr, NQUBITS, cr_zero, NMEASURE, NSHOTS, &eh_zero);
-  am_qrun(plus_init_full_qft, qr, NQUBITS, cr_plus, NMEASURE, NSHOTS, &eh_plus);
+  am_qrun(zero_init_full_qft, qr, NQUBITS, cr_zero, NMEASURE, NSHOTS, eh_zero);
+  am_qrun(plus_init_full_qft, qr, NQUBITS, cr_plus, NMEASURE, NSHOTS, eh_plus);
 
   printf("Hello from the host, pretend I'm doing something useful!\n");
   sleep(2);
-  printf("Hello again, I'm done being 'useful' and will now wait for "); 
+  printf("Hello again, I'm done being 'useful' and will now wait for ");
   printf("the quantum device to return!\n");
 
-  wait_qrun(&eh_zero);
+  wait_qrun(eh_zero);
   printf("Results from zero-initialised QFT:\n");
   report_results(cr_zero, NMEASURE, NSHOTS);
 
-  wait_qrun(&eh_plus); 
+  wait_qrun(eh_plus);
   printf("Results from plus-initialised QFT:\n");
   report_results(cr_plus, NMEASURE, NSHOTS);
 
   free_qureg(&qr);
+  free_exec(&eh_plus);
+  free_exec(&eh_zero);
+
+  CQ_PROG_END()
 
   cq_finalise(0);
 

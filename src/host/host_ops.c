@@ -1,9 +1,13 @@
-#include <stdlib.h>
-#include "datatypes.h"
 #include "host_ops.h"
+
+#include "datatypes.h"
 #include "kernel_utils.h"
 #include "src/host-device/comms.h"
 
+#include <stdlib.h>
+
+// #include "src/host-device/mpi_comms.h"
+#include <stdio.h>
 // Resource Management
 
 cq_status alloc_qubit(qubit ** qhp) {
@@ -11,21 +15,22 @@ cq_status alloc_qubit(qubit ** qhp) {
 }
 
 cq_status alloc_qureg(qubit ** qrp, size_t N) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_SUCCESS;
-  
+
   // check qr is NULL
   // If it's not, we still allocate, but issue a CQ_WARNING.
-  if (*qrp != NULL)  {
+  if (*qrp != NULL) {
     status = CQ_WARNING;
   }
-  
+
   device_alloc_params alloc_params = {
     .NQUBITS = N,
     .qregistry_idx = 0,
-    .status = CQ_ERROR
+    .status = CQ_ERROR,
   };
 
-  *qrp = (qubit *) malloc(sizeof(qubit) * N);
+  *qrp = (qubit *)malloc(sizeof(qubit) * N);
   if (*qrp == NULL) {
     /*  whoops, the malloc failed
         originally we only malloc'd on the host after receiving
@@ -35,7 +40,7 @@ cq_status alloc_qureg(qubit ** qrp, size_t N) {
     */
     return CQ_ERROR;
   }
-  
+
   host_send_ctrl_op(CQ_CTRL_ALLOC, &alloc_params);
   host_wait_all_ops();
 
@@ -61,12 +66,13 @@ cq_status free_qubit(qubit ** qhp) {
 }
 
 cq_status free_qureg(qubit ** qrp) {
+  RUN_HOST_ONLY();
   if (*qrp == NULL) return CQ_WARNING;
 
   device_alloc_params dealloc_params = {
     .NQUBITS = 0,
     .qregistry_idx = (*qrp)[0].registry_index,
-    .status = CQ_ERROR
+    .status = CQ_ERROR,
   };
 
   host_send_ctrl_op(CQ_CTRL_DEALLOC, &dealloc_params);
@@ -82,13 +88,99 @@ cq_status free_qureg(qubit ** qrp) {
 
 // Executors
 
-cq_status s_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
-cstate * crp, const size_t NMEASURE) {
+cq_status alloc_exec(cq_exec ** ehp) {
+  RUN_HOST_ONLY();
+
+  // already allocated!
+  if (*ehp != NULL) return CQ_ERROR;
+  *ehp = (cq_exec *)malloc(sizeof(cq_exec));
+  if (*ehp == NULL) return CQ_ERROR;
+
+  return CQ_SUCCESS;
+}
+
+cq_status free_exec(cq_exec ** ehp) {
+  RUN_HOST_ONLY();
+  if (ehp == NULL) return CQ_ERROR;
+  if (*ehp == NULL) return CQ_WARNING;
+
+  // NOTE: we just set those members to null because
+  // they are non-owning, clean up is handled by
+  // other functions such as free_qureg
+  pthread_mutex_lock(&(*ehp)->lock);
+  if ((*ehp)->fname != NULL) {
+    (*ehp)->fname = NULL;
+  }
+
+  if ((*ehp)->qreg != NULL) {
+    (*ehp)->qreg = NULL;
+  }
+
+  if ((*ehp)->creg != NULL) {
+    (*ehp)->creg = NULL;
+  }
+
+  if ((*ehp)->params != NULL) {
+    (*ehp)->params = NULL;
+  }
+
+  pthread_mutex_unlock(&(*ehp)->lock);
+  pthread_mutex_destroy(&(*ehp)->lock);
+  pthread_cond_destroy(&(*ehp)->cond_exec_complete);
+  if ((*ehp) != NULL) {
+    free((*ehp));
+    (*ehp) = NULL;
+  }
+
+  return CQ_SUCCESS;
+}
+
+size_t exec_id(cq_exec * const eh) {
+  if (eh == NULL) return 0;
+  return eh->id;
+}
+
+bool exec_is_init(cq_exec * const eh) {
+  if (eh == NULL) return false;
+  return eh->exec_init;
+}
+
+bool exec_completed(cq_exec * const eh) {
+  if (eh == NULL) return false;
+  return eh->complete;
+}
+
+bool exec_halted(cq_exec * const eh) {
+  if (eh == NULL) return false;
+  return eh->halt;
+}
+
+size_t exec_completed_shots(cq_exec * const eh) {
+  if (eh == NULL) return 0;
+  return eh->completed_shots;
+}
+
+size_t exec_expected_shots(cq_exec * const eh) {
+  if (eh == NULL) return 0;
+  return eh->expected_shots;
+}
+
+cq_status exec_status(cq_exec * const eh) {
+  if (eh == NULL) return CQ_ERROR;
+  return eh->status;
+}
+
+cq_status s_qrun(qkern kernel,
+                 qubit * qrp,
+                 const size_t NQUBITS,
+                 cstate * crp,
+                 const size_t NMEASURE) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   cq_exec exec_handle;
 
   status = a_qrun(kernel, qrp, NQUBITS, crp, NMEASURE, &exec_handle);
-  
+
   if (status == CQ_SUCCESS) {
     status = wait_qrun(&exec_handle);
 
@@ -100,8 +192,13 @@ cstate * crp, const size_t NMEASURE) {
   return status;
 }
 
-cq_status a_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS,
-cstate * crp, const size_t NMEASURE, cq_exec * const ehp) {
+cq_status a_qrun(qkern kernel,
+                 qubit * qrp,
+                 const size_t NQUBITS,
+                 cstate * crp,
+                 const size_t NMEASURE,
+                 cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
@@ -127,8 +224,12 @@ cstate * crp, const size_t NMEASURE, cq_exec * const ehp) {
   return status;
 }
 
-cq_status sm_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
+cq_status sm_qrun(qkern kernel,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  const size_t NSHOTS) {
   cq_exec exec_handle;
   cq_status status = CQ_ERROR;
 
@@ -145,9 +246,14 @@ cstate * const crp, const size_t NMEASURE, const size_t NSHOTS) {
   return status;
 }
 
-cq_status am_qrun(qkern kernel, qubit * qrp, const size_t NQUBITS, 
-cstate * const crp, const size_t NMEASURE, const size_t NSHOTS, 
-cq_exec * const ehp) {
+cq_status am_qrun(qkern kernel,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  const size_t NSHOTS,
+                  cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   char * fname = NULL;
 
@@ -177,21 +283,155 @@ cq_exec * const ehp) {
   return status;
 }
 
+cq_status sp_qrun(pqkern kernel,
+                  void * kernpar,
+                  const size_t KERNPAR_SIZE,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE) {
+  RUN_HOST_ONLY();
+  cq_status status = CQ_ERROR;
+  cq_exec exec_handle;
+
+  status = ap_qrun(kernel, kernpar, KERNPAR_SIZE, qrp, NQUBITS, crp, NMEASURE,
+                   &exec_handle);
+
+  if (status == CQ_SUCCESS) {
+    status = wait_qrun(&exec_handle);
+
+    if (status == CQ_SUCCESS) {
+      status = exec_handle.status;
+    }
+  }
+
+  return status;
+}
+
+cq_status ap_qrun(pqkern kernel,
+                  void * kernpar,
+                  const size_t KERNPAR_SIZE,
+                  qubit * qrp,
+                  const size_t NQUBITS,
+                  cstate * const crp,
+                  const size_t NMEASURE,
+                  cq_exec * const ehp) {
+  RUN_HOST_ONLY();
+  cq_status status = CQ_ERROR;
+  char * fname = NULL;
+
+  if (ehp == NULL) return status;
+  init_exec_handle(NQUBITS, 1, NMEASURE, ehp);
+
+  if (KERNPAR_SIZE < 0) return status;
+  ehp->params = kernpar;
+  ehp->params_size = KERNPAR_SIZE;
+
+  if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
+    status = find_pqkern_name(kernel, &fname);
+
+    if (status == CQ_SUCCESS) {
+      ehp->fname = fname;
+      ehp->qreg = qrp;
+      ehp->creg = crp;
+
+      host_send_ctrl_op(CQ_CTRL_RUN_PQKERNEL, ehp);
+    } else {
+      finalise_exec_handle(ehp);
+    }
+  } else {
+    finalise_exec_handle(ehp);
+  }
+
+  return status;
+}
+
+cq_status smp_qrun(pqkern kernel,
+                   void * kernpar,
+                   const size_t KERNPAR_SIZE,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const size_t NSHOTS) {
+  cq_exec exec_handle;
+  cq_status status = CQ_ERROR;
+
+  status = amp_qrun(kernel, kernpar, KERNPAR_SIZE, qrp, NQUBITS, crp, NMEASURE,
+                    NSHOTS, &exec_handle);
+
+  if (status == CQ_SUCCESS) {
+    status = wait_qrun(&exec_handle);
+
+    if (status == CQ_SUCCESS) {
+      status = exec_handle.status;
+    }
+  }
+
+  return status;
+}
+
+cq_status amp_qrun(pqkern kernel,
+                   void * kernpar,
+                   const size_t KERNPAR_SIZE,
+                   qubit * qrp,
+                   const size_t NQUBITS,
+                   cstate * const crp,
+                   const size_t NMEASURE,
+                   const size_t NSHOTS,
+                   cq_exec * const ehp) {
+  RUN_HOST_ONLY();
+  cq_status status = CQ_ERROR;
+  char * fname = NULL;
+
+  if (ehp == NULL) return status;
+  init_exec_handle(NQUBITS, NSHOTS, NMEASURE, ehp);
+
+  if (KERNPAR_SIZE < 0) return status;
+  ehp->params = kernpar;
+  ehp->params_size = KERNPAR_SIZE;
+
+  if (NSHOTS == 0) {
+    status = CQ_SUCCESS;
+    finalise_exec_handle(ehp);
+  } else if (qrp != NULL && (NMEASURE == 0 || crp != NULL)) {
+    status = find_pqkern_name(kernel, &fname);
+
+    if (status == CQ_SUCCESS) {
+      ehp->fname = fname;
+      ehp->qreg = qrp;
+      ehp->creg = crp;
+      host_send_ctrl_op(CQ_CTRL_RUN_PQKERNEL, ehp);
+    } else {
+      finalise_exec_handle(ehp);
+    }
+
+  } else {
+    finalise_exec_handle(ehp);
+  }
+
+  return status;
+}
+
 // Synchronisation
 
 cq_status sync_qrun(cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   if (ehp != NULL && ehp->exec_init) {
-    host_sync_exec(ehp);
+    // host_sync_exec(ehp);
+    host_send_ctrl_op(CQ_CTRL_SYNC_EXEC, ehp);
     status = CQ_SUCCESS;
   }
-  return status;  
+  return status;
 }
 
 cq_status wait_qrun(cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   if (ehp != NULL && ehp->exec_init) {
-    host_wait_exec(ehp);
+    // host_wait_exec(ehp);
+    host_send_ctrl_op(CQ_CTRL_WAIT_EXEC, ehp);
     finalise_exec_handle(ehp);
     status = CQ_SUCCESS;
   } else if (ehp != NULL && ehp->expected_shots == 0) {
@@ -202,9 +442,11 @@ cq_status wait_qrun(cq_exec * const ehp) {
 }
 
 cq_status halt_qrun(cq_exec * const ehp) {
+  RUN_HOST_ONLY();
   cq_status status = CQ_ERROR;
   if (ehp != NULL && ehp->exec_init) {
-    host_request_halt(ehp);
+    // host_request_halt(ehp);
+    host_send_ctrl_op(CQ_CTRL_ABORT, ehp);
     status = wait_qrun(ehp);
   }
   return status;

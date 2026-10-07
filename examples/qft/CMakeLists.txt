@@ -23,3 +23,19 @@ target_link_libraries(aqft
   CQ-SIMBE::cq-simbe
   ${MATHS_LIBRARY}
 )
+
+if (BUILD_WITH_MPI)
+  add_executable(mpi_aqft
+    mpi_aqft.c
+    qft-utils.c
+  )
+  
+  find_library(MATHS_LIBRARY m REQUIRED)
+  
+  target_link_libraries(mpi_aqft 
+    PRIVATE
+    CQ-SIMBE::cq-simbe
+    ${MATHS_LIBRARY}
+    ${MPI_C_LIBRARIES}
+  )
+endif()

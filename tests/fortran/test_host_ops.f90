@@ -125,11 +125,11 @@ contains
     call test_header('Test executor handle')
 
     write(*, *) 'Test normal initialisation of executor handle: '
-    call assert(cq_create_exec_handle(eh) == SUCCESS)
+    call assert(cq_alloc_exec(eh) == SUCCESS)
     write(*, *) 'Test repeated initialisation of executor handle: '
-    call assert(cq_create_exec_handle(eh) == ERROR)
+    call assert(cq_alloc_exec(eh) == ERROR)
     write(*, *) 'Test freeing initialised executor handle: '
-    call assert(cq_free_exec_handle(eh) == SUCCESS)
+    call assert(cq_free_exec(eh) == SUCCESS)
 
   end subroutine test_executor_handle
 
@@ -160,12 +160,12 @@ contains
 
     ! freed eh
     write(*, *) 'Test single shot offload on freed executor handle: '
-    status = cq_create_exec_handle(eh)
-    status = cq_free_exec_handle(eh)
+    status = cq_alloc_exec(eh)
+    status = cq_free_exec(eh)
     call assert(cq_a_qrun(good_kernel, qr, NQUBITS, cr, NMEASURE, eh) == ERROR)
 
     write(*, *) 'Test single shot offload on initialised executor handle: '
-    status = cq_create_exec_handle(eh)
+    status = cq_alloc_exec(eh)
     call assert(cq_a_qrun(good_kernel, qr, NQUBITS, cr, NMEASURE, eh) == SUCCESS)
     status = cq_free_qureg(qr)
     
@@ -173,24 +173,24 @@ contains
     call assert(cq_sync_qrun(eh) == SUCCESS)
     
     write(*, *) 'Test waiting on the executor: '
-    status = cq_free_exec_handle(eh)
-    status = cq_create_exec_handle(eh)
+    status = cq_free_exec(eh)
+    status = cq_alloc_exec(eh)
     status = cq_alloc_qureg(qr, NQUBITS)
     call assert(cq_a_qrun(good_kernel, qr, NQUBITS, cr, NMEASURE, eh) == SUCCESS)
     call assert(cq_wait_qrun(eh) == SUCCESS)
     status = cq_free_qureg(qr)
 
     write(*, *) 'Test halting the executor: '
-    status = cq_free_exec_handle(eh)
-    status = cq_create_exec_handle(eh)
+    status = cq_free_exec(eh)
+    status = cq_alloc_exec(eh)
     status = cq_alloc_qureg(qr, NQUBITS)
     call assert(cq_a_qrun(good_kernel, qr, NQUBITS, cr, NMEASURE, eh) == SUCCESS)
     call assert(cq_halt_qrun(eh) == SUCCESS)
     status = cq_free_qureg(qr)
 
     write(*, *) 'Test multi shot offload on initialised executor handle: '
-    status = cq_free_exec_handle(eh)
-    status = cq_create_exec_handle(eh)
+    status = cq_free_exec(eh)
+    status = cq_alloc_exec(eh)
     status = cq_alloc_qureg(qr, NQUBITS)
     call assert(cq_am_qrun(good_kernel, qr, NQUBITS, cr_multi_shot, NMEASURE, NSHOTS, eh) == SUCCESS)
     status = cq_free_qureg(qr)

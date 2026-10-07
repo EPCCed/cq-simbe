@@ -8,6 +8,10 @@ add_executable(test_fort_host_ops
   utils.f90
 )
 
+set_target_properties(test_fort_host_ops PROPERTIES
+  Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod/test_fort_host_ops"
+)
+
 target_link_libraries(test_fort_host_ops
   PRIVATE
   cq-simbe
@@ -23,6 +27,10 @@ add_executable(test_fort_device_ops
   utils.f90
 )
 
+set_target_properties(test_fort_device_ops PROPERTIES
+  Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod/test_fort_device_ops"
+)
+
 target_link_libraries(test_fort_device_ops
   PRIVATE
   cq-simbe
@@ -36,6 +44,10 @@ add_test(
 add_executable(test_fort_qasm_gates
   test_qasm_gates.f90
   utils.f90
+)
+
+set_target_properties(test_fort_qasm_gates PROPERTIES
+  Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod/test_fort_qasm_gates"
 )
 
 target_link_libraries(test_fort_qasm_gates

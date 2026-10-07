@@ -6,7 +6,9 @@
 #include "utils.h"
 #include "kernel_utils.h"
 #include "resources.h"
+
 #include "quest/include/environment.h"
+
 
 cq_status (*control_registry[8])(void *) =  {
   initialise_simulator,
@@ -30,7 +32,7 @@ cq_status initialise_simulator(void * par) {
       printf("Initialising QuEST.\n");
     }
 
-    initQuESTEnv();
+    init_quest_env();
 
     if (*pVERBOSITY > 0) {
       reportQuESTEnv();
@@ -63,6 +65,10 @@ cq_status finalise_simulator(void * par) {
     clear_qregistry();
 
     finalizeQuESTEnv();
+
+    if (*pVERBOSITY > 0) {
+      printf("QuEST finalised\n");
+    }
 
     // isQuESTEnvInit returns 1 for true, 0 for false
     if (!isQuESTEnvInit()) {
